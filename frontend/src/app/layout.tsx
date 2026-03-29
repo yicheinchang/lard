@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import AppShell from "@/components/AppShell";
+import { SettingsProvider } from "@/lib/SettingsContext";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -28,10 +29,12 @@ export default function RootLayout({
       lang="en"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
-      <body className="min-h-[100vh] flex bg-[#0a0a0f]">
-        <AppShell>
-          {children}
-        </AppShell>
+      <body className="min-h-[100vh] flex" style={{ backgroundColor: 'var(--bg)' }}>
+        <SettingsProvider>
+          <AppShell>
+            {children}
+          </AppShell>
+        </SettingsProvider>
       </body>
     </html>
   );

@@ -14,3 +14,11 @@ def get_db():
         yield db
     finally:
         db.close()
+
+def run_query(sql: str) -> list[dict]:
+    """Execute a raw SQL query and return rows as dictionaries."""
+    from sqlalchemy import text
+    with engine.connect() as conn:
+        result = conn.execute(text(sql))
+        # result.mappings() returns a MappingResult in SQLAlchemy 1.4+ / 2.0
+        return [dict(row) for row in result.mappings()]

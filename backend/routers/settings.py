@@ -1,0 +1,91 @@
+from fastapi import APIRouter, HTTPException, BackgroundTasks
+from pydantic import BaseModel
+from typing import Optional
+from config import load_app_settings, save_app_settings
+
+router = APIRouter(prefix="/api/settings", tags=["Settings"])
+
+
+@router.get("")
+def get_settings():
+    """Return current app settings."""
+    data = load_app_settings()
+    # Mask sensitive keys for the frontend
+    safe = _mask_secrets(data)
+    return safe
+
+
+class SettingsUpdate(BaseModel):
+    theme: Optional[str] = None
+    ai_enabled: Optional[bool] = None
+    llm_provider: Optional[str] = None
+    llm_config: Optional[dict] = None
+    embedding_provider: Optional[str] = None
+    embedding_config: Optional[dict] = None
+
+
+class TestConfigPayload(BaseModel):
+    provider: str
+    config: dict
+
+
+@router.put("")
+def update_settings(payload: SettingsUpdate):
+    """Partially update app settings."""
+    update_data = payload.model_dump(exclude_none=True)
+    merged = save_app_settings(update_data)
+    return _mask_secrets(merged)
+
+
+@router.post("/rebuild-vectors")
+def rebuild_vectors(background_tasks: BackgroundTasks):
+    """Trigger a full vector database rebuild with the current embedding config."""
+    from database.vector_store import rebuild_vector_store
+    background_tasks.add_task(rebuild_vector_store)
+    return {"status": "rebuild_started", "message": "Vector database rebuild has been queued."}
+
+
+@router.post("/test-llm")
+def test_llm_connection(payload: Optional[TestConfigPayload] = None):
+    """Quick connectivity check for the currently configured LLM or provided config."""
+    try:
+        from ai.llm_factory import get_llm
+        if payload:
+            llm = get_llm(provider=payload.provider, cfg=payload.config)
+        else:
+            llm = get_llm()
+        response = llm.invoke("Reply with exactly: OK")
+        return {"status": "ok", "response": str(response.content)[:200]}
+    except Exception as e:
+        raise HTTPException(status_code=502, detail=str(e))
+
+
+@router.post("/test-embedding")
+def test_embedding_connection(payload: Optional[TestConfigPayload] = None):
+    """Quick connectivity check for the currently configured embedding model or provided config."""
+    try:
+        from database.vector_store import get_embedding_function
+        if payload:
+            ef = get_embedding_function(provider=payload.provider, cfg=payload.config)
+        else:
+            ef = get_embedding_function()
+        result = ef.embed_query("hello world")
+        return {"status": "ok", "dimensions": len(result)}
+    except Exception as e:
+        raise HTTPException(status_code=502, detail=str(e))
+
+
+def _mask_secrets(data: dict) -> dict:
+    """Return a copy with API keys partially masked for frontend display."""
+    import copy
+    d = copy.deepcopy(data)
+    for section_key in ("llm_config", "embedding_config"):
+        section = d.get(section_key, {})
+        for key in section:
+            if "api_key" in key and section[key]:
+                val = section[key]
+                if len(val) > 8:
+                    section[key] = val[:4] + "…" + val[-4:]
+                else:
+                    section[key] = "••••"
+    return d

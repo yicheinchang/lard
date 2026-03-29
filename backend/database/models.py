@@ -39,6 +39,7 @@ class JobApplication(Base):
     company_job_id = Column(String, nullable=True)
     location = Column(String, nullable=True)
     description = Column(Text, nullable=True) # Markdown
+    salary_range = Column(String, nullable=True)
     
     hr_email = Column(String, nullable=True)
     hiring_manager_name = Column(String, nullable=True)

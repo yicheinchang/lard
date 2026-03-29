@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import ReactMarkdown from 'react-markdown';
 import { Job, getStepTypes, StepType, addInterviewStep, updateInterviewStep, updateJob, uploadJobDocument, deleteJobDocument, DocumentMeta } from '../lib/api';
-import { X, Calendar, User, Mail, Plus, Circle, FileText, Edit2, Save, MessageSquare, Paperclip, Trash2 } from 'lucide-react';
+import { X, Calendar, User, Mail, Plus, Circle, FileText, Edit2, Save, MessageSquare, Paperclip, Trash2, ExternalLink, Link as LinkIcon } from 'lucide-react';
 import { ConfirmDialog } from './ConfirmDialog';
 import { DocumentPreview } from './DocumentPreview';
 
@@ -392,6 +392,10 @@ export const JobDetailView: React.FC<JobDetailViewProps> = ({ job, onClose, onJo
                   {isEditingInfo ? (
                     <div className="space-y-3 bg-black/20 p-4 rounded-xl border border-violet-500/30">
                       <div className="flex flex-col gap-1">
+                        <label className="text-xs text-gray-400 flex items-center gap-1"><LinkIcon className="w-3 h-3" /> Application URL</label>
+                        <input type="url" className="bg-black/40 border border-white/10 rounded-md px-2 py-1 text-sm text-white focus:outline-none focus:border-violet-500" value={editFormData.url || ''} onChange={e => handleEditChange('url', e.target.value)} placeholder="https://..."/>
+                      </div>
+                      <div className="flex flex-col gap-1">
                         <label className="text-xs text-gray-400">Company Job ID</label>
                         <input className="bg-black/40 border border-white/10 rounded-md px-2 py-1 text-sm text-white focus:outline-none focus:border-violet-500" value={editFormData.company_job_id || ''} onChange={e => handleEditChange('company_job_id', e.target.value)}/>
                       </div>
@@ -427,6 +431,22 @@ export const JobDetailView: React.FC<JobDetailViewProps> = ({ job, onClose, onJo
                     </div>
                   ) : (
                     <div className="space-y-4 text-sm">
+
+                      {/* Application URL */}
+                      {job.url && (
+                        <div>
+                          <a
+                            href={job.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="w-full flex items-center justify-center gap-2 bg-violet-600/20 hover:bg-violet-600/40 border border-violet-500/40 hover:border-violet-400 text-violet-300 hover:text-white font-medium px-4 py-2.5 rounded-xl transition-all group"
+                          >
+                            <ExternalLink className="w-4 h-4 group-hover:scale-110 transition-transform" />
+                            Open Application Page
+                          </a>
+                        </div>
+                      )}
+
                       <div>
                         <span className="text-gray-500 block mb-1">Company Job ID</span>
                         <span className="text-gray-300 font-mono">{job.company_job_id || '-'}</span>

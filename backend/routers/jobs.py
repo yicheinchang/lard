@@ -56,6 +56,7 @@ class JobBase(BaseModel):
     company_job_id: Optional[str] = None
     location: Optional[str] = None
     description: Optional[str] = None
+    salary_range: Optional[str] = None
     hr_email: Optional[str] = None
     hiring_manager_name: Optional[str] = None
     hiring_manager_email: Optional[str] = None
@@ -75,6 +76,7 @@ class JobUpdate(BaseModel):
     company_job_id: Optional[str] = None
     location: Optional[str] = None
     description: Optional[str] = None
+    salary_range: Optional[str] = None
     hr_email: Optional[str] = None
     hiring_manager_name: Optional[str] = None
     hiring_manager_email: Optional[str] = None
@@ -111,6 +113,18 @@ def create_job(job: JobCreate, db: Session = Depends(get_db)):
     db.add(db_job)
     db.commit()
     db.refresh(db_job)
+    
+    if db_job.description:
+        try:
+            from database.vector_store import vector_store
+            vector_store.ingest_text(
+                document_id=f"job_{db_job.id}",
+                text=db_job.description,
+                metadata={"job_id": db_job.id, "source": f"{db_job.company} - {db_job.role}", "type": "job_description"}
+            )
+        except Exception as e:
+            print(f"Warning: Failed to vectorize job description {db_job.id}: {e}")
+            
     return db_job
 
 @router.put("/jobs/{job_id}", response_model=JobResponse)
@@ -121,12 +135,26 @@ def update_job(job_id: int, job_update: JobUpdate, db: Session = Depends(get_db)
     
     # Very permissive dict update to allow dynamic patch from the UI form
     update_data = job_update.model_dump(exclude_unset=True)
+    description_changed = "description" in update_data and update_data["description"] != db_job.description
+    
     for key, value in update_data.items():
         if hasattr(db_job, key):
             setattr(db_job, key, value)
         
     db.commit()
     db.refresh(db_job)
+    
+    if description_changed and db_job.description:
+        try:
+            from database.vector_store import vector_store
+            vector_store.ingest_text(
+                document_id=f"job_{db_job.id}",
+                text=db_job.description,
+                metadata={"job_id": db_job.id, "source": f"{db_job.company} - {db_job.role}", "type": "job_description"}
+            )
+        except Exception as e:
+            print(f"Warning: Failed to vectorize job description {db_job.id}: {e}")
+            
     return db_job
 
 @router.delete("/jobs/{job_id}")
@@ -199,6 +227,27 @@ def upload_job_document(job_id: int, file: UploadFile = File(...), doc_type: str
     db.add(doc)
     db.commit()
     db.refresh(doc)
+    
+    # Ingest document into vector store
+    try:
+        if file_path.endswith('.pdf'):
+            from langchain_community.document_loaders import PyPDFLoader
+            loader = PyPDFLoader(file_path)
+            pages = loader.load()
+            text = "\n".join([p.page_content for p in pages])
+        else:
+            with open(file_path, "r", encoding="utf-8") as f:
+                text = f.read()
+                
+        from database.vector_store import vector_store
+        vector_store.ingest_text(
+            document_id=f"doc_{doc.id}", 
+            text=text, 
+            metadata={"job_id": job_id, "source": doc.title, "type": "document"}
+        )
+    except Exception as e:
+        print(f"Warning: Failed to vectorize document {doc.id}: {e}")
+        
     return doc
 
 @router.delete("/documents/{doc_id}")

@@ -6,6 +6,7 @@ import { KanbanBoard } from '@/components/KanbanBoard';
 import { TableView } from '@/components/TableView';
 import { AddJobModal } from '@/components/AddJobModal';
 import { JobDetailView } from '@/components/JobDetailView';
+import { SettingsPage } from '@/components/SettingsPage';
 import { Job, getJobs, createJob, updateJob, uploadJobDocument } from '@/lib/api';
 import { useView } from '@/lib/ViewContext';
 
@@ -49,18 +50,24 @@ export default function Home() {
   };
 
   const handleAddJob = async (job: Partial<Job>) => {
-    await createJob(job);
+    const created = await createJob(job);
     await fetchJobs();
+    return created; // return so modal can attach documents to the new job
   };
+
+  // If settings view, render settings page directly
+  if (activeView === 'settings') {
+    return <SettingsPage />;
+  }
 
   return (
     <div className={`flex flex-col h-full w-full p-4 md:p-6 lg:p-8 pt-6 ${selectedJob ? 'md:pb-[40vh]' : ''} transition-all duration-300`}>
       <header className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4 shrink-0">
         <div>
-          <h1 className="text-2xl lg:text-3xl font-bold text-white tracking-tight">
+          <h1 className="text-2xl lg:text-3xl font-bold tracking-tight" style={{ color: 'var(--fg)' }}>
             {activeView === 'kanban' ? 'Pipeline Dashboard' : 'All Applications'}
           </h1>
-          <p className="text-gray-400 text-sm mt-1">
+          <p className="text-sm mt-1" style={{ color: 'var(--fg-muted)' }}>
             {activeView === 'kanban'
               ? 'Track your applications through the pipeline'
               : `${jobs.length} total applications`

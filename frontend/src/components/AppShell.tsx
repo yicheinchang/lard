@@ -1,8 +1,10 @@
 "use client";
 
 import React from 'react';
-import { Briefcase, LayoutGrid, Table2, ChevronLeft, ChevronRight, Sparkles } from 'lucide-react';
+import { Briefcase, LayoutGrid, Table2, ChevronLeft, ChevronRight, Sparkles, Settings } from 'lucide-react';
 import { ViewProvider, useView } from '@/lib/ViewContext';
+import { ChatAssistant } from './ChatAssistant';
+import { useSettings } from '@/lib/SettingsContext';
 
 function Sidebar() {
   const { activeView, setActiveView, sidebarCollapsed, setSidebarCollapsed } = useView();
@@ -16,7 +18,7 @@ function Sidebar() {
     <aside
       className={`
         ${sidebarCollapsed ? 'w-16' : 'w-64'}
-        border-r border-white/10 hidden sm:flex flex-col sticky top-0 h-screen glass z-10
+        border-r border-[var(--border-color)] hidden sm:flex flex-col sticky top-0 h-screen glass z-10
         transition-all duration-300 ease-in-out shrink-0
       `}
     >
@@ -48,7 +50,7 @@ function Sidebar() {
                 ${sidebarCollapsed ? 'justify-center' : ''}
                 ${isActive
                   ? 'bg-violet-500/15 text-violet-300 border border-violet-500/20 shadow-lg shadow-violet-500/5'
-                  : 'text-white/50 hover:text-white hover:bg-white/5 border border-transparent'
+                  : 'text-[var(--fg-subtle)] hover:text-[var(--fg)] hover:bg-[var(--surface-hover)] border border-transparent'
                 }
               `}
               title={sidebarCollapsed ? item.label : undefined}
@@ -60,13 +62,35 @@ function Sidebar() {
             </button>
           );
         })}
+
+        {/* Spacer */}
+        <div className="flex-1" />
+
+        {/* Settings – pinned to bottom of nav */}
+        <button
+          onClick={() => setActiveView('settings')}
+          className={`
+            flex items-center gap-3 p-3 rounded-xl group transition-all duration-200
+            ${sidebarCollapsed ? 'justify-center' : ''}
+            ${activeView === 'settings'
+              ? 'bg-violet-500/15 text-violet-300 border border-violet-500/20 shadow-lg shadow-violet-500/5'
+              : 'text-[var(--fg-subtle)] hover:text-[var(--fg)] hover:bg-[var(--surface-hover)] border border-transparent'
+            }
+          `}
+          title={sidebarCollapsed ? 'Settings' : undefined}
+        >
+          <Settings className={`w-5 h-5 shrink-0 transition-transform ${activeView === 'settings' ? 'scale-110' : 'group-hover:scale-110'}`} />
+          {!sidebarCollapsed && (
+            <span className="font-medium text-sm">Settings</span>
+          )}
+        </button>
       </nav>
 
       {/* Collapse Toggle */}
       <div className={`${sidebarCollapsed ? 'px-2' : 'px-3'} pb-4`}>
         <button
           onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-          className="w-full flex items-center justify-center gap-2 p-2.5 rounded-xl text-white/40 hover:text-white hover:bg-white/5 transition-all duration-200 border border-transparent hover:border-white/10"
+          className="w-full flex items-center justify-center gap-2 p-2.5 rounded-xl text-[var(--fg-subtle)] hover:text-[var(--fg)] hover:bg-[var(--surface-hover)] transition-all duration-200 border border-transparent hover:border-[var(--border-color)]"
           title={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
         >
           {sidebarCollapsed ? (
@@ -83,13 +107,37 @@ function Sidebar() {
   );
 }
 
+function MainContent({ children }: { children: React.ReactNode }) {
+  const [isChatOpen, setIsChatOpen] = React.useState(false);
+  const { aiEnabled } = useSettings();
+
+  return (
+    <main className="flex-1 flex flex-col relative w-full pb-0 min-w-0" style={{ background: `linear-gradient(to bottom, var(--bg), var(--bg))` }}>
+      {children}
+      
+      {/* Floating AI Button — hidden when AI is disabled */}
+      {aiEnabled && (
+        <button
+          onClick={() => setIsChatOpen(true)}
+          className={`fixed bottom-6 right-6 w-14 h-14 rounded-full bg-gradient-to-br from-violet-600 to-fuchsia-600 shadow-xl shadow-violet-600/20 flex items-center justify-center text-white hover:scale-105 transition-all z-40 ${isChatOpen ? 'opacity-0 scale-90 pointer-events-none' : 'opacity-100'}`}
+        >
+          <Sparkles className="w-6 h-6" />
+        </button>
+      )}
+
+      {/* Global Chat Assistant — hidden when AI is disabled */}
+      {aiEnabled && (
+        <ChatAssistant isOpen={isChatOpen} onClose={() => setIsChatOpen(false)} />
+      )}
+    </main>
+  );
+}
+
 export default function AppShell({ children }: { children: React.ReactNode }) {
   return (
     <ViewProvider>
       <Sidebar />
-      <main className="flex-1 flex flex-col relative w-full pb-0 bg-gradient-to-b from-[#0a0a0f] to-[#04040a] min-w-0">
-        {children}
-      </main>
+      <MainContent>{children}</MainContent>
     </ViewProvider>
   );
 }

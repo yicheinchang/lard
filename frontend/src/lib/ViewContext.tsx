@@ -2,7 +2,7 @@
 
 import React, { createContext, useContext, useState, type ReactNode } from 'react';
 
-export type ActiveView = 'kanban' | 'table';
+export type ActiveView = 'kanban' | 'table' | 'settings';
 
 interface ViewContextType {
   activeView: ActiveView;

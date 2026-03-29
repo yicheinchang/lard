@@ -1,13 +1,13 @@
 @import "tailwindcss";
 
 @theme {
-  --color-background: #0a0a0f;
-  --color-foreground: #ededed;
-  --color-primary: #8b5cf6;
-  --color-primary-hover: #7c3aed;
-  --color-surface: rgba(255, 255, 255, 0.03);
-  --color-surface-hover: rgba(255, 255, 255, 0.07);
-  --color-border: rgba(255, 255, 255, 0.1);
+  --color-background: var(--bg);
+  --color-foreground: var(--fg);
+  --color-primary: var(--primary);
+  --color-primary-hover: var(--primary-hover);
+  --color-surface: var(--surface);
+  --color-surface-hover: var(--surface-hover);
+  --color-border: var(--border-color);
   --font-sans: var(--font-inter), sans-serif;
   
   --animate-fade-in: fadeIn 0.4s ease-out;
@@ -24,27 +24,70 @@
   to { opacity: 1; transform: translateY(0); }
 }
 
-:root {
+/* ── Dark theme (default) ─────────────────────────────────────────── */
+:root,
+[data-theme="dark"] {
+  --bg: #0a0a0f;
+  --fg: #ededed;
+  --fg-muted: #a1a1aa;
+  --fg-subtle: #71717a;
+  --primary: #8b5cf6;
+  --primary-hover: #7c3aed;
+  --surface: rgba(255, 255, 255, 0.03);
+  --surface-hover: rgba(255, 255, 255, 0.07);
+  --surface-alt: #111118;
+  --border-color: rgba(255, 255, 255, 0.1);
+  --card-bg: rgba(10, 10, 15, 0.95);
+  --input-bg: rgba(0, 0, 0, 0.4);
+  --body-gradient-1: rgba(139, 92, 246, 0.08);
+  --body-gradient-2: rgba(56, 189, 248, 0.08);
+  --shadow-glow: rgba(139, 92, 246, 0.15);
+  --danger: #ef4444;
+  --success: #22c55e;
+  --warning: #f59e0b;
   color-scheme: dark;
 }
 
+/* ── Light theme ──────────────────────────────────────────────────── */
+[data-theme="light"] {
+  --bg: #f8f9fc;
+  --fg: #1a1a2e;
+  --fg-muted: #52525b;
+  --fg-subtle: #a1a1aa;
+  --primary: #7c3aed;
+  --primary-hover: #6d28d9;
+  --surface: rgba(255, 255, 255, 0.85);
+  --surface-hover: rgba(255, 255, 255, 1);
+  --surface-alt: #ffffff;
+  --border-color: rgba(0, 0, 0, 0.1);
+  --card-bg: #ffffff;
+  --input-bg: rgba(0, 0, 0, 0.04);
+  --body-gradient-1: rgba(139, 92, 246, 0.06);
+  --body-gradient-2: rgba(56, 189, 248, 0.06);
+  --shadow-glow: rgba(139, 92, 246, 0.08);
+  --danger: #dc2626;
+  --success: #16a34a;
+  --warning: #d97706;
+  color-scheme: light;
+}
+
 body {
-  background-color: var(--color-background);
-  color: var(--color-foreground);
+  background-color: var(--bg);
+  color: var(--fg);
   font-family: var(--font-sans);
   background-image: 
-    radial-gradient(circle at 15% 50%, rgba(139, 92, 246, 0.08) 0%, transparent 50%),
-    radial-gradient(circle at 85% 30%, rgba(56, 189, 248, 0.08) 0%, transparent 50%);
+    radial-gradient(circle at 15% 50%, var(--body-gradient-1) 0%, transparent 50%),
+    radial-gradient(circle at 85% 30%, var(--body-gradient-2) 0%, transparent 50%);
   background-attachment: fixed;
   min-height: 100vh;
 }
 
 /* Glassmorphism utility */
 .glass {
-  background: var(--color-surface);
+  background: var(--surface);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
-  border: 1px solid var(--color-border);
+  border: 1px solid var(--border-color);
 }
 
 /* Base interactive transitions */
@@ -86,17 +129,73 @@ button, a, .glass {
 }
 
 .custom-scrollbar::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.1);
+  background: var(--border-color);
   border-radius: 3px;
 }
 
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.2);
+  background: var(--surface-hover);
 }
 
-/* Date input styling for dark mode */
+/* Date input styling */
 input[type="date"].style-date::-webkit-calendar-picker-indicator {
   filter: invert(1);
   opacity: 0.5;
   cursor: pointer;
+}
+[data-theme="light"] input[type="date"].style-date::-webkit-calendar-picker-indicator {
+  filter: none;
+  opacity: 0.6;
+}
+
+/* ── Theme-aware utility overrides ────────────────────────────────── */
+
+/* Light-theme adjustments for hard-coded dark classes used in components */
+[data-theme="light"] .text-white { color: var(--fg); }
+[data-theme="light"] .text-gray-400 { color: var(--fg-muted); }
+[data-theme="light"] .text-gray-500 { color: var(--fg-subtle); }
+[data-theme="light"] .text-gray-600 { color: var(--fg-subtle); }
+[data-theme="light"] .border-white\/10 { border-color: var(--border-color); }
+[data-theme="light"] .border-white\/5 { border-color: rgba(0,0,0,0.06); }
+[data-theme="light"] .bg-white\/5 { background-color: rgba(0,0,0,0.04); }
+[data-theme="light"] .bg-white\/10 { background-color: rgba(0,0,0,0.06); }
+[data-theme="light"] .bg-white\/\[0\.02\] { background-color: rgba(0,0,0,0.02); }
+[data-theme="light"] .bg-black\/40 { background-color: rgba(0,0,0,0.04); }
+[data-theme="light"] .bg-black\/60 { background-color: rgba(0,0,0,0.25); }
+[data-theme="light"] .bg-black\/80 { background-color: rgba(0,0,0,0.05); }
+[data-theme="light"] .hover\:bg-white\/5:hover { background-color: rgba(0,0,0,0.06); }
+[data-theme="light"] .hover\:text-white:hover { color: var(--fg); }
+[data-theme="light"] .bg-\[\#0a0a0f\] { background-color: var(--bg); }
+[data-theme="light"] .bg-\[\#1a1a24\] { background-color: var(--surface-alt); }
+[data-theme="light"] .from-\[\#0a0a0f\] { --tw-gradient-from: var(--bg); }
+[data-theme="light"] .to-\[\#04040a\] { --tw-gradient-to: var(--bg); }
+[data-theme="light"] .placeholder-gray-500::placeholder { color: var(--fg-subtle); }
+[data-theme="light"] .text-white\/50 { color: var(--fg-subtle); }
+[data-theme="light"] .text-white\/40 { color: var(--fg-subtle); }
+
+/* Light theme card/glass adjustments */
+[data-theme="light"] .glass {
+  background: var(--surface);
+  border-color: var(--border-color);
+  box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+}
+
+/* Light-theme shadow adjustments */
+[data-theme="light"] .shadow-xl { box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
+[data-theme="light"] .shadow-2xl { box-shadow: 0 8px 24px rgba(0,0,0,0.1); }
+
+/* Light-mode gradient text stays vibrant */
+[data-theme="light"] .from-violet-400 { --tw-gradient-from: #7c3aed; }
+[data-theme="light"] .to-fuchsia-400 { --tw-gradient-to: #c026d3; }
+
+/* Light-mode sidebar text */
+[data-theme="light"] .text-violet-300 { color: #7c3aed; }
+
+/* Ensure Add button keeps its contrast in light mode */
+[data-theme="light"] .bg-white.text-black {
+  background-color: var(--fg);
+  color: var(--bg);
+}
+[data-theme="light"] .bg-white.text-black:hover {
+  background-color: #333;
 }

@@ -17,6 +17,9 @@ backend/.venv/
 backend/tracker.db
 backend/uploads/
 backend/*.log
+backend/app_settings.json
+backend/chroma_db/*
+!backend/chroma_db/.gitkeep
 
 # Frontend
 frontend/node_modules/

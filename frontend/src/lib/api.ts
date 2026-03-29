@@ -38,6 +38,7 @@ export interface Job {
   company_job_id?: string;
   location?: string;
   description?: string;
+  salary_range?: string;
   
   hr_email?: string;
   hiring_manager_name?: string;
@@ -50,6 +51,66 @@ export interface Job {
   steps?: InterviewStep[];
   documents?: DocumentMeta[];
 }
+
+// ── App Settings ──────────────────────────────────────────────────────
+
+export interface LlmConfig {
+  ollama_base_url: string;
+  ollama_model: string;
+  openai_api_key: string;
+  openai_model: string;
+  anthropic_api_key: string;
+  anthropic_model: string;
+}
+
+export interface EmbeddingConfig {
+  ollama_base_url: string;
+  ollama_model: string;
+  openai_api_key: string;
+  openai_model: string;
+}
+
+export interface AppSettings {
+  theme: 'dark' | 'light' | 'system';
+  ai_enabled: boolean;
+  llm_provider: 'ollama' | 'openai' | 'anthropic';
+  llm_config: LlmConfig;
+  embedding_provider: 'default' | 'ollama' | 'openai';
+  embedding_config: EmbeddingConfig;
+}
+
+export const getSettings = async (): Promise<AppSettings> => {
+  const response = await api.get('/settings');
+  return response.data;
+};
+
+export const updateSettings = async (data: Partial<AppSettings>): Promise<AppSettings> => {
+  const response = await api.put('/settings', data);
+  return response.data;
+};
+
+export const rebuildVectors = async () => {
+  const response = await api.post('/settings/rebuild-vectors');
+  return response.data;
+};
+
+export const testLlmConnection = async (testConfig?: { provider: string; config: any }) => {
+  const response = await api.post('/settings/test-llm', testConfig ? {
+    provider: testConfig.provider,
+    config: testConfig.config
+  } : undefined);
+  return response.data;
+};
+
+export const testEmbeddingConnection = async (testConfig?: { provider: string; config: any }) => {
+  const response = await api.post('/settings/test-embedding', testConfig ? {
+    provider: testConfig.provider,
+    config: testConfig.config
+  } : undefined);
+  return response.data;
+};
+
+// ── Jobs ──────────────────────────────────────────────────────────────
 
 export const getJobs = async () => {
   const response = await api.get('/jobs');
@@ -88,6 +149,17 @@ export const extractJobFromUrl = async (url: string) => {
 
 export const extractJobFromText = async (text: string) => {
   const response = await api.post('/ai/extract-text', { text });
+  return response.data;
+};
+
+export const extractJobFromPdf = async (file: File) => {
+  const formData = new FormData();
+  formData.append('file', file);
+  const response = await api.post('/ai/extract-pdf', formData, {
+    headers: {
+      'Content-Type': 'multipart/form-data'
+    }
+  });
   return response.data;
 };
 

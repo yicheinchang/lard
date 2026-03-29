@@ -3,7 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 import os
 from database.relational import engine, Base
-from routers import jobs, ai
+from routers import jobs, ai, settings
 
 Base.metadata.create_all(bind=engine)
 
@@ -22,6 +22,7 @@ app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
 
 app.include_router(jobs.router)
 app.include_router(ai.router)
+app.include_router(settings.router)
 
 @app.get("/")
 def root():
