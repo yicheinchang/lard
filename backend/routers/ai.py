@@ -14,6 +14,31 @@ def _check_ai_enabled():
     if not s.get("ai_enabled", True):
         raise HTTPException(status_code=403, detail="AI assistant is disabled. Enable it in Settings.")
 
+def _clean_html(html: str) -> str:
+    """Generic HTML cleaning to extract main content while removing noise."""
+    soup = BeautifulSoup(html, 'html.parser')
+    
+    # Remove script, style, nav, footer, header, and other common noise
+    for tag in soup(["script", "style", "nav", "footer", "header", "aside", "form"]):
+        tag.decompose()
+        
+    # Look for common content-heavy tags to prioritize, but fall back to body
+    # This remains generic while giving a boost to common patterns
+    main_content = soup.find('main') or soup.find('article') or soup.find(id='content') or soup.find(class_='job-description')
+    if main_content:
+        text = main_content.get_text(separator='\n', strip=True)
+    else:
+        text = soup.get_text(separator='\n', strip=True)
+        
+    return text
+
+def _preprocess_text(text: str, max_chars: int = 8000) -> str:
+    """Common text preprocessing for all input types."""
+    # Remove excessive blank lines
+    lines = [l.strip() for l in text.splitlines() if l.strip()]
+    text = "\n".join(lines)
+    return text[:max_chars]
+
 class ExtractRequest(BaseModel):
     url: str
 
@@ -27,9 +52,8 @@ async def extract_from_url(req: ExtractRequest):
         try:
             resp = await client.get(req.url, timeout=10)
             resp.raise_for_status()
-            soup = BeautifulSoup(resp.text, 'html.parser')
-            text = soup.get_text(separator=' ', strip=True)
-            text = text[:8000] # naive truncation
+            text = _clean_html(resp.text)
+            text = _preprocess_text(text)
         except Exception as e:
             raise HTTPException(status_code=400, detail=str(e))
             
@@ -44,7 +68,8 @@ import os
 @router.post("/extract-text")
 def extract_from_text(req: TextExtractRequest):
     _check_ai_enabled()
-    result = agent_app.invoke({"text": req.text})
+    text = _preprocess_text(req.text)
+    result = agent_app.invoke({"text": text})
     return {"extracted": result["extracted_data"], "error": result["error"]}
 
 @router.post("/extract-pdf")
@@ -60,7 +85,7 @@ def extract_from_pdf(file: UploadFile = File(...)):
         loader = PyPDFLoader(temp_path)
         pages = loader.load()
         text = "\n".join([page.page_content for page in pages])
-        text = text[:8000] # naive truncation
+        text = _preprocess_text(text)
         result = agent_app.invoke({"text": text})
         return {"extracted": result["extracted_data"], "error": result["error"]}
     except Exception as e:

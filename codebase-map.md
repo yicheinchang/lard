@@ -196,7 +196,13 @@ The AI assistant uses **LangGraph** to manage conversational state, enabling mul
 ### 4. Dynamic Configuration
 Settings are not just environment variables. They are persisted in `backend/app_settings.json`, allowing the user to change providers or themes at runtime via the UI without restarting the server.
 
-### 5. Document Ingestion
+### 5. AI Extraction & Preprocessing
+The system uses a multi-stage pipeline to extract job details from URLs, PDFs, and text:
+- **HTML Cleaning**: Generic BeautifulSoup-based cleaning removes `script`, `nav`, `footer`, and `header` tags to isolate the job description.
+- **Noise Reduction**: Specific instructions in the LLM prompt guide the model to skip EEO statements and legal boilerplate.
+- **Markdown Conversion**: The AI is instructed to convert the extracted job description into structured Markdown (headers, lists, etc.) to ensure high readability in the UI.
+
+### 6. Document Ingestion
 Supports PDF and plain text. PDFs are parsed using `pypdf` and split into chunks before vectorization.
 
 ---
