@@ -25,6 +25,7 @@ This document provides a summary of the project's architecture, tech stack, and 
 ### Root
 - `/backend`: Core API and AI logic.
 - `/frontend`: Next.js web application.
+- `.agents/rules/`: Operational rules and roles for AI completion.
 
 ### Backend (`/backend`)
 - `main.py`: Application entry point and router integration.
@@ -140,6 +141,13 @@ When a job description is added or a document is uploaded, it is automatically p
 The system is designed to be model-agnostic. Through `llm_factory.py`, it can switch between:
 - **Local**: Ollama (default: `gemma3:4b-it-qat`)
 - **Cloud**: OpenAI (GPT-4o) or Anthropic (Claude 3)
+
+### 3. Agent Operational Rules
+The workspace uses a formalized rule system in `.agents/rules/workspace-role.md` to ensure:
+- **Micro Git Commits**: Atomic, granular commits for every stable change.
+- **Synchronized Versioning**: Automated SemVer updates across backend and frontend.
+- **Codebase Map Sync**: Mandatory updates to this document to maintain architectural context.
+- **Git Tagging**: Automated tagging for every version bump.
 
 ### 3. State Management (LangGraph)
 The AI assistant uses **LangGraph** to manage conversational state, enabling multi-turn workflows and tool-calling (e.g., querying the database vs. searching documents).

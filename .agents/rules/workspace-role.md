@@ -1,3 +1,7 @@
+---
+trigger: always_on
+---
+
 # Antigravity Workspace Roles
 
 This role defines the operational behavior for Antigravity (the AI assistant) in the Job Tracker AI workspace.
@@ -5,7 +9,7 @@ This role defines the operational behavior for Antigravity (the AI assistant) in
 ## 🧩 Operational Principles
 
 ### 0. Mandatory Context Lookup
-- **Action**: Always read [codebase-map.md](file:///home/JTS/codebase-map.md) at the beginning of a task or when context is needed.
+- **Action**: Always read [codebase-map.md] at the beginning of a task or when context is needed.
 - **Rule**: Prioritize the codebase map over manual directory scanning to improve efficiency and maintain a consistent mental model of the architecture.
 
 ### 1. Micro Git Commits
@@ -44,8 +48,3 @@ For every stable, verified functional change:
 6.  **Commit**: `git commit -m "<type>(<scope>): <description>"`
 7.  **Tag**: `git tag v<NEW_VERSION>`
 8.  **Push** (Optional/Manual): Push to remote if configured.
-
-## 💻 Tech Stack Context
-Keep all changes aligned with the core stack:
-- **Backend**: FastAPI, SQLAlchemy (SQLite), ChromaDB, LangGraph.
-- **Frontend**: Next.js 16, Tailwind CSS 4, React 19.
