@@ -164,6 +164,25 @@ export const AddJobModal: React.FC<AddJobModalProps> = ({ isOpen, onClose, onAdd
     </div>
   );
 
+  const StatusSelect = () => (
+    <div className="flex flex-col gap-1">
+      <label className="text-xs text-gray-400">Initial Status</label>
+      <select
+        className="w-full bg-black/40 border border-white/10 rounded-lg px-3 py-2 text-white outline-none focus:border-violet-500 transition-colors text-sm appearance-none cursor-pointer"
+        value={formData.status || 'Wishlist'}
+        onChange={(e) => handleChange('status', e.target.value)}
+      >
+        <option value="Wishlist">Wishlist</option>
+        <option value="Applied">Applied</option>
+        <option value="Interviewing">Interviewing</option>
+        <option value="Offered">Offered</option>
+        <option value="Rejected">Rejected</option>
+        <option value="Closed">Closed</option>
+        <option value="Discontinued">Discontinued</option>
+      </select>
+    </div>
+  );
+
   // File picker — shared between AI mode (extraction) and manual mode (attachment)
   const FilePicker = ({ label, hint }: { label: string; hint: string }) => (
     <div>
@@ -350,6 +369,8 @@ export const AddJobModal: React.FC<AddJobModalProps> = ({ isOpen, onClose, onAdd
                   />
                 </div>
               </div>
+
+              <StatusSelect />
             </div>
 
             <div className="pt-1">

@@ -30,7 +30,7 @@ class JobApplication(Base):
     id = Column(Integer, primary_key=True, index=True)
     company = Column(String, index=True, nullable=False)
     role = Column(String, nullable=False)
-    status = Column(String, default="Applied") # Pipeline stage: Wishlist, Applied, Interviewing, Offered, Rejected
+    status = Column(String, default="Applied") # Pipeline stage: Wishlist, Applied, Interviewing, Offered, Rejected, Closed, Discontinued
     url = Column(String, nullable=True)
     
     # New detail fields

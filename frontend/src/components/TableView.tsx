@@ -14,7 +14,7 @@ interface TableViewProps {
   onJobClick: (job: Job) => void;
 }
 
-const ALL_STATUSES = ['Wishlist', 'Applied', 'Interviewing', 'Offered', 'Rejected'];
+const ALL_STATUSES = ['Wishlist', 'Applied', 'Interviewing', 'Offered', 'Rejected', 'Closed', 'Discontinued'];
 
 const statusBadgeColors: Record<string, string> = {
   Wishlist: 'text-gray-300 bg-gray-500/15 border-gray-500/20',
@@ -22,6 +22,8 @@ const statusBadgeColors: Record<string, string> = {
   Interviewing: 'text-amber-300 bg-amber-500/15 border-amber-500/20',
   Offered: 'text-emerald-300 bg-emerald-500/15 border-emerald-500/20',
   Rejected: 'text-red-300 bg-red-500/15 border-red-500/20',
+  Closed: 'text-orange-300 bg-orange-500/15 border-orange-500/20',
+  Discontinued: 'text-slate-300 bg-slate-500/15 border-slate-500/20',
 };
 
 type SortKey = 'company' | 'role' | 'status' | 'location' | 'applied_date' | 'last_updated';

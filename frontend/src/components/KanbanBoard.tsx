@@ -1,4 +1,5 @@
-import React from 'react';
+import React, { useState } from 'react';
+import { Eye, EyeOff } from 'lucide-react';
 import { Job } from '../lib/api';
 import { JobCard } from './JobCard';
 
@@ -8,12 +9,12 @@ interface KanbanBoardProps {
   onJobClick: (job: Job) => void;
 }
 
-// Visual columns — "Decision" merges Offered + Rejected
+// Visual columns — "Decision" merges Offered + Rejected + Discontinued
 const COLUMNS = [
-  { key: 'Wishlist', label: 'Wishlist', statuses: ['Wishlist'] },
+  { key: 'Wishlist', label: 'Wishlist', statuses: ['Wishlist', 'Closed'] },
   { key: 'Applied', label: 'Applied', statuses: ['Applied'] },
   { key: 'Interviewing', label: 'Interviewing', statuses: ['Interviewing'] },
-  { key: 'Decision', label: 'Decision', statuses: ['Offered', 'Rejected'] },
+  { key: 'Decision', label: 'Decision', statuses: ['Offered', 'Rejected', 'Discontinued'] },
 ];
 
 const columnAccents: Record<string, string> = {
@@ -24,15 +25,33 @@ const columnAccents: Record<string, string> = {
 };
 
 export const KanbanBoard: React.FC<KanbanBoardProps> = ({ jobs, onUpdateStatus, onJobClick }) => {
+  const [showClosed, setShowClosed] = useState(false);
+
   return (
     <div className="kanban-grid gap-4 pb-8 h-full">
       {COLUMNS.map((column) => {
-        const columnJobs = jobs.filter((job) => column.statuses.includes(job.status));
+        let columnJobs = jobs.filter((job) => column.statuses.includes(job.status));
+        
+        // Specifically filter 'Closed' in Wishlist based on toggle
+        if (column.key === 'Wishlist' && !showClosed) {
+          columnJobs = columnJobs.filter(job => job.status !== 'Closed');
+        }
 
         return (
           <div key={column.key} className="flex flex-col gap-3 min-w-0">
             <div className="flex items-center justify-between px-2">
-              <h2 className="text-sm font-semibold text-white/80 uppercase tracking-wider">{column.label}</h2>
+              <div className="flex items-center gap-2">
+                <h2 className="text-sm font-semibold text-white/80 uppercase tracking-wider">{column.label}</h2>
+                {column.key === 'Wishlist' && (
+                  <button 
+                    onClick={() => setShowClosed(!showClosed)}
+                    className={`p-1 rounded-md transition-colors ${showClosed ? 'text-violet-400 bg-violet-400/10' : 'text-white/30 hover:text-white/50'}`}
+                    title={showClosed ? "Hide Closed Jobs" : "Show Closed Jobs"}
+                  >
+                    {showClosed ? <Eye className="w-3.5 h-3.5" /> : <EyeOff className="w-3.5 h-3.5" />}
+                  </button>
+                )}
+              </div>
               <span className="bg-white/10 text-white/60 text-xs px-2 py-0.5 rounded-full">{columnJobs.length}</span>
             </div>
             

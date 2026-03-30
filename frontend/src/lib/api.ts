@@ -31,7 +31,7 @@ export interface Job {
   company: string;
   role: string;
   url?: string;
-  status: string; // Wishlist, Applied, Interviewing, Offered, Rejected
+  status: string; // Wishlist, Applied, Interviewing, Offered, Rejected, Closed, Discontinued
   
   job_posted_date?: string;
   application_deadline?: string;
