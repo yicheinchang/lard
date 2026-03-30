@@ -41,23 +41,23 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({ jobs, onUpdateStatus, 
           <div key={column.key} className="flex flex-col gap-3 min-w-0">
             <div className="flex items-center justify-between px-2">
               <div className="flex items-center gap-2">
-                <h2 className="text-sm font-semibold text-white/80 uppercase tracking-wider">{column.label}</h2>
+                <h2 className="text-sm font-semibold text-[var(--fg)] opacity-80 uppercase tracking-wider">{column.label}</h2>
                 {column.key === 'Wishlist' && (
                   <button 
                     onClick={() => setShowClosed(!showClosed)}
-                    className={`p-1 rounded-md transition-colors ${showClosed ? 'text-violet-400 bg-violet-400/10' : 'text-white/30 hover:text-white/50'}`}
+                    className={`p-1 rounded-md transition-colors ${showClosed ? 'text-violet-500 bg-violet-500/10' : 'text-[var(--fg-subtle)] hover:text-[var(--fg)]'}`}
                     title={showClosed ? "Hide Closed Jobs" : "Show Closed Jobs"}
                   >
                     {showClosed ? <Eye className="w-3.5 h-3.5" /> : <EyeOff className="w-3.5 h-3.5" />}
                   </button>
                 )}
               </div>
-              <span className="bg-white/10 text-white/60 text-xs px-2 py-0.5 rounded-full">{columnJobs.length}</span>
+              <span className="bg-[var(--surface-hover)] text-[var(--fg-subtle)] text-xs px-2 py-0.5 rounded-full font-medium">{columnJobs.length}</span>
             </div>
             
-            <div className={`flex flex-col gap-3 min-h-[400px] p-2.5 rounded-2xl border ${columnAccents[column.key] || 'bg-black/20 border-white/5'}`}>
+            <div className={`flex flex-col gap-3 min-h-[400px] p-2.5 rounded-2xl border ${columnAccents[column.key] || 'bg-[var(--surface)] border-[var(--border-color)]'}`}>
               {columnJobs.length === 0 ? (
-                <div className="h-full flex items-center justify-center text-sm text-white/20 italic py-10">
+                <div className="h-full flex items-center justify-center text-sm text-[var(--fg-subtle)] opacity-40 italic py-10">
                   No jobs here
                 </div>
               ) : (

@@ -83,16 +83,34 @@ export function SettingsPage() {
     return () => setUnsavedChanges(false);
   }, [isDirty, setUnsavedChanges]);
 
+  // Track dirty state and settings in refs for cleanup closure
+  const isDirtyRef = React.useRef(false);
+  const activeThemeRef = React.useRef<ThemeOption>('dark');
+  const savedThemeRef = React.useRef<ThemeOption>('dark');
+
+  useEffect(() => {
+    isDirtyRef.current = isDirty;
+  }, [isDirty]);
+
+  useEffect(() => {
+    activeThemeRef.current = theme;
+  }, [theme]);
+
+  useEffect(() => {
+    if (settings) {
+      savedThemeRef.current = settings.theme;
+    }
+  }, [settings]);
+
   // Restore theme on unmount if changes weren't saved
   useEffect(() => {
     return () => {
-      // We check ref/current value because isDirty might be outdated in unmount closure
-      // But since we're using settings from the context, we can just re-apply it
-      if (settings) {
-        applyTheme(settings.theme);
+      // Only revert if there are unsaved changes
+      if (isDirtyRef.current) {
+        applyTheme(savedThemeRef.current);
       }
     };
-  }, [settings]);
+  }, []);
 
   // Sync from server settings
   useEffect(() => {
