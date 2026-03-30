@@ -2,17 +2,36 @@
 
 import React from 'react';
 import { Briefcase, LayoutGrid, Table2, ChevronLeft, ChevronRight, Sparkles, Settings } from 'lucide-react';
-import { ViewProvider, useView } from '@/lib/ViewContext';
+import { ViewProvider, useView, type ActiveView } from '@/lib/ViewContext';
 import { ChatAssistant } from './ChatAssistant';
 import { useSettings } from '@/lib/SettingsContext';
+import { ConfirmDialog } from './ConfirmDialog';
 
 function Sidebar() {
-  const { activeView, setActiveView, sidebarCollapsed, setSidebarCollapsed } = useView();
+  const { activeView, setActiveView, sidebarCollapsed, setSidebarCollapsed, unsavedChanges, setUnsavedChanges } = useView();
+  const [pendingView, setPendingView] = React.useState<ActiveView | null>(null);
 
   const navItems = [
     { id: 'kanban' as const, label: 'Dashboard', icon: LayoutGrid },
     { id: 'table' as const, label: 'Table View', icon: Table2 },
   ];
+
+  const handleViewChange = (view: ActiveView) => {
+    if (view === activeView) return;
+    if (unsavedChanges) {
+      setPendingView(view);
+    } else {
+      setActiveView(view);
+    }
+  };
+
+  const confirmDiscard = () => {
+    if (pendingView) {
+      setActiveView(pendingView);
+      setUnsavedChanges(false);
+      setPendingView(null);
+    }
+  };
 
   return (
     <aside
@@ -44,7 +63,7 @@ function Sidebar() {
           return (
             <button
               key={item.id}
-              onClick={() => setActiveView(item.id)}
+              onClick={() => handleViewChange(item.id)}
               className={`
                 flex items-center gap-3 p-3 rounded-xl group transition-all duration-200
                 ${sidebarCollapsed ? 'justify-center' : ''}
@@ -68,7 +87,7 @@ function Sidebar() {
 
         {/* Settings – pinned to bottom of nav */}
         <button
-          onClick={() => setActiveView('settings')}
+          onClick={() => handleViewChange('settings')}
           className={`
             flex items-center gap-3 p-3 rounded-xl group transition-all duration-200
             ${sidebarCollapsed ? 'justify-center' : ''}
@@ -103,6 +122,16 @@ function Sidebar() {
           )}
         </button>
       </div>
+
+      <ConfirmDialog
+        isOpen={pendingView !== null}
+        title="Unsaved Changes"
+        message="You have unsaved changes in Settings. Do you want to discard them and move to another page?"
+        confirmLabel="Discard & Move"
+        onConfirm={() => confirmDiscard()}
+        onCancel={() => setPendingView(null)}
+        variant="danger"
+      />
     </aside>
   );
 }

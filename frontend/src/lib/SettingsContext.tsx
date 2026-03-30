@@ -36,7 +36,7 @@ const SettingsContext = createContext<SettingsContextType | undefined>(undefined
 
 // ── Theme application helper ──────────────────────────────────────────
 
-function applyTheme(theme: 'dark' | 'light' | 'system') {
+export function applyTheme(theme: 'dark' | 'light' | 'system') {
   const root = document.documentElement;
   if (theme === 'system') {
     const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;

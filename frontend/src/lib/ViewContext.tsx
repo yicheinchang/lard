@@ -9,6 +9,8 @@ interface ViewContextType {
   setActiveView: (view: ActiveView) => void;
   sidebarCollapsed: boolean;
   setSidebarCollapsed: (collapsed: boolean) => void;
+  unsavedChanges: boolean;
+  setUnsavedChanges: (unsaved: boolean) => void;
 }
 
 const ViewContext = createContext<ViewContextType | undefined>(undefined);
@@ -16,9 +18,17 @@ const ViewContext = createContext<ViewContextType | undefined>(undefined);
 export function ViewProvider({ children }: { children: ReactNode }) {
   const [activeView, setActiveView] = useState<ActiveView>('kanban');
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [unsavedChanges, setUnsavedChanges] = useState(false);
 
   return (
-    <ViewContext.Provider value={{ activeView, setActiveView, sidebarCollapsed, setSidebarCollapsed }}>
+    <ViewContext.Provider value={{ 
+      activeView, 
+      setActiveView, 
+      sidebarCollapsed, 
+      setSidebarCollapsed,
+      unsavedChanges,
+      setUnsavedChanges
+    }}>
       {children}
     </ViewContext.Provider>
   );

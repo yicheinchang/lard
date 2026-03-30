@@ -1,11 +1,11 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import {
-  Sun, Moon, Monitor, Bot, BotOff, Server, Key, Database, RefreshCw,
+import { Sun, Moon, Monitor, Bot, BotOff, Server, Key, Database, RefreshCw,
   CheckCircle2, XCircle, Loader2, AlertTriangle, Sparkles, ChevronDown
 } from 'lucide-react';
-import { useSettings } from '@/lib/SettingsContext';
+import { useSettings, applyTheme } from '@/lib/SettingsContext';
+import { useView } from '@/lib/ViewContext';
 import {
   testLlmConnection,
   testEmbeddingConnection,
@@ -27,6 +27,7 @@ type EmbeddingProvider = 'default' | 'ollama' | 'openai';
 
 export function SettingsPage() {
   const { settings, updateSettings: ctxUpdate, refreshSettings } = useSettings();
+  const { setUnsavedChanges } = useView();
 
   // Local form state (buffered so we can save explicitly)
   const [theme, setTheme] = useState<ThemeOption>('dark');
@@ -61,6 +62,37 @@ export function SettingsPage() {
 
   const embeddingChanged = embeddingProvider !== originalEmbeddingProvider ||
     JSON.stringify(embeddingConfig) !== JSON.stringify(originalEmbeddingConfig);
+
+  // ── Dirty State Tracking ──────────────────────────────────────────
+
+  const isDirty = React.useMemo(() => {
+    if (!settings) return false;
+    return (
+      theme !== settings.theme ||
+      aiEnabled !== settings.ai_enabled ||
+      llmProvider !== settings.llm_provider ||
+      JSON.stringify(llmConfig) !== JSON.stringify(settings.llm_config) ||
+      embeddingProvider !== settings.embedding_provider ||
+      JSON.stringify(embeddingConfig) !== JSON.stringify(settings.embedding_config)
+    );
+  }, [theme, aiEnabled, llmProvider, llmConfig, embeddingProvider, embeddingConfig, settings]);
+
+  // Update global navigation guard
+  useEffect(() => {
+    setUnsavedChanges(isDirty);
+    return () => setUnsavedChanges(false);
+  }, [isDirty, setUnsavedChanges]);
+
+  // Restore theme on unmount if changes weren't saved
+  useEffect(() => {
+    return () => {
+      // We check ref/current value because isDirty might be outdated in unmount closure
+      // But since we're using settings from the context, we can just re-apply it
+      if (settings) {
+        applyTheme(settings.theme);
+      }
+    };
+  }, [settings]);
 
   // Sync from server settings
   useEffect(() => {
@@ -305,7 +337,10 @@ export function SettingsPage() {
               return (
                 <button
                   key={opt.value}
-                  onClick={() => setTheme(opt.value)}
+                  onClick={() => {
+                    setTheme(opt.value);
+                    applyTheme(opt.value);
+                  }}
                   className={`
                     p-4 rounded-xl border-2 transition-all text-left group
                     ${active
