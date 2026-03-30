@@ -2,8 +2,11 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
 import ReactMarkdown from 'react-markdown';
+import MdEditor from 'react-markdown-editor-lite';
+import MarkdownIt from 'markdown-it';
+import 'react-markdown-editor-lite/lib/index.css';
 import { Job, getStepTypes, StepType, addInterviewStep, updateInterviewStep, updateJob, uploadJobDocument, deleteJobDocument, DocumentMeta } from '../lib/api';
-import { X, Calendar, User, Mail, Plus, Circle, FileText, Edit2, Save, MessageSquare, Paperclip, Trash2, ExternalLink, Link as LinkIcon } from 'lucide-react';
+import { X, Calendar, User, Mail, Plus, Circle, FileText, Edit2, Save, MessageSquare, Paperclip, Trash2, ExternalLink, Link as LinkIcon, StickyNote } from 'lucide-react';
 import { ConfirmDialog } from './ConfirmDialog';
 import { DocumentPreview } from './DocumentPreview';
 
@@ -14,7 +17,8 @@ interface JobDetailViewProps {
 }
 
 export const JobDetailView: React.FC<JobDetailViewProps> = ({ job, onClose, onJobUpdated }) => {
-  const [activeTab, setActiveTab] = useState<'info' | 'pipeline'>('pipeline');
+  const [activeTab, setActiveTab] = useState<'info' | 'pipeline' | 'notes'>('pipeline');
+  const mdParser = new MarkdownIt();
   const [stepTypes, setStepTypes] = useState<StepType[]>([]);
   const [newStepName, setNewStepName] = useState('');
   const [newStepDate, setNewStepDate] = useState('');
@@ -26,6 +30,10 @@ export const JobDetailView: React.FC<JobDetailViewProps> = ({ job, onClose, onJo
   // Notes state
   const [editingNoteId, setEditingNoteId] = useState<number | null>(null);
   const [noteContent, setNoteContent] = useState<string>('');
+
+  // Job-level Notes state
+  const [jobNotes, setJobNotes] = useState<string>('');
+  const [isSavingNotes, setIsSavingNotes] = useState(false);
 
   // Advance state
   const [showAdvanceConfirm, setShowAdvanceConfirm] = useState(false);
@@ -70,8 +78,31 @@ export const JobDetailView: React.FC<JobDetailViewProps> = ({ job, onClose, onJo
     if (job) {
       getStepTypes().then(setStepTypes).catch(console.error);
       setEditFormData(job);
+      setJobNotes(job.notes || '');
     }
   }, [job]);
+
+  // Debounced auto-save for job notes
+  useEffect(() => {
+    if (!job || job.notes === jobNotes) return;
+
+    const timeoutId = setTimeout(async () => {
+      setIsSavingNotes(true);
+      try {
+        await updateJob(job.id!, { notes: jobNotes });
+        // We don't call onJobUpdated() here to avoid a re-render cycle 
+        // that might reset the cursor in the editor, but we update the local job object if possible
+        // Better: let the parent know but handle the local sync carefully.
+        // For now, just fire and forget the save.
+      } catch (err) {
+        console.error("Failed to auto-save notes", err);
+      } finally {
+        setIsSavingNotes(false);
+      }
+    }, 1000);
+
+    return () => clearTimeout(timeoutId);
+  }, [jobNotes, job?.id]);
 
   const sortedSteps = useMemo(() => {
     if (!job?.steps) return [];
@@ -191,6 +222,15 @@ export const JobDetailView: React.FC<JobDetailViewProps> = ({ job, onClose, onJo
             onClick={() => setActiveTab('info')}
           >
             Job Details & Contacts
+          </button>
+          <button 
+            className={`py-3 px-4 text-sm font-medium border-b-2 transition-colors ${activeTab === 'notes' ? 'border-violet-500 text-violet-400' : 'border-transparent text-gray-500 hover:text-gray-300'}`}
+            onClick={() => setActiveTab('notes')}
+          >
+            <div className="flex items-center gap-2">
+               Additional Notes
+               {isSavingNotes && <span className="w-1.5 h-1.5 bg-violet-400 rounded-full animate-pulse" title="Saving..."></span>}
+            </div>
           </button>
         </div>
 
@@ -485,6 +525,36 @@ export const JobDetailView: React.FC<JobDetailViewProps> = ({ job, onClose, onJo
                   )}
                </div>
              </div>
+          )}
+
+          {activeTab === 'notes' && (
+            <div className="h-full flex flex-col">
+               <div className="flex items-center justify-between mb-4">
+                  <div>
+                    <h3 className="text-lg font-semibold text-white/90 flex items-center gap-2">
+                       <StickyNote className="w-5 h-5 text-violet-400" /> Application Notes
+                    </h3>
+                    <p className="text-xs text-gray-500">Document research, thoughts, or preparation for this specific role. Auto-saves as you type.</p>
+                  </div>
+                  {isSavingNotes ? (
+                    <span className="text-[10px] uppercase tracking-widest text-violet-400 font-bold animate-pulse">Saving...</span>
+                  ) : (
+                    <span className="text-[10px] uppercase tracking-widest text-gray-600 font-bold">Saved</span>
+                  )}
+               </div>
+               
+               <div className="flex-1 min-h-[400px] mb-8 job-notes-editor">
+                  <MdEditor 
+                    style={{ height: '100%', background: 'transparent' }}
+                    value={jobNotes}
+                    renderHTML={text => mdParser.render(text)}
+                    onChange={({ text }) => setJobNotes(text)}
+                    placeholder="Start documenting your thoughts here... supports Markdown!"
+                    view={{ menu: true, md: true, html: false }}
+                    canView={{ menu: true, md: true, html: true, fullScreen: true, hideMenu: true }}
+                  />
+               </div>
+            </div>
           )}
         </div>
       </div>

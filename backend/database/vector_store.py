@@ -140,6 +140,22 @@ def rebuild_vector_store():
             except Exception as e:
                 print(f"[vector_store] Failed to ingest document {doc.id}: {e}")
 
+        # Job Notes
+        jobs_with_notes = db.query(JobApplication).filter(JobApplication.notes.isnot(None)).all()
+        for job in jobs_with_notes:
+            try:
+                manager.ingest_text(
+                    document_id=f"job_notes_{job.id}",
+                    text=job.notes,
+                    metadata={
+                        "job_id": job.id,
+                        "source": f"{job.company} - {job.role} (Notes)",
+                        "type": "job_notes",
+                    },
+                )
+            except Exception as e:
+                print(f"[vector_store] Failed to ingest notes for job {job.id}: {e}")
+
         print("[vector_store] Rebuild complete.")
     finally:
         db.close()

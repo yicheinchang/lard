@@ -112,6 +112,47 @@ Global configuration persisted on the server.
 
 ---
 
+## 🗄️ Data Storage & Persistence
+
+### 1. Relational Database (SQLAlchemy + SQLite: `tracker.db`)
+
+#### `job_applications`
+- `id`: (Integer, PK)
+- `company`: (String)
+- `role`: (String)
+- `status`: (String) Pipeline stage: Wishlist, Applied, etc.
+- `url`: (String) Application web link.
+- `job_posted_date`, `application_deadline`: (DateTime)
+- `company_job_id`, `location`, `salary_range`: (String)
+- `description`: (Text, Markdown)
+- `notes`: (Text, Markdown) User notes.
+- `hr_email`, `hiring_manager_name`, `hiring_manager_email`: (String)
+- `applied_date`, `last_updated`: (DateTime)
+
+#### `interview_steps`
+- `id`: (Integer, PK)
+- `job_application_id`: (FK -> `job_applications.id`)
+- `step_type_id`: (FK -> `step_types.id`)
+- `step_date`: (DateTime)
+- `status`: (String) Scheduled, Completed, etc.
+- `notes`: (Text) Specific step feedback.
+
+#### `step_types` & `documents`
+- `step_types`: Configuration table for unique interview types.
+- `documents`: Metadata/paths for PDFs and MD files.
+
+### 2. Vector Store (ChromaDB: `chroma_db/`)
+
+- **Collection**: `jobs_collection`
+- **Embedding Logic**: Hybrid (Ollama/OpenAI/Local fallback).
+- **Document Categorization** (`metadata.type`):
+  - `job_description`: Primary job text (Source ID: `job_{id}`).
+  - `document`: Uploaded files (Source ID: `doc_{id}`).
+  - `job_notes`: User-provided Markdown notes (Source ID: `job_notes_{id}`).
+- **Chunking Strategy**: RecursiveCharacterTextSplitter (1000/200 overlap).
+
+---
+
 ## 🔌 API Endpoints (Prefix: `/api`)
 
 ### Jobs (`/jobs`)

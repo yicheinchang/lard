@@ -62,6 +62,7 @@ class JobBase(BaseModel):
     hiring_manager_email: Optional[str] = None
     headhunter_name: Optional[str] = None
     headhunter_email: Optional[str] = None
+    notes: Optional[str] = None
 
 class JobCreate(JobBase):
     pass
@@ -82,6 +83,7 @@ class JobUpdate(BaseModel):
     hiring_manager_email: Optional[str] = None
     headhunter_name: Optional[str] = None
     headhunter_email: Optional[str] = None
+    notes: Optional[str] = None
 
 class JobResponse(JobBase):
     id: int
@@ -134,8 +136,10 @@ def update_job(job_id: int, job_update: JobUpdate, db: Session = Depends(get_db)
         raise HTTPException(status_code=404, detail="Job not found")
     
     # Very permissive dict update to allow dynamic patch from the UI form
+    
     update_data = job_update.model_dump(exclude_unset=True)
     description_changed = "description" in update_data and update_data["description"] != db_job.description
+    notes_changed = "notes" in update_data and update_data["notes"] != db_job.notes
     
     for key, value in update_data.items():
         if hasattr(db_job, key):
@@ -154,6 +158,17 @@ def update_job(job_id: int, job_update: JobUpdate, db: Session = Depends(get_db)
             )
         except Exception as e:
             print(f"Warning: Failed to vectorize job description {db_job.id}: {e}")
+            
+    if notes_changed and db_job.notes:
+        try:
+            from database.vector_store import vector_store
+            vector_store.ingest_text(
+                document_id=f"job_notes_{db_job.id}",
+                text=db_job.notes,
+                metadata={"job_id": db_job.id, "source": f"{db_job.company} - {db_job.role} (Notes)", "type": "job_notes"}
+            )
+        except Exception as e:
+            print(f"Warning: Failed to vectorize job notes {db_job.id}: {e}")
             
     return db_job
 

@@ -45,6 +45,7 @@ export interface Job {
   hiring_manager_email?: string;
   headhunter_name?: string;
   headhunter_email?: string;
+  notes?: string;
 
   applied_date?: string;
   last_updated?: string;
