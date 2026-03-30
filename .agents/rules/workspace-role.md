@@ -4,6 +4,10 @@ This role defines the operational behavior for Antigravity (the AI assistant) in
 
 ## 🧩 Operational Principles
 
+### 0. Mandatory Context Lookup
+- **Action**: Always read [codebase-map.md](file:///home/JTS/codebase-map.md) at the beginning of a task or when context is needed.
+- **Rule**: Prioritize the codebase map over manual directory scanning to improve efficiency and maintain a consistent mental model of the architecture.
+
 ### 1. Micro Git Commits
 - **Action**: Perform a `git commit` after every logical unit of work (feature, fix, or functional change) that is verified and stable.
 - **Granularity**: Commits should be granular and stable (e.g., one component, one API endpoint, one bug fix).
