@@ -1,6 +1,6 @@
 {
   "name": "frontend",
-  "version": "0.6.5",
+  "version": "0.6.6",
   "private": true,
   "scripts": {
     "dev": "next dev",
@@ -9,6 +9,7 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@tailwindcss/typography": "^0.5.19",
     "axios": "^1.14.0",
     "lucide-react": "^1.7.0",
     "markdown-it": "^14.1.1",

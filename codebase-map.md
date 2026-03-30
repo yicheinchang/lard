@@ -52,7 +52,7 @@ This document provides a summary of the project's architecture, tech stack, and 
   - `KanbanBoard.tsx`: Drag-and-drop pipeline visualization.
   - `TableView.tsx`: Density-rich list view of applications.
   - `JobCard.tsx`: Individual job item in the Kanban board.
-  - `JobDetailView.tsx`: Comprehensive slide-over for job details and document management.
+  - `JobDetailView.tsx`: Core component for job application management. Consists of multiple tabs including "Interview Pipeline", "Job Details", and "Application Notes". Integrates `MdEditor` for rich text editing and `ReactMarkdown` with `prose` for rendering.
   - `AddJobModal.tsx`: Multi-step form for new job entries and initial AI processing.
   - `ChatAssistant.tsx`: Semi-permanent drawer for the AI conversational agent.
   - `SettingsPage.tsx`: Integrated configuration for LLMs, themes, and system toggles.
@@ -80,7 +80,7 @@ Instead of separate routes, job details are shown in an overlay (`JobDetailView.
 The `ChatAssistant` is a global component accessible from any page. It maintains its own state and can be toggled via a floating action button or keyboard shortcuts.
 
 ### 4. Dynamic Theme Store
-The UI uses Tailwind CSS 4 with CSS variables defined in `globals.css`. These variables are updated dynamically by the `SettingsContext`, supporting instant theme switching between Dark/Light and customizable accent colors. Key components like `JobDetailView` and `KanbanBoard` are fully theme-aware, ensuring readability in both Light and Dark modes.
+The UI uses Tailwind CSS 4 with `globals.css`: Global CSS containing theme variables, glassmorphism utilities, and the `@plugin "@tailwindcss/typography"` registration for Markdown rendering. These variables are updated dynamically by the `SettingsContext`, supporting instant theme switching between Dark/Light and customizable accent colors. Key components like `JobDetailView` and `KanbanBoard` are fully theme-aware, ensuring readability in both Light and Dark modes.
 
 ---
 

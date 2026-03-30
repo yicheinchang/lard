@@ -234,7 +234,7 @@ export const JobDetailView: React.FC<JobDetailViewProps> = ({ job, onClose, onJo
             className={`py-3 px-4 text-sm font-medium border-b-2 transition-colors ${activeTab === 'info' ? 'border-violet-500 text-violet-500' : 'border-transparent text-[var(--fg-muted)] hover:text-[var(--fg)]'}`}
             onClick={() => setActiveTab('info')}
           >
-            Job Details & Contacts
+            Job Details
           </button>
         </div>
 
@@ -357,15 +357,20 @@ export const JobDetailView: React.FC<JobDetailViewProps> = ({ job, onClose, onJo
                 </div>
 
                 {isEditingInfo ? (
-                  <textarea
-                    className="w-full bg-[var(--input-bg)] border border-violet-500/50 rounded-lg px-3 py-2 text-[var(--fg)] placeholder-[var(--fg-subtle)] focus:outline-none min-h-[300px] text-sm font-mono"
-                    value={editFormData.description || ''}
-                    onChange={(e) => handleEditChange('description', e.target.value)}
-                    placeholder="Enter Job Description in Markdown format..."
-                  />
+                  <div className="min-h-[400px] job-description-editor">
+                    <MdEditor 
+                      style={{ height: '400px', background: 'transparent' }}
+                      value={editFormData.description || ''}
+                      renderHTML={text => mdParser.render(text)}
+                      onChange={({ text }) => handleEditChange('description', text)}
+                      placeholder="Enter Job Description in Markdown format..."
+                      view={{ menu: true, md: true, html: false }}
+                      canView={{ menu: true, md: true, html: true, both: true, fullScreen: true, hideMenu: true }}
+                    />
+                  </div>
                 ) : (
                   job.description ? (
-                    <div className="prose dark:prose-invert prose-sm max-w-none text-[var(--fg-muted)]">
+                    <div className="prose dark:prose-invert prose-sm max-w-none text-[var(--fg-muted)] prose-headings:text-[var(--fg)] prose-strong:text-[var(--fg)] prose-li:text-[var(--fg-muted)]">
                       <ReactMarkdown>{job.description}</ReactMarkdown>
                     </div>
                   ) : (
