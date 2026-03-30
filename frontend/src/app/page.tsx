@@ -37,6 +37,12 @@ export default function Home() {
     fetchJobs();
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Reset overlays when switching views
+  useEffect(() => {
+    setSelectedJob(null);
+    setIsModalOpen(false);
+  }, [activeView]);
+
   const handleUpdateStatus = async (id: number, status: string, file?: File | null, docType?: string) => {
     try {
       await updateJob(id, { status });
