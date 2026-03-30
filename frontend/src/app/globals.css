@@ -199,3 +199,49 @@ input[type="date"].style-date::-webkit-calendar-picker-indicator {
 [data-theme="light"] .bg-white.text-black:hover {
   background-color: #333;
 }
+
+/* ── Markdown Editor Theme Overrides ──────────────────────────────── */
+.rc-md-editor {
+  border: 1px solid var(--border-color) !important;
+  background-color: var(--input-bg) !important;
+}
+
+.rc-md-editor .editor-container > .section {
+  background-color: transparent !important;
+}
+
+.rc-md-editor .editor-container .sec-md .input {
+  color: var(--fg) !important;
+  background-color: transparent !important;
+}
+
+.rc-md-editor .editor-container .sec-html .html-wrap {
+  color: var(--fg) !important;
+  background-color: transparent !important;
+}
+
+.rc-md-editor .rc-md-navigation {
+  background-color: var(--bg) !important;
+  border-bottom: 1px solid var(--border-color) !important;
+}
+
+.rc-md-editor .rc-md-navigation .button-wrap .button {
+  color: var(--fg-muted) !important;
+}
+
+.rc-md-editor .rc-md-navigation .button-wrap .button:hover {
+  color: var(--primary) !important;
+}
+
+/* Specific Dark Mode overrides to prevent white background bleed */
+[data-theme="dark"] .rc-md-editor {
+  background-color: rgba(0, 0, 0, 0.2) !important;
+}
+
+[data-theme="dark"] .rc-md-editor .editor-container .sec-md .input {
+  color: #e2e8f0 !important;
+}
+
+[data-theme="dark"] .rc-md-editor .rc-md-navigation {
+  background-color: #111118 !important;
+}

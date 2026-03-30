@@ -128,6 +128,11 @@ export const updateJob = async (id: number, jobUpdate: Partial<Job>) => {
   return response.data;
 };
 
+export const deleteJob = async (id: number) => {
+  const response = await api.delete(`/jobs/${id}`);
+  return response.data;
+};
+
 export const getStepTypes = async () => {
   const response = await api.get('/steps/types');
   return response.data;

@@ -17,7 +17,7 @@ interface JobDetailViewProps {
 }
 
 export const JobDetailView: React.FC<JobDetailViewProps> = ({ job, onClose, onJobUpdated }) => {
-  const [activeTab, setActiveTab] = useState<'info' | 'pipeline' | 'notes'>('pipeline');
+  const [activeTab, setActiveTab] = useState<'info' | 'pipeline'>('pipeline');
   const mdParser = new MarkdownIt();
   const [stepTypes, setStepTypes] = useState<StepType[]>([]);
   const [newStepName, setNewStepName] = useState('');
@@ -34,6 +34,10 @@ export const JobDetailView: React.FC<JobDetailViewProps> = ({ job, onClose, onJo
   // Job-level Notes state
   const [jobNotes, setJobNotes] = useState<string>('');
   const [isSavingNotes, setIsSavingNotes] = useState(false);
+  const [isEditingJobNotes, setIsEditingJobNotes] = useState(false);
+
+  // Deletion state
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   // Advance state
   const [showAdvanceConfirm, setShowAdvanceConfirm] = useState(false);
@@ -190,6 +194,20 @@ export const JobDetailView: React.FC<JobDetailViewProps> = ({ job, onClose, onJo
     }
   };
 
+  const handleDeleteJob = async () => {
+    if (!job?.id) return;
+    try {
+      const { deleteJob } = await import('../lib/api');
+      await deleteJob(job.id);
+      onJobUpdated();
+      onClose();
+    } catch (err) {
+      console.error("Failed to delete job", err);
+      alert("Failed to delete application.");
+    }
+    setShowDeleteConfirm(false);
+  };
+
   const stepStatusOptions = ['Requested', 'Scheduled', 'Passed', 'Completed'];
 
   return (
@@ -222,15 +240,6 @@ export const JobDetailView: React.FC<JobDetailViewProps> = ({ job, onClose, onJo
             onClick={() => setActiveTab('info')}
           >
             Job Details & Contacts
-          </button>
-          <button 
-            className={`py-3 px-4 text-sm font-medium border-b-2 transition-colors ${activeTab === 'notes' ? 'border-violet-500 text-violet-400' : 'border-transparent text-gray-500 hover:text-gray-300'}`}
-            onClick={() => setActiveTab('notes')}
-          >
-            <div className="flex items-center gap-2">
-               Additional Notes
-               {isSavingNotes && <span className="w-1.5 h-1.5 bg-violet-400 rounded-full animate-pulse" title="Saving..."></span>}
-            </div>
           </button>
         </div>
 
@@ -422,6 +431,52 @@ export const JobDetailView: React.FC<JobDetailViewProps> = ({ job, onClose, onJo
                       )}
                     </div>
                   </div>
+
+                  {/* Notes Section Integrated into Info Tab */}
+                  <div className="mt-8 pt-6 border-t border-white/10">
+                    <div className="flex items-center justify-between mb-4">
+                      <div className="flex items-center gap-2">
+                        <h3 className="text-lg font-semibold text-white/90 flex items-center gap-2">
+                          <StickyNote className="w-5 h-5 text-violet-400" /> Additional Notes
+                        </h3>
+                        {isSavingNotes && <span className="w-1.5 h-1.5 bg-violet-400 rounded-full animate-pulse"></span>}
+                      </div>
+                      <button 
+                        onClick={() => setIsEditingJobNotes(!isEditingJobNotes)}
+                        className="text-xs font-medium text-violet-400 hover:text-violet-300 flex items-center gap-1.5 transition-colors bg-violet-400/10 px-2.5 py-1.5 rounded-lg border border-violet-400/20"
+                      >
+                        {isEditingJobNotes ? (
+                          <> <FileText className="w-3.5 h-3.5" /> Finish Editing </>
+                        ) : (
+                          <> <Edit2 className="w-3.5 h-3.5" /> {jobNotes ? 'Edit Notes' : 'Add Notes'} </>
+                        )}
+                      </button>
+                    </div>
+
+                    {isEditingJobNotes ? (
+                      <div className="min-h-[300px] job-notes-editor">
+                        <MdEditor 
+                          style={{ height: '300px', background: 'transparent' }}
+                          value={jobNotes}
+                          renderHTML={text => mdParser.render(text)}
+                          onChange={({ text }) => setJobNotes(text)}
+                          placeholder="Your notes here..."
+                          view={{ menu: true, md: true, html: false }}
+                          canView={{ menu: true, md: true, html: true, fullScreen: true, hideMenu: true }}
+                        />
+                      </div>
+                    ) : (
+                      <div className="glass p-4 rounded-xl min-h-[100px]">
+                        {jobNotes ? (
+                          <div className="prose prose-invert prose-sm max-w-none text-gray-300">
+                            <ReactMarkdown>{jobNotes}</ReactMarkdown>
+                          </div>
+                        ) : (
+                          <p className="text-gray-500 italic text-sm">No additional notes for this application.</p>
+                        )}
+                      </div>
+                    )}
+                  </div>
                </div>
 
                <div className="w-full lg:w-80 space-y-6 flex-shrink-0">
@@ -470,7 +525,7 @@ export const JobDetailView: React.FC<JobDetailViewProps> = ({ job, onClose, onJo
                       <button onClick={() => { setIsEditingInfo(false); setEditFormData(job); }} className="w-full mt-2 text-gray-400 hover:text-white text-sm transition-colors">Cancel</button>
                     </div>
                   ) : (
-                    <div className="space-y-4 text-sm">
+                    <div className="space-y-4 text-sm flex flex-col h-full">
 
                       {/* Application URL */}
                       {job.url && (
@@ -521,6 +576,16 @@ export const JobDetailView: React.FC<JobDetailViewProps> = ({ job, onClose, onJo
                           <span className="text-gray-300">{job.application_deadline ? new Date(job.application_deadline).toLocaleDateString() : '-'}</span>
                         </div>
                       </div>
+
+                      {/* Delete Button at the very bottom of sidebar */}
+                      <div className="mt-auto pt-8">
+                        <button 
+                          onClick={() => setShowDeleteConfirm(true)}
+                          className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-red-400 hover:text-red-300 hover:bg-red-500/10 border border-red-500/20 hover:border-red-500/40 transition-all text-xs font-medium"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" /> Remove Application
+                        </button>
+                      </div>
                     </div>
                   )}
                </div>
@@ -567,6 +632,16 @@ export const JobDetailView: React.FC<JobDetailViewProps> = ({ job, onClose, onJo
         onCancel={() => setShowAdvanceConfirm(false)}
         confirmLabel="Move to Interviewing"
         variant="default"
+      />
+
+      <ConfirmDialog
+        isOpen={showDeleteConfirm}
+        title="Delete Application?"
+        message={`Are you sure you want to remove this application for ${job.company}? All interview steps and history will be permanently deleted. This action cannot be undone.`}
+        onConfirm={handleDeleteJob}
+        onCancel={() => setShowDeleteConfirm(false)}
+        confirmLabel="Delete Permanently"
+        variant="danger"
       />
 
       <DocumentPreview 
