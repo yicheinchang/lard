@@ -175,8 +175,8 @@ Global configuration persisted on the server.
 
 ## 🧠 Critical Logic & Patterns
 
-### 1. RAG (Retrieval-Augmented Generation)
-When a job description is added or a document is uploaded, it is automatically processed and stored in **ChromaDB**. The AI Assistant uses these embeddings to provide context-aware answers about the user's specific job search.
+### 1. Note Ingestion & RAG
+When `JobApplication.notes` is updated via the integrated editor in the **Job Details** tab, the change triggers an automatic re-ingestion of the text into ChromaDB under the `job_notes` type. This ensures the AI Assistant can retrieve the user's personal thoughts and research during chat sessions.
 
 ### 2. Multi-Provider AI
 The system is designed to be model-agnostic. Through `llm_factory.py`, it can switch between:
