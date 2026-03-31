@@ -1,8 +1,9 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Sparkles, Loader2, Link as LinkIcon, Building2, Briefcase, Plus, ChevronDown, ChevronUp, FileText, Upload, Zap, Paperclip } from 'lucide-react';
 import { extractJobFromUrl, extractJobFromPdf, uploadJobDocument, checkJobDuplicate, getCompanies, Job } from '../lib/api';
 import { useSettings } from '@/lib/SettingsContext';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
+import { Ticker } from './Ticker';
 
 interface AddJobModalProps {
   isOpen: boolean;
@@ -22,6 +23,7 @@ export const AddJobModal: React.FC<AddJobModalProps> = ({ isOpen, onClose, onAdd
   const [formData, setFormData] = useState<Partial<Job>>(initialFormData);
   const [aiEnabled, setAiEnabled] = useState(true);
   const [isExtracting, setIsExtracting] = useState(false);
+  const [extractionStatus, setExtractionStatus] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
   const [showAdvanced, setShowAdvanced] = useState(false);
@@ -77,31 +79,70 @@ export const AddJobModal: React.FC<AddJobModalProps> = ({ isOpen, onClose, onAdd
   const handleExtract = async () => {
     setError('');
     setIsExtracting(true);
+    setExtractionStatus('Initializing AI...');
     
     // Create new abort controller
     if (abortControllerRef.current) abortControllerRef.current.abort();
     abortControllerRef.current = new AbortController();
 
     try {
-      let data: any;
-      if (selectedFile) {
-        data = await extractJobFromPdf(selectedFile, abortControllerRef.current.signal);
-      } else if (formData.url) {
-        data = await extractJobFromUrl(formData.url, abortControllerRef.current.signal);
-      } else {
-        setError('Please provide a URL or upload a file to auto-fill.');
-        setIsExtracting(false);
-        return;
+      const endpoint = selectedFile ? '/api/ai/extract-pdf-stream' : '/api/ai/extract-url-stream';
+      const body = selectedFile ? (() => {
+        const fd = new FormData();
+        fd.append('file', selectedFile);
+        return fd;
+      })() : JSON.stringify({ url: formData.url });
+
+      const response = await fetch(`http://localhost:8000${endpoint}`, {
+        method: 'POST',
+        headers: selectedFile ? {} : { 'Content-Type': 'application/json' },
+        body,
+        signal: abortControllerRef.current.signal,
+      });
+
+      if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+      if (!response.body) throw new Error('ReadableStream not supported');
+
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = '';
+
+      while (true) {
+        const { value, done } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n\n');
+        buffer = lines.pop() || '';
+
+        for (const line of lines) {
+          if (line.startsWith('data: ')) {
+            const jsonStr = line.replace('data: ', '');
+            try {
+              const data = JSON.parse(jsonStr);
+              if (data.event === 'progress' || data.event === 'extracting' || data.event === 'field_done') {
+                setExtractionStatus(data.msg);
+              } else if (data.event === 'final_result') {
+                applyExtraction(data);
+              } else if (data.event === 'error') {
+                setError(data.msg);
+              }
+            } catch (e) {
+              console.error('Error parsing SSE:', e);
+            }
+          }
+        }
       }
-      applyExtraction(data);
     } catch (err: any) {
-      if (err.name === 'AbortError' || err.name === 'CanceledError' || axios.isCancel(err)) {
+      if (err.name === 'AbortError' || err.name === 'CanceledError') {
         console.log('Extraction aborted');
+        setExtractionStatus('Cancelled');
       } else {
         handleExtractError(err);
       }
     } finally {
       setIsExtracting(false);
+      setExtractionStatus('');
       abortControllerRef.current = null;
     }
   };
@@ -112,6 +153,7 @@ export const AddJobModal: React.FC<AddJobModalProps> = ({ isOpen, onClose, onAdd
       abortControllerRef.current = null;
     }
     setIsExtracting(false);
+    setExtractionStatus('');
   };
 
   const applyExtraction = (data: any) => {
@@ -382,12 +424,24 @@ export const AddJobModal: React.FC<AddJobModalProps> = ({ isOpen, onClose, onAdd
 
                 <button
                   type="button"
-                  onClick={handleExtract}
-                  disabled={isExtracting || !canExtract}
-                  className="w-full bg-violet-600 hover:bg-violet-500 disabled:bg-violet-600/30 disabled:cursor-not-allowed text-white px-4 py-2.5 rounded-lg font-medium transition-colors flex items-center justify-center gap-2"
+                  onClick={() => {
+                    if (isExtracting) {
+                      setShowCancelExtractionConfirm(true);
+                    } else {
+                      handleExtract();
+                    }
+                  }}
+                  disabled={!isExtracting && !canExtract}
+                  className={`w-full ${isExtracting ? 'bg-violet-600/20 border border-violet-500/30' : 'bg-violet-600 hover:bg-violet-500'} text-white px-4 py-2.5 rounded-lg font-medium transition-all flex items-center justify-center gap-2 overflow-hidden min-h-[44px]`}
                 >
                   {isExtracting ? (
-                    <><Loader2 className="w-4 h-4 animate-spin" /> Extracting…</>
+                    <div className="flex items-center gap-3 w-full px-2 animate-fade-in">
+                      <Loader2 className="w-4 h-4 animate-spin text-violet-400 shrink-0" />
+                      <div className="flex-1 overflow-hidden">
+                        <Ticker text={extractionStatus} />
+                      </div>
+                      <span className="text-[10px] text-violet-400 font-bold uppercase tracking-widest shrink-0">Stop</span>
+                    </div>
                   ) : (
                     <><Sparkles className="w-4 h-4" /> Auto-fill from {selectedFile ? 'File' : 'URL'}</>
                   )}

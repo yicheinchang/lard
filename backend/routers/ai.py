@@ -1,7 +1,10 @@
-from fastapi import APIRouter, HTTPException, Request
+from fastapi import APIRouter, HTTPException, Request, UploadFile, File
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 from ai.graph import agent_app
 import httpx
+import json
+import asyncio
 from bs4 import BeautifulSoup
 from config import load_app_settings
 
@@ -47,18 +50,76 @@ class TextExtractRequest(BaseModel):
 
 @router.post("/extract-url")
 async def extract_from_url(req: ExtractRequest, request: Request):
+    # Backward compatibility: Wait for stream to finish and return JSON
+    result = {"extracted": None, "error": None}
+    async for event in _extract_stream_generator(request, url=req.url):
+        data = json.loads(event.replace("data: ", ""))
+        if data["event"] == "final_result":
+            result["extracted"] = data["data"]
+        elif data["event"] == "error":
+            result["error"] = data["msg"]
+    return result
+
+async def _extract_stream_generator(request: Request, url: str = None, text: str = None):
+    """Generator for SSE events during extraction."""
     _check_ai_enabled()
-    async with httpx.AsyncClient() as client:
+    
+    # 1. Initial Status
+    if url:
+        yield f"data: {json.dumps({'event': 'progress', 'msg': f'Reading URL: {url[:60]}...'})}\n\n"
         try:
-            resp = await client.get(req.url, timeout=10)
-            resp.raise_for_status()
-            text = _clean_html(resp.text)
-            text = _preprocess_text(text)
+            async with httpx.AsyncClient() as client:
+                resp = await client.get(url, timeout=15)
+                resp.raise_for_status()
+                yield f"data: {json.dumps({'event': 'progress', 'msg': 'Cleaning HTML content...'})}\n\n"
+                text = _clean_html(resp.text)
+                snippet = _preprocess_text(text, max_chars=100)
+                yield f"data: {json.dumps({'event': 'progress', 'msg': f'Processing text: {snippet[:60]}...'})}\n\n"
+                text = _preprocess_text(text)
         except Exception as e:
-            raise HTTPException(status_code=400, detail=str(e))
-            
-    result = await agent_app.ainvoke({"text": text, "url": req.url, "request": request})
-    return {"extracted": result["extracted_data"], "error": result["error"]}
+            yield f"data: {json.dumps({'event': 'error', 'msg': str(e)})}\n\n"
+            return
+    elif text:
+        yield f"data: {json.dumps({'event': 'progress', 'msg': f'Processing input text...'})}\n\n"
+        text = _preprocess_text(text)
+        
+    # 2. AI Execution with Progress Callback
+    async def progress_callback(data: dict):
+        # Translate graph events to SSE events
+        await asyncio.sleep(0.1) # Smooth out updates
+        # Ensure we yield string in the correct format for the outer loop's perspective
+        # But this is a callback, so we need to put it into a queue or yield it.
+        # Simplest: use a queue.
+        await q.put(f"data: {json.dumps(data)}\n\n")
+
+    q = asyncio.Queue()
+
+    async def run_ai():
+        try:
+            result = await agent_app.ainvoke({"text": text, "url": url, "request": request, "progress_callback": progress_callback})
+            await q.put(f"data: {json.dumps({'event': 'final_result', 'data': result['extracted_data'], 'error': result['error']})}\n\n")
+        except Exception as e:
+            await q.put(f"data: {json.dumps({'event': 'error', 'msg': str(e)})}\n\n")
+        finally:
+            await q.put(None)
+
+    # Start AI in background
+    asyncio.create_task(run_ai())
+
+    # Yield items from the queue until AI finish (None)
+    while True:
+        item = await q.get()
+        if item is None:
+            break
+        yield item
+
+@router.post("/extract-url-stream")
+async def extract_url_stream(req: ExtractRequest, request: Request):
+    return StreamingResponse(_extract_stream_generator(request, url=req.url), media_type="text/event-stream")
+
+@router.post("/extract-text-stream")
+async def extract_text_stream(req: TextExtractRequest, request: Request):
+    return StreamingResponse(_extract_stream_generator(request, text=req.text), media_type="text/event-stream")
 
 from fastapi import UploadFile, File
 from langchain_community.document_loaders import PyPDFLoader
@@ -72,8 +133,8 @@ async def extract_from_text(req: TextExtractRequest, request: Request):
     result = await agent_app.ainvoke({"text": text, "url": None, "request": request})
     return {"extracted": result["extracted_data"], "error": result["error"]}
 
-@router.post("/extract-pdf")
-async def extract_from_pdf(request: Request, file: UploadFile = File(...)):
+@router.post("/extract-pdf-stream")
+async def extract_pdf_stream(request: Request, file: UploadFile = File(...)):
     _check_ai_enabled()
     # Save temporarily
     os.makedirs("tmp", exist_ok=True)
@@ -81,18 +142,35 @@ async def extract_from_pdf(request: Request, file: UploadFile = File(...)):
     with open(temp_path, "wb") as buffer:
         shutil.copyfileobj(file.file, buffer)
     
-    try:
-        loader = PyPDFLoader(temp_path)
-        pages = loader.load()
-        text = "\n".join([page.page_content for page in pages])
-        text = _preprocess_text(text)
-        result = await agent_app.ainvoke({"text": text, "url": None, "request": request})
-        return {"extracted": result["extracted_data"], "error": result["error"]}
-    except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e))
-    finally:
-        if os.path.exists(temp_path):
-            os.remove(temp_path)
+    async def pdf_gen():
+        try:
+            yield f"data: {json.dumps({'event': 'progress', 'msg': f'Parsing PDF: {file.filename}'})}\n\n"
+            loader = PyPDFLoader(temp_path)
+            pages = await asyncio.to_thread(loader.load) # Run blocking load in thread
+            text = "\n".join([page.page_content for page in pages])
+            text = _preprocess_text(text)
+            
+            async for event in _extract_stream_generator(request, text=text):
+                yield event
+        except Exception as e:
+            yield f"data: {json.dumps({'event': 'error', 'msg': str(e)})}\n\n"
+        finally:
+            if os.path.exists(temp_path):
+                os.remove(temp_path)
+
+    return StreamingResponse(pdf_gen(), media_type="text/event-stream")
+
+@router.post("/extract-pdf")
+async def extract_from_pdf(request: Request, file: UploadFile = File(...)):
+    # Backward compatibility
+    res = {"extracted": None, "error": None}
+    async for event in (await extract_pdf_stream(request, file)).body_iterator:
+        data = json.loads(event.replace("data: ", ""))
+        if data["event"] == "final_result":
+            res["extracted"] = data["data"]
+        elif data.get("event") == "error":
+            res["error"] = data["msg"]
+    return res
 
 class ChatRequest(BaseModel):
     message: str

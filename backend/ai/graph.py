@@ -1,5 +1,5 @@
 import asyncio
-from typing import TypedDict, Any
+from typing import TypedDict, Any, Callable
 from langgraph.graph import StateGraph, END
 from ai.llm_factory import get_llm
 from ai.chains import (
@@ -16,8 +16,9 @@ class AgentState(TypedDict):
     extracted_data: dict | None
     error: str | None
     request: Any | None # fastapi.Request
+    progress_callback: Callable | None # Async callback for streaming
 
-async def _run_field_extraction(field, schema, prompt, text, url, llm, request, semaphore):
+async def _run_field_extraction(field, schema, prompt, text, url, llm, request, semaphore, progress_cb=None):
     """Async helper to execute a single agent task within a concurrency limit."""
     async with semaphore:
         # Check for disconnection before starting the call
@@ -25,17 +26,37 @@ async def _run_field_extraction(field, schema, prompt, text, url, llm, request, 
             print(f"Task Cancelled: Parallel agent aborted at field '{field}'.")
             return field, None
         
+        if progress_cb:
+            # Emit "Extracting..." status
+            await progress_cb({"event": "extracting", "field": field, "msg": f"AI: Extracting {field.replace('_', ' ')}..."})
+
         try:
             chain = prompt | llm.with_structured_output(schema)
-            res = await chain.ainvoke({"text": text, "url": url or "Not provided"})
-            return field, res.model_dump()
-        except Exception:
+            # Add 60s timeout per agent call to prevent permanent hangs
+            res = await asyncio.wait_for(
+                chain.ainvoke({"text": text, "url": url or "Not provided"}),
+                timeout=60
+            )
+            val = res.model_dump()
+            
+            if progress_cb:
+                # Emit "Field Done" status with a snippet of the value
+                raw_val = list(val.values())[0]
+                snippet = str(raw_val)[:40] + ("..." if len(str(raw_val)) > 40 else "")
+                await progress_cb({"event": "field_done", "field": field, "msg": f"Found {field.replace('_', ' ')}: {snippet}"})
+                
+            return field, val
+        except asyncio.TimeoutError:
+            print(f"Timeout extracting {field}")
+            return field, None
+        except Exception as e:
+            print(f"Error extracting {field}: {e}")
             return field, None
 
-async def _run_multi_agent_extraction(llm, text: str, url: str, request: Any = None):
-    """Parallelized extraction for small models (Multi-Agent mode)."""
-    # Concurrency limit (3 concurrent agents) to prevent overwhelming local hardware
-    semaphore = asyncio.Semaphore(3)
+async def _run_multi_agent_extraction(llm, text: str, url: str, request: Any = None, progress_cb: Callable = None):
+    """Parallelized extraction for small models (Multi-Agent mode) with streaming support."""
+    # Concurrency limit (Reduced to 2 for improved stability on local hardware)
+    semaphore = asyncio.Semaphore(2)
     results = {}
     
     metadata_tasks = [
@@ -51,7 +72,7 @@ async def _run_multi_agent_extraction(llm, text: str, url: str, request: Any = N
     
     # Launch all tasks concurrently
     tasks = [
-        _run_field_extraction(field, schema, prompt, text, url, llm, request, semaphore)
+        _run_field_extraction(field, schema, prompt, text, url, llm, request, semaphore, progress_cb)
         for field, schema, prompt in metadata_tasks
     ]
     
@@ -71,10 +92,11 @@ async def extract_node(state: AgentState):
     mode = settings.get("extraction_mode", "single")
     llm = get_llm()
     request = state.get("request")
+    progress_cb = state.get("progress_callback")
     
     try:
         if mode == "multi":
-            results = await _run_multi_agent_extraction(llm, state["text"], state.get("url"), request)
+            results = await _run_multi_agent_extraction(llm, state["text"], state.get("url"), request, progress_cb)
             return {"extracted_data": results, "error": None}
         else:
             # Single-Agent (Default)
@@ -82,12 +104,20 @@ async def extract_node(state: AgentState):
                 print("Task Cancelled: Single-agent extraction aborted.")
                 return {"extracted_data": None, "error": "Cancelled"}
                 
+            if progress_cb:
+                await progress_cb({"event": "extracting", "field": "all", "msg": "AI: Extracting all job details..."})
+
             extractor = extraction_prompt | llm.with_structured_output(JobDetails)
-            result = await extractor.ainvoke({
-                "text": state["text"],
-                "url": state.get("url") or "Not provided"
-            })
+            result = await asyncio.wait_for(
+                extractor.ainvoke({
+                    "text": state["text"],
+                    "url": state.get("url") or "Not provided"
+                }),
+                timeout=120 # Higher timeout for single-agent pass
+            )
             return {"extracted_data": result.model_dump(), "error": None}
+    except asyncio.TimeoutError:
+        return {"extracted_data": None, "error": "Extraction timed out. Try Multi-Agent mode for better results."}
     except Exception as e:
         return {"extracted_data": None, "error": str(e)}
 
