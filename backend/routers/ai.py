@@ -35,7 +35,7 @@ def _clean_html(html: str) -> str:
         
     return text
 
-def _preprocess_text(text: str, max_chars: int = 8000) -> str:
+def _preprocess_text(text: str, max_chars: int = 24000) -> str:
     """Common text preprocessing for all input types."""
     # Remove excessive blank lines
     lines = [l.strip() for l in text.splitlines() if l.strip()]
@@ -76,12 +76,27 @@ async def _extract_stream_generator(request: Request, url: str = None, text: str
                 snippet = _preprocess_text(text, max_chars=100)
                 yield f"data: {json.dumps({'event': 'progress', 'msg': f'Processing text: {snippet[:60]}...'})}\n\n"
                 text = _preprocess_text(text)
+                
+                # Log cleaned text for manual investigation (as requested)
+                try:
+                    os.makedirs("tmp", exist_ok=True)
+                    with open("tmp/last_extracted_content.txt", "w", encoding="utf-8") as f:
+                        f.write(text)
+                except Exception as log_err:
+                    print(f"Failed to log extracted content: {log_err}")
         except Exception as e:
             yield f"data: {json.dumps({'event': 'error', 'msg': str(e)})}\n\n"
             return
     elif text:
         yield f"data: {json.dumps({'event': 'progress', 'msg': f'Processing input text...'})}\n\n"
         text = _preprocess_text(text)
+        # Log input text for manual investigation
+        try:
+            os.makedirs("tmp", exist_ok=True)
+            with open("tmp/last_extracted_content.txt", "w", encoding="utf-8") as f:
+                f.write(text)
+        except Exception as log_err:
+            print(f"Failed to log extracted content: {log_err}")
         
     # 2. AI Execution with Progress Callback
     async def progress_callback(data: dict):
