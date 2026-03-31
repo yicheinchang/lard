@@ -1,3 +1,4 @@
+import asyncio
 from typing import TypedDict, Any
 from langgraph.graph import StateGraph, END
 from ai.llm_factory import get_llm
@@ -16,47 +17,53 @@ class AgentState(TypedDict):
     error: str | None
     request: Any | None # fastapi.Request
 
+async def _run_field_extraction(field, schema, prompt, text, url, llm, request, semaphore):
+    """Async helper to execute a single agent task within a concurrency limit."""
+    async with semaphore:
+        # Check for disconnection before starting the call
+        if request and await request.is_disconnected():
+            print(f"Task Cancelled: Parallel agent aborted at field '{field}'.")
+            return field, None
+        
+        try:
+            chain = prompt | llm.with_structured_output(schema)
+            res = await chain.ainvoke({"text": text, "url": url or "Not provided"})
+            return field, res.model_dump()
+        except Exception:
+            return field, None
+
 async def _run_multi_agent_extraction(llm, text: str, url: str, request: Any = None):
-    """Sequential extraction for small models (Multi-Agent mode)."""
+    """Parallelized extraction for small models (Multi-Agent mode)."""
+    # Concurrency limit (3 concurrent agents) to prevent overwhelming local hardware
+    semaphore = asyncio.Semaphore(3)
     results = {}
     
-    # Metadata Agents (Sequential)
     metadata_tasks = [
-        ("company", JobCompany),
-        ("role", JobRole),
-        ("location", JobLocation),
-        ("salary_range", JobSalary),
-        ("company_job_id", JobId),
-        ("job_posted_date", PostedDate),
-        ("application_deadline", DeadlineDate),
+        ("company", JobCompany, multi_metadata_prompt),
+        ("role", JobRole, multi_metadata_prompt),
+        ("location", JobLocation, multi_metadata_prompt),
+        ("salary_range", JobSalary, multi_metadata_prompt),
+        ("company_job_id", JobId, multi_metadata_prompt),
+        ("job_posted_date", PostedDate, multi_metadata_prompt),
+        ("application_deadline", DeadlineDate, multi_metadata_prompt),
+        ("description", JobDescription, description_extraction_prompt),
     ]
     
-    for field, schema in metadata_tasks:
-        # Check for client disconnection before each agent call
-        if request and await request.is_disconnected():
-            print(f"Task Cancelled: Multi-agent extraction aborted at field '{field}'.")
-            return results
-            
-        try:
-            # Use ainvoke for async compatibility and better cancellation support
-            chain = multi_metadata_prompt | llm.with_structured_output(schema)
-            res = await chain.ainvoke({"text": text, "url": url or "Not provided"})
-            results.update(res.model_dump())
-        except Exception:
+    # Launch all tasks concurrently
+    tasks = [
+        _run_field_extraction(field, schema, prompt, text, url, llm, request, semaphore)
+        for field, schema, prompt in metadata_tasks
+    ]
+    
+    results_list = await asyncio.gather(*tasks)
+    
+    # Merge results from all parallel tasks
+    for field, res in results_list:
+        if res:
+            results.update(res)
+        else:
             results[field] = None
-
-    # Description Agent (Separate Prompt)
-    if request and await request.is_disconnected():
-        print("Task Cancelled: Multi-agent extraction aborted before description.")
-        return results
-
-    try:
-        desc_chain = description_extraction_prompt | llm.with_structured_output(JobDescription)
-        desc_res = await desc_chain.ainvoke({"text": text})
-        results.update(desc_res.model_dump())
-    except Exception:
-        results["description"] = None
-        
+            
     return results
 
 async def extract_node(state: AgentState):

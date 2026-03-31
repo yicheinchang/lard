@@ -234,7 +234,7 @@ The system uses a multi-stage pipeline to extract job details from URLs, PDFs, a
 - **Contextual Metadata**: In addition to the description, the system extracts the company, role, location, salary, internal Job ID, posted date, and application deadline.
 - **Extraction Strategies**: Supports two modes of operation:
   - **Single-Agent**: Fast, one-pass extraction for powerful cloud models.
-  - **Multi-Agent**: Sequential, granular extraction using dedicated agents for each field, significantly improving accuracy for local/small models (e.g., 3B parameter models).
+  - **Multi-Agent**: Parallelized, granular extraction using dedicated agents for each field. Uses `asyncio.gather` with a concurrency semaphore (default: 3) to optimize speed on local/small models without overwhelming hardware.
 - **Cancellation & Safety**: Extraction tasks can be aborted via `AbortController` in the UI. Cancellation is propagated to the backend, where the system detects client disconnection and terminates the AI loop immediately to free up resources.
 - **URL Fallback**: Utilizes the source URL as a last-resort context for identifying Job IDs that may be missing from the main text.
 
