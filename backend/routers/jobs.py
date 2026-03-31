@@ -6,7 +6,7 @@ from pydantic import BaseModel, ConfigDict
 from typing import List, Optional
 from datetime import datetime
 from database.relational import get_db
-from database.models import JobApplication, InterviewStep, StepType, DocumentMeta
+from database.models import JobApplication, InterviewStep, StepType, DocumentMeta, Company
 
 router = APIRouter(prefix="/api", tags=["Jobs"])
 
