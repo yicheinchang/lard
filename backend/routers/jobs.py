@@ -317,11 +317,16 @@ def update_interview_step(step_id: int, step_update: InterviewStepUpdate, db: Se
         raise HTTPException(status_code=404, detail="Step not found")
     
     update_data = step_update.model_dump(exclude_unset=True)
+    
+    if "step_type_name" in update_data:
+        st = get_or_create_step_type(db, update_data.pop("step_type_name"))
+        db_step.step_type_id = st.id
+        
     for k, v in update_data.items():
         setattr(db_step, k, v)
     
     db.commit()
-    db.refresh(db_step)
+    db_step = db.query(InterviewStep).filter(InterviewStep.id == step_id).first() # Reload with type
     return db_step
 
 @router.post("/jobs/{job_id}/documents", response_model=DocumentMetaResponse)

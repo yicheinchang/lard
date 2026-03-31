@@ -153,7 +153,7 @@ export const addInterviewStep = async (jobId: number, step_type_name: string, st
   return response.data;
 };
 
-export const updateInterviewStep = async (stepId: number, updateData: { step_date?: string, status?: string, notes?: string }) => {
+export const updateInterviewStep = async (stepId: number, updateData: { step_type_name?: string, step_date?: string, status?: string, notes?: string }) => {
   const response = await api.put(`/jobs/steps/${stepId}`, updateData);
   return response.data;
 };

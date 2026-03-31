@@ -5,7 +5,7 @@ import ReactMarkdown from 'react-markdown';
 import MdEditor from 'react-markdown-editor-lite';
 import MarkdownIt from 'markdown-it';
 import 'react-markdown-editor-lite/lib/index.css';
-import { Job, getStepTypes, StepType, addInterviewStep, updateInterviewStep, updateJob, uploadJobDocument, deleteJobDocument, getCompanies } from '../lib/api';
+import { Job, getStepTypes, StepType, addInterviewStep, updateInterviewStep, updateJob, uploadJobDocument, deleteJobDocument, getCompanies, InterviewStep } from '../lib/api';
 import { X, Calendar, User, Mail, Plus, Circle, FileText, Edit2, Save, Paperclip, Trash2, ExternalLink, Link as LinkIcon, StickyNote, Send } from 'lucide-react';
 import { ConfirmDialog } from './ConfirmDialog';
 import { DocumentPreview } from './DocumentPreview';
@@ -31,9 +31,14 @@ export const JobDetailView: React.FC<JobDetailViewProps> = ({ job, onClose, onJo
   const [editFormData, setEditFormData] = useState<Partial<Job>>({});
   const [companies, setCompanies] = useState<{id: number, name: string}[]>([]);
 
-  // Notes state
-  const [editingNoteId, setEditingNoteId] = useState<number | null>(null);
-  const [noteContent, setNoteContent] = useState<string>('');
+  // Interview Step Editing State
+  const [editingStepId, setEditingStepId] = useState<number | null>(null);
+  const [editStepForm, setEditStepForm] = useState<{name: string, date: string, status: string, notes: string}>({
+    name: '',
+    date: '',
+    status: '',
+    notes: ''
+  });
 
   // Job-level Notes state
   const [jobNotes, setJobNotes] = useState<string>('');
@@ -41,27 +46,53 @@ export const JobDetailView: React.FC<JobDetailViewProps> = ({ job, onClose, onJo
   const [isEditingJobNotes, setIsEditingJobNotes] = useState(false);
   
   const isDirty = useMemo(() => {
-    if (!isEditingInfo || !job) return false;
+    // 1. Check Job Info
+    if (isEditingInfo && job) {
+      const fields: (keyof Job)[] = [
+        'company', 'role', 'url', 'status', 'location', 
+        'description', 'salary_range', 'hr_email', 
+        'hiring_manager_name', 'hiring_manager_email',
+        'company_job_id', 'created_at', 'applied_date'
+      ];
+      
+      const infoDirty = fields.some(field => {
+        const original = job[field] || '';
+        const current = editFormData[field] || '';
+        return String(original) !== String(current);
+      });
+      if (infoDirty) return true;
+    }
+
+    // 2. Check Interview Step
+    if (editingStepId !== null && job?.steps) {
+      const step = job.steps.find(s => s.id === editingStepId);
+      if (step) {
+        const originalName = step.step_type.name || '';
+        const originalDate = step.step_date ? step.step_date.substring(0, 10) : '';
+        const originalStatus = step.status || '';
+        const originalNotes = step.notes || '';
+
+        if (
+          editStepForm.name !== originalName ||
+          editStepForm.date !== originalDate ||
+          editStepForm.status !== originalStatus ||
+          editStepForm.notes !== originalNotes
+        ) {
+          return true;
+        }
+      }
+    }
     
-    // Compare essential fields
-    const fields: (keyof Job)[] = [
-      'company', 'role', 'url', 'status', 'location', 
-      'description', 'salary_range', 'hr_email', 
-      'hiring_manager_name', 'hiring_manager_email',
-      'company_job_id', 'created_at', 'applied_date'
-    ];
-    
-    return fields.some(field => {
-      const original = job[field] || '';
-      const current = editFormData[field] || '';
-      return String(original) !== String(current);
-    });
-  }, [isEditingInfo, editFormData, job]);
+    return false;
+  }, [isEditingInfo, editFormData, job, editingStepId, editStepForm]);
 
   useEffect(() => {
-    setDirty(isDirty, "You have unsaved changes in the job details. If you switch now, these changes will be lost.");
+    const message = editingStepId !== null 
+      ? "You have unsaved changes in the interview step. If you switch now, these changes will be lost."
+      : "You have unsaved changes in the job details. If you switch now, these changes will be lost.";
+    setDirty(isDirty, message);
     return () => setDirty(false); // Clear on close
-  }, [isDirty, setDirty]);
+  }, [isDirty, setDirty, editingStepId]);
 
   // Deletion state
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -191,16 +222,31 @@ export const JobDetailView: React.FC<JobDetailViewProps> = ({ job, onClose, onJo
     }
   };
 
-  const startEditingNote = (stepId: number, currentNote: string | null = '') => {
-    setEditingNoteId(stepId);
-    setNoteContent(currentNote || '');
+  const startEditingStep = (step: InterviewStep) => {
+    setEditingStepId(step.id);
+    setEditStepForm({
+      name: step.step_type.name || '',
+      date: step.step_date ? step.step_date.substring(0, 10) : '',
+      status: step.status || 'Scheduled',
+      notes: step.notes || ''
+    });
   };
 
-  const saveNote = async (stepId: number) => {
+  const saveStep = async (stepId: number) => {
     try {
-      await updateInterviewStep(stepId, { notes: noteContent });
-      setEditingNoteId(null);
-      onJobUpdated();
+      const step = job?.steps?.find(s => s.id === stepId);
+      const updateData: any = {};
+      
+      if (editStepForm.name !== step?.step_type.name) updateData.step_type_name = editStepForm.name;
+      if (editStepForm.date !== (step?.step_date ? step.step_date.substring(0, 10) : '')) updateData.step_date = editStepForm.date ? new Date(editStepForm.date).toISOString() : null;
+      if (editStepForm.status !== step?.status) updateData.status = editStepForm.status;
+      if (editStepForm.notes !== step?.notes) updateData.notes = editStepForm.notes;
+
+      if (Object.keys(updateData).length > 0) {
+        await updateInterviewStep(stepId, updateData);
+        onJobUpdated();
+      }
+      setEditingStepId(null);
     } catch (err) {
       console.error(err);
     }
@@ -330,40 +376,66 @@ export const JobDetailView: React.FC<JobDetailViewProps> = ({ job, onClose, onJo
                     </div>
                     <div className={`flex flex-col glass p-4 rounded-xl w-full border ${step.status === 'Completed' || step.status === 'Passed' ? 'border-green-500/20 bg-green-500/5' : 'border-[var(--border-color)]'} hover:border-violet-500/30 transition`}>
                       <div className="flex justify-between items-center mb-1">
-                        <span className={`font-semibold ${step.status === 'Completed' || step.status === 'Passed' ? 'text-[var(--fg)]' : 'text-[var(--fg-muted)]'}`}>{step.step_type.name}</span>
+                        {editingStepId === step.id ? (
+                          <input 
+                            value={editStepForm.name}
+                            onChange={(e) => setEditStepForm(prev => ({ ...prev, name: e.target.value }))}
+                            list="step-types"
+                            className="bg-[var(--bg)] border border-violet-500/50 rounded-lg px-2 py-1 text-[var(--fg)] text-sm focus:outline-none focus:border-violet-500 flex-1 mr-4"
+                            placeholder="Step Name"
+                            autoFocus
+                          />
+                        ) : (
+                          <span className={`font-semibold ${step.status === 'Completed' || step.status === 'Passed' ? 'text-[var(--fg)]' : 'text-[var(--fg-muted)]'}`}>{step.step_type.name}</span>
+                        )}
+                        
                         {step.id !== -1 && (
                           <select 
-                            className="text-xs font-medium px-2 py-1 rounded-md bg-[var(--input-bg)] text-[var(--fg-muted)] border border-[var(--border-color)] cursor-pointer focus:outline-none focus:border-violet-500 transition-colors"
-                            value={step.status}
-                            onChange={(e) => handleStatusChange(step.id, e.target.value)}
+                            className="text-xs font-medium px-2 py-1 rounded-md bg-[var(--input-bg)] text-[var(--fg-muted)] border border-[var(--border-color)] cursor-pointer focus:outline-none focus:border-violet-500 transition-colors dark:text-white"
+                            value={editingStepId === step.id ? editStepForm.status : step.status}
+                            onChange={(e) => editingStepId === step.id ? setEditStepForm(prev => ({ ...prev, status: e.target.value })) : handleStatusChange(step.id, e.target.value)}
                           >
-                            {stepStatusOptions.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+                            {stepStatusOptions.map(opt => (
+                              <option key={opt} value={opt} className="bg-[var(--surface)] text-[var(--fg)]">{opt}</option>
+                            ))}
                           </select>
                         )}
                         {step.id === -1 && (
                           <span className="text-[10px] uppercase font-bold text-violet-500/60 tracking-wider">System Event</span>
                         )}
                       </div>
-                      {step.step_date && (
+                      
+                      {editingStepId === step.id ? (
                         <div className="flex items-center gap-1.5 text-xs text-[var(--fg-subtle)] mt-2">
                           <Calendar className="w-3.5 h-3.5" />
-                          {new Date(step.step_date).toLocaleDateString()}
+                          <input 
+                            type="date"
+                            value={editStepForm.date}
+                            onChange={(e) => setEditStepForm(prev => ({ ...prev, date: e.target.value }))}
+                            className="bg-[var(--bg)] border border-violet-500/30 rounded-lg px-2 py-0.5 text-[var(--fg)] text-xs focus:outline-none focus:border-violet-500 style-date"
+                          />
                         </div>
+                      ) : (
+                        step.step_date && (
+                          <div className="flex items-center gap-1.5 text-xs text-[var(--fg-subtle)] mt-2">
+                            <Calendar className="w-3.5 h-3.5" />
+                            {new Date(step.step_date).toLocaleDateString()}
+                          </div>
+                        )
                       )}
                       
                       <div className="mt-3 pt-3 border-t border-[var(--border-color)]">
-                        {editingNoteId === step.id ? (
+                        {editingStepId === step.id ? (
                           <div className="flex flex-col gap-2 mt-1 z-10 relative">
                             <textarea
-                              value={noteContent}
-                              onChange={(e) => setNoteContent(e.target.value)}
-                              className="w-full bg-[var(--input-bg)] border border-violet-500/50 rounded-lg px-3 py-2 text-[var(--fg)] text-sm focus:outline-none focus:border-violet-500 min-h-[80px]"
+                              value={editStepForm.notes}
+                              onChange={(e) => setEditStepForm(prev => ({ ...prev, notes: e.target.value }))}
+                              className="w-full bg-[var(--bg)] border border-violet-500/50 rounded-lg px-3 py-2 text-[var(--fg)] text-sm focus:outline-none focus:border-violet-500 min-h-[80px]"
                               placeholder="Add comments or notes..."
-                              autoFocus
                             />
                             <div className="flex justify-end gap-2">
-                              <button onClick={() => setEditingNoteId(null)} className="text-xs px-3 py-1.5 text-[var(--fg-muted)] hover:text-[var(--fg)] transition-colors">Cancel</button>
-                              <button onClick={() => saveNote(step.id)} className="text-xs font-medium bg-violet-600 hover:bg-violet-500 text-white px-3 py-1.5 rounded-lg transition-colors flex items-center gap-1">
+                              <button onClick={() => setEditingStepId(null)} className="text-xs px-3 py-1.5 text-[var(--fg-muted)] hover:text-[var(--fg)] transition-colors">Cancel</button>
+                              <button onClick={() => saveStep(step.id)} className="text-xs font-medium bg-violet-600 hover:bg-violet-500 text-white px-3 py-1.5 rounded-lg transition-colors flex items-center gap-1">
                                 <Save className="w-3.5 h-3.5" /> Save
                               </button>
                             </div>
@@ -379,10 +451,10 @@ export const JobDetailView: React.FC<JobDetailViewProps> = ({ job, onClose, onJo
                             )}
                             {step.id !== -1 && (
                               <button 
-                                onClick={() => startEditingNote(step.id, step.notes)} 
+                                onClick={() => startEditingStep(step)} 
                                 className="shrink-0 text-xs text-[var(--fg-subtle)] hover:text-violet-500 opacity-0 group-hover/step:opacity-100 transition-all flex items-center gap-1.5 bg-[var(--surface)] hover:bg-[var(--surface-hover)] px-2 py-1 rounded border border-[var(--border-color)]"
                               >
-                                <Edit2 className="w-3 h-3" /> {step.notes ? 'Edit' : 'Add Note'}
+                                <Edit2 className="w-3 h-3" /> Edit Step
                               </button>
                             )}
                           </div>

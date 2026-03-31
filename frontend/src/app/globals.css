@@ -246,3 +246,29 @@ input[type="date"].style-date::-webkit-calendar-picker-indicator {
 [data-theme="dark"] .rc-md-editor .rc-md-navigation {
   background-color: #111118 !important;
 }
+
+/* ── Native Form Element Readability ─────────────────────────────── */
+
+select, option, input, textarea {
+  color: inherit;
+  background-color: transparent;
+}
+
+[data-theme="dark"] select option {
+  background-color: #1a1a24;
+  color: #ededed;
+}
+
+[data-theme="light"] select option {
+  background-color: #ffffff;
+  color: #1a1a2e;
+}
+
+/* Fix for Safari/Chrome autofill and native styling */
+input:-webkit-autofill,
+input:-webkit-autofill:hover, 
+input:-webkit-autofill:focus {
+  -webkit-text-fill-color: var(--fg);
+  -webkit-box-shadow: 0 0 0px 1000px var(--input-bg) inset;
+  transition: background-color 5000s ease-in-out 0s;
+}

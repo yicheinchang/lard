@@ -221,7 +221,13 @@ The system uses a global navigation guard managed within `ViewContext.tsx`. This
 - **Action Interception**: All disruptive actions (view changes, job selection, opening modals) are wrapped in a `requestAction` call.
 - **Global Prompt**: If the system is dirty, a centralized `ConfirmDialog` in `AppShell.tsx` intercepts the action and prompts the user to either discard changes or stay on the current page.
 
-### 8. Modal State Management
+### 8. Interview Timeline & Step Editing
+The interview pipeline supports full CRUD and inline editing:
+- **Incremental Addition**: Users can add steps with custom names (automagically linked to `StepType`) and dates.
+- **Inline Editing**: Existing steps can be fully modified (Name, Date, Status, Notes). Renaming a step triggers a backend lookup/creation for the new `StepType`.
+- **Dark Mode Compatibility**: Native form elements (select, date, etc.) are globally styled to ensure high contrast and readability across all themes.
+
+### 9. Modal State Management
 Modals (like `AddJobModal.tsx`) are designed to be idempotent. They utilize `useEffect` hooks to reset their internal form state to `initialFormData` every time they are opened, ensuring no stale data persists from previous interactions.
 
 ---
