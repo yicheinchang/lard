@@ -10,14 +10,16 @@ import { X, Calendar, User, Mail, Plus, Circle, FileText, Edit2, Save, Paperclip
 import { ConfirmDialog } from './ConfirmDialog';
 import { DocumentPreview } from './DocumentPreview';
 
+import { useView } from '@/lib/ViewContext';
+
 interface JobDetailViewProps {
   job: Job | null;
   onClose: () => void;
   onJobUpdated: () => void;
-  onDirtyStateChange?: (isDirty: boolean) => void;
 }
 
-export const JobDetailView: React.FC<JobDetailViewProps> = ({ job, onClose, onJobUpdated, onDirtyStateChange }) => {
+export const JobDetailView: React.FC<JobDetailViewProps> = ({ job, onClose, onJobUpdated }) => {
+  const { setDirty } = useView();
   const [activeTab, setActiveTab] = useState<'info' | 'pipeline' | 'notes'>('pipeline');
   const mdParser = new MarkdownIt();
   const [stepTypes, setStepTypes] = useState<StepType[]>([]);
@@ -46,7 +48,7 @@ export const JobDetailView: React.FC<JobDetailViewProps> = ({ job, onClose, onJo
       'company', 'role', 'url', 'status', 'location', 
       'description', 'salary_range', 'hr_email', 
       'hiring_manager_name', 'hiring_manager_email',
-      'company_job_id'
+      'company_job_id', 'created_at', 'applied_date'
     ];
     
     return fields.some(field => {
@@ -57,8 +59,9 @@ export const JobDetailView: React.FC<JobDetailViewProps> = ({ job, onClose, onJo
   }, [isEditingInfo, editFormData, job]);
 
   useEffect(() => {
-    onDirtyStateChange?.(isDirty);
-  }, [isDirty, onDirtyStateChange]);
+    setDirty(isDirty, "You have unsaved changes in the job details. If you switch now, these changes will be lost.");
+    return () => setDirty(false); // Clear on close
+  }, [isDirty, setDirty]);
 
   // Deletion state
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);

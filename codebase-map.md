@@ -215,6 +215,15 @@ The system uses a multi-stage pipeline to extract job details from URLs, PDFs, a
 ### 6. Document Ingestion
 Supports PDF and plain text. PDFs are parsed using `pypdf` and split into chunks before vectorization.
 
+### 7. Centralized Navigation Guard
+The system uses a global navigation guard managed within `ViewContext.tsx`. This pattern protects against accidental data loss:
+- **Dirty State Tracking**: Components (like `JobDetailView` and `SettingsPage`) report their "dirty" status and a contextual warning message to the `ViewContext`.
+- **Action Interception**: All disruptive actions (view changes, job selection, opening modals) are wrapped in a `requestAction` call.
+- **Global Prompt**: If the system is dirty, a centralized `ConfirmDialog` in `AppShell.tsx` intercepts the action and prompts the user to either discard changes or stay on the current page.
+
+### 8. Modal State Management
+Modals (like `AddJobModal.tsx`) are designed to be idempotent. They utilize `useEffect` hooks to reset their internal form state to `initialFormData` every time they are opened, ensuring no stale data persists from previous interactions.
+
 ---
 
 ## 🛠️ Development Commands

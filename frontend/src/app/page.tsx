@@ -16,13 +16,8 @@ export default function Home() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedJob, setSelectedJob] = useState<Job | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const { activeView } = useView();
+  const { activeView, requestAction } = useView();
   
-  // Unsaved changes state
-  const [isDetailDirty, setIsDetailDirty] = useState(false);
-  const [showDiscardConfirm, setShowDiscardConfirm] = useState(false);
-  const [pendingJob, setPendingJob] = useState<Job | null>(null);
-
   // Status transition state
   const [showAdvanceToApplied, setShowAdvanceToApplied] = useState(false);
   const [pendingStatusUpdate, setPendingStatusUpdate] = useState<{id: number, status: string} | null>(null);
@@ -95,20 +90,16 @@ export default function Home() {
     return created; // return so modal can attach documents to the new job
   };
 
-  const handleJobClick = (job: Job) => {
-    if (isDetailDirty) {
-      setPendingJob(job);
-      setShowDiscardConfirm(true);
-    } else {
+  const handleJobClick = (job: Job | null) => {
+    requestAction(() => {
       setSelectedJob(job);
-    }
+    }, "You have unsaved changes in the current job details. If you switch now, these changes will be lost.");
   };
 
-  const confirmDiscardChanges = () => {
-    setIsDetailDirty(false);
-    setSelectedJob(pendingJob);
-    setPendingJob(null);
-    setShowDiscardConfirm(false);
+  const handleAddClick = () => {
+    requestAction(() => {
+      setIsModalOpen(true);
+    }, "You have unsaved changes in the current job details. If you open the 'Add Application' form now, these changes will be lost.");
   };
 
   // If settings view, render settings page directly
@@ -132,7 +123,7 @@ export default function Home() {
         </div>
 
         <button 
-          onClick={() => setIsModalOpen(true)}
+          onClick={handleAddClick}
           className="bg-white hover:bg-gray-100 text-black px-5 py-2.5 rounded-xl font-semibold transition-all hover:scale-105 active:scale-95 flex items-center gap-2 shadow-xl shadow-white/10 text-sm"
         >
           <Plus className="w-4 h-4" />
@@ -154,25 +145,14 @@ export default function Home() {
 
       <JobDetailView 
         job={selectedJob} 
-        onClose={() => handleJobClick(null as any)} // Use same check for closing
+        onClose={() => handleJobClick(null)}
         onJobUpdated={fetchJobs} 
-        onDirtyStateChange={setIsDetailDirty}
       />
 
       <AddJobModal 
         isOpen={isModalOpen} 
         onClose={() => setIsModalOpen(false)} 
         onAddJob={handleAddJob} 
-      />
-
-      <ConfirmDialog
-        isOpen={showDiscardConfirm}
-        title="Unsaved Changes"
-        message="You have unsaved changes in the current job details. If you switch now, these changes will be lost. Do you want to discard them?"
-        onConfirm={confirmDiscardChanges}
-        onCancel={() => { setShowDiscardConfirm(false); setPendingJob(null); }}
-        confirmLabel="Discard Changes"
-        variant="danger"
       />
 
       <ConfirmDialog

@@ -37,6 +37,7 @@ export const AddJobModal: React.FC<AddJobModalProps> = ({ isOpen, onClose, onAdd
   React.useEffect(() => {
     if (isOpen) {
       getCompanies().then(setCompanies).catch(console.error);
+      resetForm();
     }
   }, [isOpen]);
 

@@ -27,7 +27,7 @@ type EmbeddingProvider = 'default' | 'ollama' | 'openai';
 
 export function SettingsPage() {
   const { settings, updateSettings: ctxUpdate, refreshSettings } = useSettings();
-  const { setUnsavedChanges } = useView();
+  const { setDirty } = useView();
 
   // Local form state (buffered so we can save explicitly)
   const [theme, setTheme] = useState<ThemeOption>('dark');
@@ -79,9 +79,9 @@ export function SettingsPage() {
 
   // Update global navigation guard
   useEffect(() => {
-    setUnsavedChanges(isDirty);
-    return () => setUnsavedChanges(false);
-  }, [isDirty, setUnsavedChanges]);
+    setDirty(isDirty, "You have unsaved changes in Settings. Do you want to discard them and move to another page?");
+    return () => setDirty(false);
+  }, [isDirty, setDirty]);
 
   // Track dirty state and settings in refs for cleanup closure
   const isDirtyRef = React.useRef(false);

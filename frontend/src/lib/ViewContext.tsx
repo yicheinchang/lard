@@ -9,8 +9,17 @@ interface ViewContextType {
   setActiveView: (view: ActiveView) => void;
   sidebarCollapsed: boolean;
   setSidebarCollapsed: (collapsed: boolean) => void;
-  unsavedChanges: boolean;
-  setUnsavedChanges: (unsaved: boolean) => void;
+  
+  // Dirty state tracking
+  isDirty: boolean;
+  dirtyMessage: string;
+  setDirty: (isDirty: boolean, message?: string) => void;
+  
+  // Navigation guard
+  showDiscardDialog: boolean;
+  requestAction: (action: () => void, message?: string) => void;
+  confirmDiscard: () => void;
+  cancelDiscard: () => void;
 }
 
 const ViewContext = createContext<ViewContextType | undefined>(undefined);
@@ -18,7 +27,43 @@ const ViewContext = createContext<ViewContextType | undefined>(undefined);
 export function ViewProvider({ children }: { children: ReactNode }) {
   const [activeView, setActiveView] = useState<ActiveView>('kanban');
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-  const [unsavedChanges, setUnsavedChanges] = useState(false);
+  
+  // Dirty state
+  const [isDirty, setIsDirty] = useState(false);
+  const [dirtyMessage, setDirtyMessage] = useState('');
+  
+  // Guard state
+  const [pendingAction, setPendingAction] = useState<(() => void) | null>(null);
+  const [showDiscardDialog, setShowDiscardDialog] = useState(false);
+
+  const setDirty = (dirty: boolean, message: string = 'You have unsaved changes. Do you want to discard them?') => {
+    setIsDirty(dirty);
+    if (dirty) setDirtyMessage(message);
+  };
+
+  const requestAction = (action: () => void, message?: string) => {
+    if (!isDirty) {
+      action();
+    } else {
+      setPendingAction(() => action);
+      if (message) setDirtyMessage(message);
+      setShowDiscardDialog(true);
+    }
+  };
+
+  const confirmDiscard = () => {
+    setIsDirty(false);
+    setShowDiscardDialog(false);
+    if (pendingAction) {
+      pendingAction();
+      setPendingAction(null);
+    }
+  };
+
+  const cancelDiscard = () => {
+    setShowDiscardDialog(false);
+    setPendingAction(null);
+  };
 
   return (
     <ViewContext.Provider value={{ 
@@ -26,8 +71,13 @@ export function ViewProvider({ children }: { children: ReactNode }) {
       setActiveView, 
       sidebarCollapsed, 
       setSidebarCollapsed,
-      unsavedChanges,
-      setUnsavedChanges
+      isDirty,
+      dirtyMessage,
+      setDirty,
+      showDiscardDialog,
+      requestAction,
+      confirmDiscard,
+      cancelDiscard
     }}>
       {children}
     </ViewContext.Provider>

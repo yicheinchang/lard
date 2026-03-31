@@ -8,8 +8,7 @@ import { useSettings } from '@/lib/SettingsContext';
 import { ConfirmDialog } from './ConfirmDialog';
 
 function Sidebar() {
-  const { activeView, setActiveView, sidebarCollapsed, setSidebarCollapsed, unsavedChanges, setUnsavedChanges } = useView();
-  const [pendingView, setPendingView] = React.useState<ActiveView | null>(null);
+  const { activeView, setActiveView, sidebarCollapsed, setSidebarCollapsed, requestAction } = useView();
 
   const navItems = [
     { id: 'kanban' as const, label: 'Dashboard', icon: LayoutGrid },
@@ -18,19 +17,7 @@ function Sidebar() {
 
   const handleViewChange = (view: ActiveView) => {
     if (view === activeView) return;
-    if (unsavedChanges) {
-      setPendingView(view);
-    } else {
-      setActiveView(view);
-    }
-  };
-
-  const confirmDiscard = () => {
-    if (pendingView) {
-      setActiveView(pendingView);
-      setUnsavedChanges(false);
-      setPendingView(null);
-    }
+    requestAction(() => setActiveView(view));
   };
 
   return (
@@ -122,16 +109,6 @@ function Sidebar() {
           )}
         </button>
       </div>
-
-      <ConfirmDialog
-        isOpen={pendingView !== null}
-        title="Unsaved Changes"
-        message="You have unsaved changes in Settings. Do you want to discard them and move to another page?"
-        confirmLabel="Discard & Move"
-        onConfirm={() => confirmDiscard()}
-        onCancel={() => setPendingView(null)}
-        variant="danger"
-      />
     </aside>
   );
 }
@@ -139,6 +116,7 @@ function Sidebar() {
 function MainContent({ children }: { children: React.ReactNode }) {
   const [isChatOpen, setIsChatOpen] = React.useState(false);
   const { aiEnabled } = useSettings();
+  const { showDiscardDialog, dirtyMessage, confirmDiscard, cancelDiscard } = useView();
 
   return (
     <main className="flex-1 flex flex-col relative w-full pb-0 min-w-0" style={{ background: `linear-gradient(to bottom, var(--bg), var(--bg))` }}>
@@ -158,6 +136,17 @@ function MainContent({ children }: { children: React.ReactNode }) {
       {aiEnabled && (
         <ChatAssistant isOpen={isChatOpen} onClose={() => setIsChatOpen(false)} />
       )}
+
+      {/* Global Navigation Guard Dialog */}
+      <ConfirmDialog
+        isOpen={showDiscardDialog}
+        title="Unsaved Changes"
+        message={dirtyMessage}
+        confirmLabel="Discard & Continue"
+        onConfirm={confirmDiscard}
+        onCancel={cancelDiscard}
+        variant="danger"
+      />
     </main>
   );
 }
