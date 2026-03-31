@@ -242,6 +242,7 @@ The system uses a multi-stage pipeline to extract job details from URLs, PDFs, a
     - **Fixed Context**: Standardized `num_ctx` to 9,000 tokens for all extraction tasks to optimize performance on local Ollama hardware.
     - **Raw Pass (Job Description)**: Specifically skips structured JSON extraction for the description field, using a direct verbatim retrieval prompt for maximum reliability and speed.
     - **Structured Pass (Metadata)**: Continues to use JSON schema enforcement for small fields like Company, Role, and ID.
+    - **JSON-LD Support**: Prioritizes `application/ld+json` script tags (Schema.org `JobPosting`) for metadata extraction. This ensures high-fidelity results for modern, client-side rendered job boards (e.g., Workday/Moderna) where the primary page content is dynamic.
 
 ### 6. Document Ingestion
 Supports PDF and plain text. PDFs are parsed using `pypdf` and split into chunks before vectorization.

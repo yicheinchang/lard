@@ -18,22 +18,63 @@ def _check_ai_enabled():
         raise HTTPException(status_code=403, detail="AI assistant is disabled. Enable it in Settings.")
 
 def _clean_html(html: str) -> str:
-    """Generic HTML cleaning to extract main content while removing noise."""
+    """Generic HTML cleaning to extract main content while removing noise, with JSON-LD support."""
     soup = BeautifulSoup(html, 'html.parser')
-    
-    # Remove script, style, nav, footer, header, and other common noise
+
+    # 1. Look for application/ld+json (Schema.org JobPosting)
+    # This is often the most reliable source for modern job boards (like Workday/Moderna)
+    json_ld_content = ""
+    for ld_script in soup.find_all("script", type="application/ld+json"):
+        try:
+            data = json.loads(ld_script.string or "")
+            # Handle both single objects and lists
+            items = data if isinstance(data, list) else [data]
+            for item in items:
+                if item.get("@type") == "JobPosting" or "JobPosting" in str(item.get("@type", "")):
+                    # Extract high-fidelity fields
+                    title = item.get("title")
+                    desc = item.get("description")
+                    org = item.get("hiringOrganization", {}).get("name")
+                    # Job ID is often in 'identifier.value' or 'identifier'
+                    job_id = item.get("identifier")
+                    if isinstance(job_id, dict): job_id = job_id.get("value")
+                    
+                    loc = item.get("jobLocation", {})
+                    if isinstance(loc, dict):
+                        addr = loc.get("address", {})
+                        if isinstance(addr, dict):
+                            loc_str = f"{addr.get('addressLocality', '')}, {addr.get('addressRegion', '')} {addr.get('addressCountry', '')}"
+                            loc = loc_str.strip(", ")
+                    
+                    json_ld_content += f"SOURCE_METADATA (JSON-LD):\n"
+                    if org: json_ld_content += f"Company: {org}\n"
+                    if title: json_ld_content += f"Title: {title}\n"
+                    if job_id: json_ld_content += f"Job ID: {job_id}\n"
+                    if loc: json_ld_content += f"Location: {loc}\n"
+                    if desc: json_ld_content += f"FULL_DESCRIPTION:\n{desc}\n"
+                    json_ld_content += "-" * 20 + "\n\n"
+        except Exception as e:
+            print(f"Error parsing JSON-LD: {e}")
+
+    # 2. Decompose generic noise (scripts, styles, etc.)
     for tag in soup(["script", "style", "nav", "footer", "header", "aside", "form"]):
         tag.decompose()
         
-    # Look for common content-heavy tags to prioritize, but fall back to body
-    # This remains generic while giving a boost to common patterns
+    # 3. Standard Text Extraction
     main_content = soup.find('main') or soup.find('article') or soup.find(id='content') or soup.find(class_='job-description')
     if main_content:
         text = main_content.get_text(separator='\n', strip=True)
     else:
         text = soup.get_text(separator='\n', strip=True)
         
-    return text
+    # Combine JSON-LD (priority) with secondary body text
+    combined_result = ""
+    if json_ld_content:
+        combined_result += json_ld_content
+        combined_result += "SECONDARY_SOURCE (HTML Body):\n"
+    
+    combined_result += text
+    return combined_result
 
 def _preprocess_text(text: str, max_chars: int = 24000) -> str:
     """Common text preprocessing for all input types."""
