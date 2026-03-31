@@ -271,11 +271,37 @@ select, option, input, textarea {
   color: #1a1a2e;
 }
 
-/* Fix for Safari/Chrome autofill and native styling */
-input:-webkit-autofill,
-input:-webkit-autofill:hover, 
-input:-webkit-autofill:focus {
-  -webkit-text-fill-color: var(--fg);
-  -webkit-box-shadow: 0 0 0px 1000px var(--input-bg) inset;
-  transition: background-color 5000s ease-in-out 0s;
+/* ── Resize Handles ────────────────────────────────────────────── */
+.resize-handle-v {
+  position: absolute;
+  top: 0;
+  right: -3px;
+  width: 6px;
+  height: 100%;
+  cursor: col-resize;
+  z-index: 50;
+  transition: background-color 0.2s;
+}
+
+.resize-handle-v:hover,
+.resize-handle-v.dragging {
+  background-color: var(--primary);
+  opacity: 0.5;
+}
+
+.resize-handle-h {
+  position: absolute;
+  top: -3px;
+  left: 0;
+  width: 100%;
+  height: 6px;
+  cursor: row-resize;
+  z-index: 50;
+  transition: background-color 0.2s;
+}
+
+.resize-handle-h:hover,
+.resize-handle-h.dragging {
+  background-color: var(--primary);
+  opacity: 0.5;
 }

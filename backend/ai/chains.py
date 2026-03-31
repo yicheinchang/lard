@@ -65,8 +65,8 @@ multi_metadata_prompt = ChatPromptTemplate.from_messages([
 ])
 
 description_extraction_prompt = ChatPromptTemplate.from_messages([
-    ("system", "You are an expert at extracting job details from text, HTML, or PDF sources. "
-               "Extract the COMPLETE job description, use clean Markdown structure but PRESERVE VERBATIM text. "
+    ("system", "You are an expert at extracting job details from a job posting."
+               "Reformat the COMPLETE job/position description, use clean Markdown structure but PRESERVE VERBATIM text. "
                "Do NOT rephrase, do NOT add your own labels or categories (like 'Education' or 'Programming' if they aren't in the source). "
                "Include sections like 'About the Role', 'Responsibilities', 'Qualifications' etc. EXACTLY as they appear. "
                "SKIP legal boilerplate, EEO statements, and cookie notices. "

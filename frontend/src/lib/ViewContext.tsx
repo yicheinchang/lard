@@ -1,6 +1,6 @@
 "use client";
 
-import React, { createContext, useContext, useState, type ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, type ReactNode } from 'react';
 
 export type ActiveView = 'kanban' | 'table' | 'settings';
 
@@ -9,6 +9,10 @@ interface ViewContextType {
   setActiveView: (view: ActiveView) => void;
   sidebarCollapsed: boolean;
   setSidebarCollapsed: (collapsed: boolean) => void;
+  sidebarWidth: number;
+  setSidebarWidth: (width: number) => void;
+  jobDetailHeight: number;
+  setJobDetailHeight: (height: number) => void;
   
   // Dirty state tracking
   isDirty: boolean;
@@ -27,8 +31,33 @@ const ViewContext = createContext<ViewContextType | undefined>(undefined);
 export function ViewProvider({ children }: { children: ReactNode }) {
   const [activeView, setActiveView] = useState<ActiveView>('kanban');
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [sidebarWidth, setSidebarWidth] = useState(120);
+  const [jobDetailHeight, setJobDetailHeight] = useState(45); // in percentage
   
-  // Dirty state
+  // Persistence
+  useEffect(() => {
+    const savedWidth = localStorage.getItem('sidebarWidth');
+    const savedHeight = localStorage.getItem('jobDetailHeight');
+    const savedCollapsed = localStorage.getItem('sidebarCollapsed');
+    
+    if (savedWidth) setSidebarWidth(parseInt(savedWidth, 10));
+    if (savedHeight) setJobDetailHeight(parseInt(savedHeight, 10));
+    if (savedCollapsed) setSidebarCollapsed(savedCollapsed === 'true');
+  }, []);
+
+  useEffect(() => {
+    localStorage.setItem('sidebarWidth', sidebarWidth.toString());
+  }, [sidebarWidth]);
+
+  useEffect(() => {
+    localStorage.setItem('jobDetailHeight', jobDetailHeight.toString());
+  }, [jobDetailHeight]);
+
+  useEffect(() => {
+    localStorage.setItem('sidebarCollapsed', sidebarCollapsed.toString());
+  }, [sidebarCollapsed]);
+
+  // Dirty state member
   const [isDirty, setIsDirty] = useState(false);
   const [dirtyMessage, setDirtyMessage] = useState('');
   
@@ -71,6 +100,10 @@ export function ViewProvider({ children }: { children: ReactNode }) {
       setActiveView, 
       sidebarCollapsed, 
       setSidebarCollapsed,
+      sidebarWidth,
+      setSidebarWidth,
+      jobDetailHeight,
+      setJobDetailHeight,
       isDirty,
       dirtyMessage,
       setDirty,

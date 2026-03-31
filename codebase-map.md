@@ -51,11 +51,11 @@ This document provides a summary of the project's architecture, tech stack, and 
 ### Frontend (`/frontend`)
 - `src/app/`: Next.js routes (Layouts and Pages).
 - `src/components/`: Reusable UI components:
-  - `AppShell.tsx`: Main layout wrapper (Sidebar + Content area + AI Chat).
+  - `AppShell.tsx`: Main layout wrapper (Resizable Sidebar + Content area + AI Chat).
   - `KanbanBoard.tsx`: Drag-and-drop pipeline visualization.
   - `TableView.tsx`: Density-rich list view of applications.
   - `JobCard.tsx`: Individual job item in the Kanban board.
-  - `JobDetailView.tsx`: Core component for job application management. Consists of multiple tabs including "Interview Pipeline", "Job Details", and "Application Notes". Integrates `MdEditor` for rich text editing and `ReactMarkdown` with `prose` for rendering.
+  - `JobDetailView.tsx`: Core component for job application management. Features a resizable overlay height. Consists of multiple tabs including "Interview Pipeline", "Job Details", and "Application Notes". Integrates `MdEditor` for rich text editing and `ReactMarkdown` with `prose` for rendering.
   - `AddJobModal.tsx`: Core form for new applications. Includes AI Auto-fill, file attachment, and **Duplication Detection** prompts.
   - `ConfirmDialog.tsx`: Reusable modal for user confirmations (e.g., "Add Anyway", "Discard Changes").
   - `MdEditor`: Markdown editor component.

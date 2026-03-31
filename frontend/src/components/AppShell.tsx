@@ -8,7 +8,45 @@ import { useSettings } from '@/lib/SettingsContext';
 import { ConfirmDialog } from './ConfirmDialog';
 
 function Sidebar() {
-  const { activeView, setActiveView, sidebarCollapsed, setSidebarCollapsed, requestAction } = useView();
+  const { activeView, setActiveView, sidebarCollapsed, setSidebarCollapsed, sidebarWidth, setSidebarWidth, requestAction } = useView();
+  const [isResizing, setIsResizing] = React.useState(false);
+
+  const startResizing = (e: React.MouseEvent) => {
+    e.preventDefault();
+    setIsResizing(true);
+  };
+
+  React.useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!isResizing) return;
+      
+      const newWidth = Math.min(Math.max(e.clientX, 0), 200); // 200 is user-requested max
+      
+      if (newWidth < 75) {
+        setSidebarCollapsed(true);
+      } else {
+        setSidebarCollapsed(false);
+        setSidebarWidth(newWidth);
+      }
+    };
+
+    const handleMouseUp = () => {
+      setIsResizing(false);
+    };
+
+    if (isResizing) {
+      window.addEventListener('mousemove', handleMouseMove);
+      window.addEventListener('mouseup', handleMouseUp);
+      document.body.style.cursor = 'col-resize';
+    } else {
+      document.body.style.cursor = 'default';
+    }
+
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, [isResizing, setSidebarWidth, setSidebarCollapsed]);
 
   const navItems = [
     { id: 'kanban' as const, label: 'Dashboard', icon: LayoutGrid },
@@ -23,11 +61,16 @@ function Sidebar() {
   return (
     <aside
       className={`
-        ${sidebarCollapsed ? 'w-16' : 'w-64'}
         border-r border-[var(--border-color)] hidden sm:flex flex-col sticky top-0 h-screen glass z-10
-        transition-all duration-300 ease-in-out shrink-0
+        transition-[width] duration-300 ease-in-out shrink-0 relative
       `}
+      style={{ width: sidebarCollapsed ? '64px' : `${sidebarWidth}px` }}
     >
+      {/* Resize Handle */}
+      <div 
+        className={`resize-handle-v ${isResizing ? 'dragging' : ''}`}
+        onMouseDown={startResizing}
+      />
       {/* Logo Area */}
       <div className={`flex items-center ${sidebarCollapsed ? 'justify-center p-4' : 'px-6 pt-6 pb-2'} mb-2`}>
         {sidebarCollapsed ? (

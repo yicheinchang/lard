@@ -19,7 +19,44 @@ interface JobDetailViewProps {
 }
 
 export const JobDetailView: React.FC<JobDetailViewProps> = ({ job, onClose, onJobUpdated }) => {
-  const { setDirty } = useView();
+  const { setDirty, jobDetailHeight, setJobDetailHeight } = useView();
+  const [isResizingHeight, setIsResizingHeight] = useState(false);
+
+  const startResizingHeight = (e: React.MouseEvent) => {
+    e.preventDefault();
+    setIsResizingHeight(true);
+  };
+
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!isResizingHeight) return;
+      
+      const windowHeight = window.innerHeight;
+      const newHeightPercent = ((windowHeight - e.clientY) / windowHeight) * 100;
+      
+      // Keep within user-approved 25% - 85% range
+      const clampedHeight = Math.min(Math.max(newHeightPercent, 25), 85);
+      setJobDetailHeight(clampedHeight);
+    };
+
+    const handleMouseUp = () => {
+      setIsResizingHeight(false);
+    };
+
+    if (isResizingHeight) {
+      window.addEventListener('mousemove', handleMouseMove);
+      window.addEventListener('mouseup', handleMouseUp);
+      document.body.style.cursor = 'row-resize';
+    } else {
+      document.body.style.cursor = 'default';
+    }
+
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, [isResizingHeight, setJobDetailHeight]);
+
   const [activeTab, setActiveTab] = useState<'info' | 'pipeline' | 'notes'>('pipeline');
   const mdParser = new MarkdownIt();
   const [stepTypes, setStepTypes] = useState<StepType[]>([]);
@@ -301,7 +338,15 @@ export const JobDetailView: React.FC<JobDetailViewProps> = ({ job, onClose, onJo
 
   return (
     <>
-      <div className="absolute inset-x-0 bottom-0 top-1/2 md:top-[40%] bg-[var(--bg)] border-t border-[var(--border-color)] shadow-[0_-10px_40px_rgba(0,0,0,0.5)] flex flex-col z-20 animate-slide-up">
+      <div 
+        className="absolute inset-x-0 bottom-0 bg-[var(--bg)] border-t border-[var(--border-color)] shadow-[0_-10px_40px_rgba(0,0,0,0.5)] flex flex-col z-20 animate-slide-up"
+        style={{ top: `${100 - jobDetailHeight}%` }}
+      >
+        {/* Resize Handle */}
+        <div 
+          className={`resize-handle-h ${isResizingHeight ? 'dragging' : ''}`}
+          onMouseDown={startResizingHeight}
+        />
         {/* Header */}
         <div className="flex justify-between items-center p-4 md:px-8 border-b border-[var(--border-color)] bg-[var(--surface)] backdrop-blur-md shrink-0">
           <div>
