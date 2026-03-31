@@ -38,6 +38,7 @@ export function SettingsPage() {
     openai_api_key: '', openai_model: '',
     anthropic_api_key: '', anthropic_model: '',
   });
+  const [extractionMode, setExtractionMode] = useState<'single' | 'multi'>('single');
   const [embeddingProvider, setEmbeddingProvider] = useState<EmbeddingProvider>('default');
   const [embeddingConfig, setEmbeddingConfig] = useState<EmbeddingConfig>({
     ollama_base_url: '', ollama_model: '',
@@ -72,10 +73,11 @@ export function SettingsPage() {
       aiEnabled !== settings.ai_enabled ||
       llmProvider !== settings.llm_provider ||
       JSON.stringify(llmConfig) !== JSON.stringify(settings.llm_config) ||
+      extractionMode !== settings.extraction_mode ||
       embeddingProvider !== settings.embedding_provider ||
       JSON.stringify(embeddingConfig) !== JSON.stringify(settings.embedding_config)
     );
-  }, [theme, aiEnabled, llmProvider, llmConfig, embeddingProvider, embeddingConfig, settings]);
+  }, [theme, aiEnabled, llmProvider, llmConfig, extractionMode, embeddingProvider, embeddingConfig, settings]);
 
   // Update global navigation guard
   useEffect(() => {
@@ -119,6 +121,7 @@ export function SettingsPage() {
     setAiEnabled(settings.ai_enabled);
     setLlmProvider(settings.llm_provider);
     setLlmConfig(settings.llm_config);
+    setExtractionMode(settings.extraction_mode);
     setEmbeddingProvider(settings.embedding_provider);
     setEmbeddingConfig(settings.embedding_config);
     setOriginalEmbeddingProvider(settings.embedding_provider);
@@ -144,6 +147,7 @@ export function SettingsPage() {
         ai_enabled: aiEnabled,
         llm_provider: llmProvider,
         llm_config: llmConfig,
+        extraction_mode: extractionMode,
         embedding_provider: embeddingProvider,
         embedding_config: embeddingConfig,
       });
@@ -417,6 +421,36 @@ export function SettingsPage() {
                     { value: 'anthropic', label: 'Anthropic' },
                   ]}
                 />
+              </div>
+
+              {/* Extraction Strategy */}
+              <div>
+                <Label>Extraction Strategy</Label>
+                <div className="grid grid-cols-2 gap-3">
+                  {[
+                    { id: 'single', label: 'Single-Agent', desc: 'Fast, for Large LLMs' },
+                    { id: 'multi', label: 'Multi-Agent', desc: 'Accurate, for Small LLMs' },
+                  ].map(mode => {
+                    const active = extractionMode === mode.id;
+                    return (
+                      <button
+                        key={mode.id}
+                        type="button"
+                        onClick={() => setExtractionMode(mode.id as 'single' | 'multi')}
+                        className={`
+                          p-3 rounded-xl border-2 transition-all text-left
+                          ${active
+                            ? 'border-violet-500 bg-violet-500/10'
+                            : 'border-[var(--border-color)] hover:border-violet-500/40 hover:bg-violet-500/5'
+                          }
+                        `}
+                      >
+                        <p className="font-medium text-sm" style={{ color: active ? 'var(--primary)' : 'var(--fg)' }}>{mode.label}</p>
+                        <p className="text-[10px] sm:text-xs" style={{ color: 'var(--fg-subtle)' }}>{mode.desc}</p>
+                      </button>
+                    )
+                  })}
+                </div>
               </div>
 
               {/* Ollama Config */}

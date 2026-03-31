@@ -78,6 +78,7 @@ export interface AppSettings {
   llm_config: LlmConfig;
   embedding_provider: 'default' | 'ollama' | 'openai';
   embedding_config: EmbeddingConfig;
+  extraction_mode: 'single' | 'multi';
 }
 
 export const getSettings = async (): Promise<AppSettings> => {

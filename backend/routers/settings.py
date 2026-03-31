@@ -22,6 +22,7 @@ class SettingsUpdate(BaseModel):
     llm_config: Optional[dict] = None
     embedding_provider: Optional[str] = None
     embedding_config: Optional[dict] = None
+    extraction_mode: Optional[str] = None
 
 
 class TestConfigPayload(BaseModel):

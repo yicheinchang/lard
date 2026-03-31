@@ -117,6 +117,7 @@ Timeline events for an application.
 Global configuration persisted on the server (`app_settings.json`).
 - `theme`: `dark` | `light` | `system`.
 - `ai_enabled`: Global boolean toggle.
+- `extraction_mode`: `single` | `multi` (Decomposes extraction for small models).
 - `providers`: Configurable LLM and Embedding sources (Ollama, OpenAI, Anthropic).
 
 ---
@@ -230,10 +231,11 @@ Settings are not just environment variables. They are persisted in `backend/app_
 
 ### 5. AI Extraction & Preprocessing
 The system uses a multi-stage pipeline to extract job details from URLs, PDFs, and text:
-- **HTML Cleaning**: Generic BeautifulSoup-based cleaning removes `script`, `nav`, `footer`, and `header` tags to isolate the job description.
-- **Verbatim Extraction**: The LLM prompt is optimized to extract text VERBATIM without rephrasing or adding inferred labels, preserving the original sentence structure and wording.
-- **Markdown Conversion**: The AI is instructed to convert the extracted job description into structured Markdown (headers, lists, etc.) while keeping the original content intact.
-- **Contextual Metadata**: In addition to the description, the system extracts the company, role, location, salary, internal Job ID, posted date, and application deadline, utilizing the source URL as a fallback context for Job ID identification.
+- **Contextual Metadata**: In addition to the description, the system extracts the company, role, location, salary, internal Job ID, posted date, and application deadline.
+- **Extraction Strategies**: Supports two modes of operation:
+  - **Single-Agent**: Fast, one-pass extraction for powerful cloud models.
+  - **Multi-Agent**: Sequential, granular extraction using dedicated agents for each field, significantly improving accuracy for local/small models (e.g., 3B parameter models).
+- **URL Fallback**: Utilizes the source URL as a last-resort context for identifying Job IDs that may be missing from the main text.
 
 ### 6. Document Ingestion
 Supports PDF and plain text. PDFs are parsed using `pypdf` and split into chunks before vectorization.

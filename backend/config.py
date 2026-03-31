@@ -39,6 +39,7 @@ DEFAULT_APP_SETTINGS = {
         "openai_api_key": settings.OPENAI_API_KEY or "",
         "openai_model": "text-embedding-3-small",
     },
+    "extraction_mode": "single",
 }
 
 
