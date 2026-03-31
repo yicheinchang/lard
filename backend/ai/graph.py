@@ -30,9 +30,9 @@ async def _run_field_extraction(field, schema, prompt, text, url, request, semap
             # Emit "Extracting..." status
             await progress_cb({"event": "extracting", "field": field, "msg": f"AI: Extracting {field.replace('_', ' ')}..."})
 
-        # --- Fixed Context Strategy (9000 tokens) ---
+        # --- Fixed Context Strategy (8190 tokens) ---
         # Using a stable, fixed context window for local LLM performance as requested
-        num_ctx = 9000 
+        num_ctx = 8190 
         llm = get_llm(num_ctx=num_ctx)
 
         try:
@@ -118,8 +118,8 @@ async def extract_node(state: AgentState):
             results = await _run_multi_agent_extraction(state["text"], state.get("url"), request, progress_cb)
             return {"extracted_data": results, "error": None}
         else:
-            # Single-Agent (Default) using fixed 9000 context
-            llm = get_llm(num_ctx=9000)
+            # Single-Agent (Default) using fixed 8190 context
+            llm = get_llm(num_ctx=8190)
             if request and await request.is_disconnected():
                 return {"extracted_data": None, "error": "Cancelled"}
                 

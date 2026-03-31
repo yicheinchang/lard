@@ -239,7 +239,7 @@ The system uses a multi-stage pipeline to extract job details from URLs, PDFs, a
 - **Cancellation & Safety**: Extraction tasks can be aborted via `AbortController` in the UI. Cancellation is strictly enforced on the backend; if the connection is closed or the "Stop" button is clicked, the system explicitly cancels the background AI processing to stop LLM calls immediately.
 - **Reliability & Timeouts**: Field extractions have a per-agent timeout of 300 seconds (5 minutes) to ensure completion of complex tasks while preventing permanent hangs.
 - **Selective Context & Fallback**:
-    - **Fixed Context**: Standardized `num_ctx` to 9,000 tokens for all extraction tasks to optimize performance on local Ollama hardware.
+    - **Fixed Context**: Standardized `num_ctx` to 8,190 tokens for all extraction tasks (optimized for local RAM footprint).
     - **Raw Pass (Job Description)**: Specifically skips structured JSON extraction for the description field, using a direct verbatim retrieval prompt for maximum reliability and speed.
     - **Structured Pass (Metadata)**: Continues to use JSON schema enforcement for small fields like Company, Role, and ID.
     - **JSON-LD Support**: Prioritizes `application/ld+json` script tags (Schema.org `JobPosting`) for metadata extraction. This ensures high-fidelity results for modern, client-side rendered job boards (e.g., Workday/Moderna) where the primary page content is dynamic.
