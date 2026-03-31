@@ -55,9 +55,9 @@ async def extract_from_url(req: ExtractRequest, request: Request):
     async for event in _extract_stream_generator(request, url=req.url):
         data = json.loads(event.replace("data: ", ""))
         if data["event"] == "final_result":
-            result["extracted"] = data["data"]
-        elif data["event"] == "error":
-            result["error"] = data["msg"]
+            result["extracted"] = data.get("extracted")
+        elif data.get("event") == "error":
+            result["error"] = data.get("msg")
     return result
 
 async def _extract_stream_generator(request: Request, url: str = None, text: str = None):
@@ -97,21 +97,35 @@ async def _extract_stream_generator(request: Request, url: str = None, text: str
     async def run_ai():
         try:
             result = await agent_app.ainvoke({"text": text, "url": url, "request": request, "progress_callback": progress_callback})
-            await q.put(f"data: {json.dumps({'event': 'final_result', 'data': result['extracted_data'], 'error': result['error']})}\n\n")
+            await q.put(f"data: {json.dumps({'event': 'final_result', 'extracted': result['extracted_data'], 'error': result['error']})}\n\n")
         except Exception as e:
             await q.put(f"data: {json.dumps({'event': 'error', 'msg': str(e)})}\n\n")
         finally:
             await q.put(None)
 
     # Start AI in background
-    asyncio.create_task(run_ai())
+    ai_task = asyncio.create_task(run_ai())
 
     # Yield items from the queue until AI finish (None)
-    while True:
-        item = await q.get()
-        if item is None:
-            break
-        yield item
+    try:
+        while True:
+            item = await q.get()
+            if item is None:
+                break
+            yield item
+    finally:
+        # Strict termination: If the generator exits (client disconnect or manual stop), 
+        # cancel the background AI task immediately to stop Ollama calls.
+        if not ai_task.done():
+            print("Client disconnected, canceling AI task...")
+            ai_task.cancel()
+            try:
+                # Wait for cancellation to complete
+                await ai_task
+            except asyncio.CancelledError:
+                print("AI task successfully canceled.")
+            except Exception as e:
+                print(f"Error during AI task cancellation: {e}")
 
 @router.post("/extract-url-stream")
 async def extract_url_stream(req: ExtractRequest, request: Request):
@@ -167,9 +181,9 @@ async def extract_from_pdf(request: Request, file: UploadFile = File(...)):
     async for event in (await extract_pdf_stream(request, file)).body_iterator:
         data = json.loads(event.replace("data: ", ""))
         if data["event"] == "final_result":
-            res["extracted"] = data["data"]
+            res["extracted"] = data.get("extracted")
         elif data.get("event") == "error":
-            res["error"] = data["msg"]
+            res["error"] = data.get("msg")
     return res
 
 class ChatRequest(BaseModel):

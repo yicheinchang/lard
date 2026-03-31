@@ -236,8 +236,8 @@ The system uses a multi-stage pipeline to extract job details from URLs, PDFs, a
   - **Single-Agent**: Fast, one-pass extraction for powerful cloud models.
   - **Multi-Agent**: Parallelized, granular extraction using dedicated agents for each field. Uses `asyncio.gather` with a concurrency semaphore (default: 2) to optimize speed on local/small models without overwhelming hardware.
 - **Streaming & Progress UI**: Extraction tasks support real-time progress updates via Server-Sent Events (SSE). The frontend displays a news-ticker style status bar inside the extraction button, showing exactly what part of the URL or text is being processed and which fields are being extracted.
-- **Cancellation & Safety**: Extraction tasks can be aborted via `AbortController` in the UI. Cancellation is propagated to the backend, where the system detects client disconnection and terminates the AI loop immediately to free up resources. Interactive cancellation is available by clicking the active progress button.
-- **URL Fallback**: Utilizes the source URL as a last-resort context for identifying Job IDs that may be missing from the main text.
+- **Cancellation & Safety**: Extraction tasks can be aborted via `AbortController` in the UI. Cancellation is strictly enforced on the backend; if the connection is closed or the "Stop" button is clicked, the system explicitly cancels the background AI processing to stop LLM calls immediately.
+- **Reliability & Timeouts**: Field extractions have a per-agent timeout of 300 seconds (5 minutes) to ensure completion of complex tasks while preventing permanent hangs.
 
 ### 6. Document Ingestion
 Supports PDF and plain text. PDFs are parsed using `pypdf` and split into chunks before vectorization.

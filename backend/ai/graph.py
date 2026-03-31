@@ -32,10 +32,10 @@ async def _run_field_extraction(field, schema, prompt, text, url, llm, request, 
 
         try:
             chain = prompt | llm.with_structured_output(schema)
-            # Add 60s timeout per agent call to prevent permanent hangs
+            # Increased timeout to 300s (5 minutes) as requested
             res = await asyncio.wait_for(
                 chain.ainvoke({"text": text, "url": url or "Not provided"}),
-                timeout=60
+                timeout=300
             )
             val = res.model_dump()
             
@@ -113,11 +113,11 @@ async def extract_node(state: AgentState):
                     "text": state["text"],
                     "url": state.get("url") or "Not provided"
                 }),
-                timeout=120 # Higher timeout for single-agent pass
+                timeout=300 # Increased timeout to 300s (5 minutes)
             )
             return {"extracted_data": result.model_dump(), "error": None}
     except asyncio.TimeoutError:
-        return {"extracted_data": None, "error": "Extraction timed out. Try Multi-Agent mode for better results."}
+        return {"extracted_data": None, "error": "Extraction timed out after 5 minutes. Try smaller snippets or Multi-Agent mode."}
     except Exception as e:
         return {"extracted_data": None, "error": str(e)}
 
