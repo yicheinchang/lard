@@ -142,7 +142,8 @@ export const AddJobModal: React.FC<AddJobModalProps> = ({ isOpen, onClose, onAdd
         });
 
         if (check.status === 'exact_match') {
-          setError(`This role already exists! Found matching ${check.match_type} for ${check.job.company} - ${check.job.role} (Applied on ${new Date(check.job.applied_date).toLocaleDateString()}).`);
+          const dateLabel = check.job.status === 'Wishlist' ? 'Added' : 'Applied';
+          setError(`This role already exists! Found matching ${check.match_type} for ${check.job.company} - ${check.job.role} (${dateLabel} on ${new Date(check.job.applied_date).toLocaleDateString()}).`);
           setIsSubmitting(false);
           return;
         }
@@ -479,7 +480,13 @@ export const AddJobModal: React.FC<AddJobModalProps> = ({ isOpen, onClose, onAdd
             <div className="bg-white/5 rounded-lg p-3 border border-white/10">
               <p className="font-semibold text-white">{duplicateCheckResult.job.company} - {duplicateCheckResult.job.role}</p>
               <p className="text-xs text-gray-400">Current Status: <span className="text-violet-400 font-medium">{duplicateCheckResult.job.status}</span></p>
-              <p className="text-xs text-gray-400">Applied on: {new Date(duplicateCheckResult.job.applied_date).toLocaleDateString()}</p>
+              <p className="text-xs text-gray-400">
+                {duplicateCheckResult.job.status === 'Wishlist' ? 'Added to system: ' : 'Applied on: '}
+                {new Date(duplicateCheckResult.job.applied_date).toLocaleDateString()}
+              </p>
+              {duplicateCheckResult.job.job_posted_date && (
+                <p className="text-xs text-gray-400">Job Posted on: {new Date(duplicateCheckResult.job.job_posted_date).toLocaleDateString()}</p>
+              )}
             </div>
             <p className="mt-3">Are you sure you want to add this as a new application?</p>
           </div>
