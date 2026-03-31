@@ -239,10 +239,9 @@ The system uses a multi-stage pipeline to extract job details from URLs, PDFs, a
 - **Cancellation & Safety**: Extraction tasks can be aborted via `AbortController` in the UI. Cancellation is strictly enforced on the backend; if the connection is closed or the "Stop" button is clicked, the system explicitly cancels the background AI processing to stop LLM calls immediately.
 - **Reliability & Timeouts**: Field extractions have a per-agent timeout of 300 seconds (5 minutes) to ensure completion of complex tasks while preventing permanent hangs.
 - **Selective Context & Fallback**:
-    - **Metadata context**: 8,000 characters (approx 2,000 tokens).
-    - **Description context**: 24,000 characters (approx 6,000 tokens).
-    - **Dynamic `num_ctx`**: Adjusts Ollama's `num_ctx` parameter (up to 32,768) dynamically based on the field being extracted.
-    - **Raw Fallback**: If structured JSON extraction fails for the `description` field, a raw verbatim extraction pass is automatically triggered as a fallback.
+    - **Fixed Context**: Standardized `num_ctx` to 9,000 tokens for all extraction tasks to optimize performance on local Ollama hardware.
+    - **Raw Pass (Job Description)**: Specifically skips structured JSON extraction for the description field, using a direct verbatim retrieval prompt for maximum reliability and speed.
+    - **Structured Pass (Metadata)**: Continues to use JSON schema enforcement for small fields like Company, Role, and ID.
 
 ### 6. Document Ingestion
 Supports PDF and plain text. PDFs are parsed using `pypdf` and split into chunks before vectorization.
