@@ -5,7 +5,7 @@ import ReactMarkdown from 'react-markdown';
 import MdEditor from 'react-markdown-editor-lite';
 import MarkdownIt from 'markdown-it';
 import 'react-markdown-editor-lite/lib/index.css';
-import { Job, getStepTypes, StepType, addInterviewStep, updateInterviewStep, updateJob, uploadJobDocument, deleteJobDocument } from '../lib/api';
+import { Job, getStepTypes, StepType, addInterviewStep, updateInterviewStep, updateJob, uploadJobDocument, deleteJobDocument, getCompanies } from '../lib/api';
 import { X, Calendar, User, Mail, Plus, Circle, FileText, Edit2, Save, Paperclip, Trash2, ExternalLink, Link as LinkIcon, StickyNote } from 'lucide-react';
 import { ConfirmDialog } from './ConfirmDialog';
 import { DocumentPreview } from './DocumentPreview';
@@ -27,6 +27,7 @@ export const JobDetailView: React.FC<JobDetailViewProps> = ({ job, onClose, onJo
   
   const [isEditingInfo, setIsEditingInfo] = useState(false);
   const [editFormData, setEditFormData] = useState<Partial<Job>>({});
+  const [companies, setCompanies] = useState<{id: number, name: string}[]>([]);
 
   // Notes state
   const [editingNoteId, setEditingNoteId] = useState<number | null>(null);
@@ -104,6 +105,7 @@ export const JobDetailView: React.FC<JobDetailViewProps> = ({ job, onClose, onJo
   useEffect(() => {
     if (job) {
       getStepTypes().then(setStepTypes).catch(console.error);
+      getCompanies().then(setCompanies).catch(console.error);
       setEditFormData(job);
       setJobNotes(job.notes || '');
     }
@@ -504,6 +506,24 @@ export const JobDetailView: React.FC<JobDetailViewProps> = ({ job, onClose, onJo
                 
                 {isEditingInfo ? (
                   <div className="space-y-3 bg-[var(--input-bg)] p-4 rounded-xl border border-violet-500/30">
+                    <div className="flex flex-col gap-1">
+                      <label className="text-xs text-[var(--fg-subtle)]">Company *</label>
+                      <input 
+                        className="bg-[var(--bg)] border border-[var(--border-color)] rounded-md px-2 py-1 text-sm text-[var(--fg)] focus:outline-none focus:border-violet-500" 
+                        value={editFormData.company || ''} 
+                        onChange={e => handleEditChange('company', e.target.value)}
+                        list="edit-company-list"
+                      />
+                      <datalist id="edit-company-list">
+                        {companies.map(c => (
+                          <option key={c.id} value={c.name} />
+                        ))}
+                      </datalist>
+                    </div>
+                    <div className="flex flex-col gap-1">
+                      <label className="text-xs text-[var(--fg-subtle)]">Role *</label>
+                      <input className="bg-[var(--bg)] border border-[var(--border-color)] rounded-md px-2 py-1 text-sm text-[var(--fg)] focus:outline-none focus:border-violet-500" value={editFormData.role || ''} onChange={e => handleEditChange('role', e.target.value)}/>
+                    </div>
                     <div className="flex flex-col gap-1">
                       <label className="text-xs text-[var(--fg-subtle)] flex items-center gap-1"><LinkIcon className="w-3 h-3" /> Application URL</label>
                       <input type="url" className="bg-[var(--bg)] border border-[var(--border-color)] rounded-md px-2 py-1 text-sm text-[var(--fg)] focus:outline-none focus:border-violet-500" value={editFormData.url || ''} onChange={e => handleEditChange('url', e.target.value)} placeholder="https://..."/>
