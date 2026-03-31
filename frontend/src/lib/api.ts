@@ -138,6 +138,16 @@ export const getStepTypes = async () => {
   return response.data;
 };
 
+export const getCompanies = async (): Promise<{id: number, name: string}[]> => {
+  const response = await api.get('/companies');
+  return response.data;
+};
+
+export const checkJobDuplicate = async (data: { company: string, role: string, url?: string, company_job_id?: string }) => {
+  const response = await api.post('/jobs/check-duplicate', data);
+  return response.data;
+};
+
 export const addInterviewStep = async (jobId: number, step_type_name: string, step_date?: string, status?: string, notes?: string) => {
   const response = await api.post(`/jobs/${jobId}/steps`, { step_type_name, step_date, status, notes });
   return response.data;

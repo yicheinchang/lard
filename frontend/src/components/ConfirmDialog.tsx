@@ -6,10 +6,11 @@ import { AlertTriangle, CheckCircle2, X } from 'lucide-react';
 interface ConfirmDialogProps {
   isOpen: boolean;
   title: string;
-  message: string;
+  message: React.ReactNode;
   onConfirm: (date?: string, file?: File | null) => void;
   onCancel: () => void;
   confirmLabel?: string;
+  cancelLabel?: string;
   variant?: 'default' | 'danger' | 'success';
   showDateInput?: boolean;
   dateLabel?: string;
@@ -46,6 +47,7 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
   onConfirm,
   onCancel,
   confirmLabel = 'Confirm',
+  cancelLabel = 'Cancel',
   variant = 'default',
   showDateInput = false,
   dateLabel = 'Date',
@@ -122,7 +124,7 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
             onClick={handleCancel}
             className="px-4 py-2 rounded-lg text-gray-400 hover:text-white hover:bg-white/5 transition-colors font-medium text-sm"
           >
-            Cancel
+            {cancelLabel}
           </button>
           <button
             onClick={handleConfirm}

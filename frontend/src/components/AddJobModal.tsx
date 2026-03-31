@@ -1,7 +1,8 @@
 import React, { useState, useRef } from 'react';
 import { Sparkles, Loader2, Link as LinkIcon, Building2, Briefcase, Plus, ChevronDown, ChevronUp, FileText, Upload, Zap, Paperclip } from 'lucide-react';
-import { extractJobFromUrl, extractJobFromPdf, uploadJobDocument, Job } from '../lib/api';
+import { extractJobFromUrl, extractJobFromPdf, uploadJobDocument, checkJobDuplicate, getCompanies, Job } from '../lib/api';
 import { useSettings } from '@/lib/SettingsContext';
+import { ConfirmDialog } from '@/components/ConfirmDialog';
 
 interface AddJobModalProps {
   isOpen: boolean;
@@ -27,6 +28,17 @@ export const AddJobModal: React.FC<AddJobModalProps> = ({ isOpen, onClose, onAdd
   // Shared file state — used for AI extraction (AI on) or attachment (AI off)
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  
+  // Custom states for duplication and suggestions
+  const [companies, setCompanies] = useState<{id: number, name: string}[]>([]);
+  const [duplicateCheckResult, setDuplicateCheckResult] = useState<any>(null);
+  const [showSimilarConfirm, setShowSimilarConfirm] = useState(false);
+
+  React.useEffect(() => {
+    if (isOpen) {
+      getCompanies().then(setCompanies).catch(console.error);
+    }
+  }, [isOpen]);
 
   if (!isOpen) return null;
 
@@ -111,8 +123,8 @@ export const AddJobModal: React.FC<AddJobModalProps> = ({ isOpen, onClose, onAdd
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = async (e: React.FormEvent, skipCheck = false) => {
+    if (e) e.preventDefault();
     if (!formData.company || !formData.role) {
       setError('Company and Role are required.');
       return;
@@ -120,6 +132,30 @@ export const AddJobModal: React.FC<AddJobModalProps> = ({ isOpen, onClose, onAdd
     setError('');
     setIsSubmitting(true);
     try {
+      // 1. Perform Duplicate Check (if not skipped)
+      if (!skipCheck) {
+        const check = await checkJobDuplicate({
+          company: formData.company,
+          role: formData.role,
+          url: formData.url,
+          company_job_id: formData.company_job_id
+        });
+
+        if (check.status === 'exact_match') {
+          setError(`This role already exists! Found matching ${check.match_type} for ${check.job.company} - ${check.job.role} (Applied on ${new Date(check.job.applied_date).toLocaleDateString()}).`);
+          setIsSubmitting(false);
+          return;
+        }
+
+        if (check.status === 'similar_match') {
+          setDuplicateCheckResult(check);
+          setShowSimilarConfirm(true);
+          setIsSubmitting(false);
+          return;
+        }
+      }
+
+      // 2. Proceed with creation
       const cleanData = Object.fromEntries(
         Object.entries(formData).map(([k, v]) => [k, v === '' ? null : v])
       );
@@ -349,10 +385,16 @@ export const AddJobModal: React.FC<AddJobModalProps> = ({ isOpen, onClose, onAdd
                   <input
                     type="text"
                     required
+                    list="company-list"
                     className="w-full bg-black/40 border border-white/10 rounded-lg pl-10 pr-4 py-2 text-white placeholder-gray-500 focus:outline-none focus:border-violet-500 transition-colors"
                     value={formData.company}
                     onChange={(e) => handleChange('company', e.target.value)}
                   />
+                  <datalist id="company-list">
+                    {companies.map(c => (
+                      <option key={c.id} value={c.name} />
+                    ))}
+                  </datalist>
                 </div>
               </div>
 
@@ -426,8 +468,28 @@ export const AddJobModal: React.FC<AddJobModalProps> = ({ isOpen, onClose, onAdd
             {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Add Job'}
           </button>
         </div>
-
       </div>
+
+      <ConfirmDialog
+        isOpen={showSimilarConfirm}
+        title="Similar Record Found"
+        message={duplicateCheckResult ? (
+          <div>
+            <p className="mb-2">A similar role was found in your system:</p>
+            <div className="bg-white/5 rounded-lg p-3 border border-white/10">
+              <p className="font-semibold text-white">{duplicateCheckResult.job.company} - {duplicateCheckResult.job.role}</p>
+              <p className="text-xs text-gray-400">Current Status: <span className="text-violet-400 font-medium">{duplicateCheckResult.job.status}</span></p>
+              <p className="text-xs text-gray-400">Applied on: {new Date(duplicateCheckResult.job.applied_date).toLocaleDateString()}</p>
+            </div>
+            <p className="mt-3">Are you sure you want to add this as a new application?</p>
+          </div>
+        ) : ""}
+        onConfirm={() => handleSubmit(null as any, true)} // skipCheck = true
+        onCancel={() => setShowSimilarConfirm(false)}
+        confirmLabel="Add Anyway"
+        cancelLabel="Wait, I'll Check"
+        variant="default"
+      />
     </div>
   );
 };

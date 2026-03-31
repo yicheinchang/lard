@@ -31,7 +31,10 @@ This document provides a summary of the project's architecture, tech stack, and 
 - `main.py`: Application entry point and router integration.
 - `config.py`: Settings management (env vars + `app_settings.json`).
 - `routers/`:
-  - `jobs.py`: CRUD operations for jobs, interview steps, and documents.
+  - `jobs.py`: 
+    *   `Company`: Represents a company/organization. Ensures consistency.
+    *   `JobApplication`: Tracks job details, status, and linked documents/steps. Linked to `Company`.
+    *   `InterviewStep`: Individual process steps (e.g., "Phone Screen").
   - `ai.py`: AI Assistant chat and data extraction endpoints.
   - `settings.py`: Application configuration endpoints.
 - `database/`:
@@ -53,7 +56,9 @@ This document provides a summary of the project's architecture, tech stack, and 
   - `TableView.tsx`: Density-rich list view of applications.
   - `JobCard.tsx`: Individual job item in the Kanban board.
   - `JobDetailView.tsx`: Core component for job application management. Consists of multiple tabs including "Interview Pipeline", "Job Details", and "Application Notes". Integrates `MdEditor` for rich text editing and `ReactMarkdown` with `prose` for rendering.
-  - `AddJobModal.tsx`: Multi-step form for new job entries and initial AI processing.
+  - `AddJobModal.tsx`: Core form for new applications. Includes AI Auto-fill, file attachment, and **Duplication Detection** prompts.
+  - `ConfirmDialog.tsx`: Reusable modal for user confirmations (e.g., "Add Anyway", "Discard Changes").
+  - `MdEditor`: Markdown editor component.
   - `ChatAssistant.tsx`: Semi-permanent drawer for the AI conversational agent.
   - `SettingsPage.tsx`: Integrated configuration for LLMs, themes, and system toggles.
 - `src/lib/`:
@@ -157,7 +162,9 @@ Global configuration persisted on the server.
 
 ### Jobs (`/jobs`)
 - `GET /jobs`: List all applications.
-- `POST /jobs/`: Create a new application (triggers vectorization).
+- `POST /api/jobs/`: Create new application. Performs auto-linkage to `Company`.
+- `POST /api/jobs/check-duplicate`: Logic for exact (URL/JobID) and similar (Role) matches.
+- `GET /api/companies`: List of known companies for suggestions.
 - `PUT /jobs/{id}`: Update application details.
 - `DELETE /jobs/{id}`: Remove application.
 - `POST /jobs/{id}/documents`: Upload and vectorize PDF/Text files.

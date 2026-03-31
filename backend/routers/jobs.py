@@ -11,6 +11,11 @@ from database.models import JobApplication, InterviewStep, StepType, DocumentMet
 router = APIRouter(prefix="/api", tags=["Jobs"])
 
 # --- Pydantic Models ---
+class CompanyResponse(BaseModel):
+    id: int
+    name: str
+    model_config = ConfigDict(from_attributes=True)
+
 class DocumentMetaResponse(BaseModel):
     id: int
     job_id: Optional[int]
@@ -56,6 +61,7 @@ class JobBase(BaseModel):
     company_job_id: Optional[str] = None
     location: Optional[str] = None
     description: Optional[str] = None
+    company_id: Optional[int] = None
     salary_range: Optional[str] = None
     hr_email: Optional[str] = None
     hiring_manager_name: Optional[str] = None
@@ -77,6 +83,7 @@ class JobUpdate(BaseModel):
     company_job_id: Optional[str] = None
     location: Optional[str] = None
     description: Optional[str] = None
+    company_id: Optional[int] = None
     salary_range: Optional[str] = None
     hr_email: Optional[str] = None
     hiring_manager_name: Optional[str] = None
@@ -96,6 +103,16 @@ class JobResponse(JobBase):
 
 # --- Routes ---
 
+def get_or_create_company(db: Session, name: str) -> Company:
+    name = name.strip()
+    company = db.query(Company).filter(Company.name.ilike(name)).first()
+    if not company:
+        company = Company(name=name)
+        db.add(company)
+        db.commit()
+        db.refresh(company)
+    return company
+
 def get_or_create_step_type(db: Session, name: str) -> StepType:
     st = db.query(StepType).filter(StepType.name == name).first()
     if not st:
@@ -111,7 +128,15 @@ def read_jobs(db: Session = Depends(get_db)):
 
 @router.post("/jobs/", response_model=JobResponse)
 def create_job(job: JobCreate, db: Session = Depends(get_db)):
-    db_job = JobApplication(**job.model_dump())
+    job_data = job.model_dump()
+    
+    # Handle company linkage
+    if job.company:
+        company = get_or_create_company(db, job.company)
+        job_data["company_id"] = company.id
+        job_data["company"] = company.name # Keep name for legacy / convenience
+        
+    db_job = JobApplication(**job_data)
     db.add(db_job)
     db.commit()
     db.refresh(db_job)
@@ -141,6 +166,12 @@ def update_job(job_id: int, job_update: JobUpdate, db: Session = Depends(get_db)
     description_changed = "description" in update_data and update_data["description"] != db_job.description
     notes_changed = "notes" in update_data and update_data["notes"] != db_job.notes
     
+    # Maintain company sync if name is updated or ID is provided
+    if "company" in update_data and update_data["company"]:
+        company = get_or_create_company(db, update_data["company"])
+        update_data["company_id"] = company.id
+        update_data["company"] = company.name
+        
     for key, value in update_data.items():
         if hasattr(db_job, key):
             setattr(db_job, key, value)
@@ -180,6 +211,72 @@ def delete_job(job_id: int, db: Session = Depends(get_db)):
     db.delete(db_job)
     db.commit()
     return {"status": "deleted"}
+
+class DuplicateCheck(BaseModel):
+    company: str
+    role: str
+    url: Optional[str] = None
+    company_job_id: Optional[str] = None
+
+@router.post("/jobs/check-duplicate")
+def check_duplicate(check: DuplicateCheck, db: Session = Depends(get_db)):
+    # 1. Check for URL match (Case 3 - Exact Match)
+    if check.url:
+        existing_url = db.query(JobApplication).filter(JobApplication.url == check.url).first()
+        if existing_url:
+            return {
+                "status": "exact_match", 
+                "match_type": "URL", 
+                "job": {
+                    "company": existing_url.company, 
+                    "role": existing_url.role, 
+                    "applied_date": existing_url.applied_date.isoformat()
+                }
+            }
+
+    # 2. Check for Exact Match (Company + Role + JobID)
+    company = db.query(Company).filter(Company.name.ilike(check.company.strip())).first()
+    if company:
+        # If job ID matches
+        if check.company_job_id:
+            existing_exact = db.query(JobApplication).filter(
+                JobApplication.company_id == company.id,
+                JobApplication.role.ilike(check.role.strip()),
+                JobApplication.company_job_id == check.company_job_id
+            ).first()
+            if existing_exact:
+                return {
+                    "status": "exact_match", 
+                    "match_type": "Company Job ID", 
+                    "job": {
+                        "company": existing_exact.company, 
+                        "role": existing_exact.role, 
+                        "applied_date": existing_exact.applied_date.isoformat()
+                    }
+                }
+        
+        # 3. Check for Similar Match (Company + Role)
+        existing_similar = db.query(JobApplication).filter(
+            JobApplication.company_id == company.id,
+            JobApplication.role.ilike(check.role.strip())
+        ).first()
+        if existing_similar:
+            return {
+                "status": "similar_match", 
+                "job": {
+                    "id": existing_similar.id,
+                    "company": existing_similar.company, 
+                    "role": existing_similar.role,
+                    "status": existing_similar.status,
+                    "applied_date": existing_similar.applied_date.isoformat()
+                }
+            }
+
+    return {"status": "unique"}
+
+@router.get("/companies", response_model=List[CompanyResponse])
+def read_companies(db: Session = Depends(get_db)):
+    return db.query(Company).order_by(Company.name).all()
 
 @router.get("/steps/types", response_model=List[StepTypeResponse])
 def get_step_types(db: Session = Depends(get_db)):
