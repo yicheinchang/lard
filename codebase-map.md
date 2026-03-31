@@ -239,7 +239,7 @@ Supports PDF and plain text. PDFs are parsed using `pypdf` and split into chunks
 
 ### 7. Centralized Navigation Guard
 The system uses a global navigation guard managed within `ViewContext.tsx`. This pattern protects against accidental data loss:
-- **Dirty State Tracking**: Components (like `JobDetailView` and `SettingsPage`) report their "dirty" status and a contextual warning message to the `ViewContext`.
+- **Dirty State Tracking**: Components (like `JobDetailView` and `SettingsPage`) report their "dirty" status and a contextual warning message to the `ViewContext`. This includes job info edits, existing interview step edits, and **unsaved data in the '+ Add Step' form**.
 - **Action Interception**: All disruptive actions (view changes, job selection, opening modals) are wrapped in a `requestAction` call.
 - **Global Prompt**: If the system is dirty, a centralized `ConfirmDialog` in `AppShell.tsx` intercepts the action and prompts the user to either discard changes or stay on the current page.
 

@@ -153,9 +153,16 @@ input[type="date"].style-date::-webkit-calendar-picker-indicator {
 
 /* Light-theme adjustments for hard-coded dark classes used in components */
 [data-theme="light"] .text-white { color: var(--fg); }
+[data-theme="light"] .text-gray-300 { color: var(--fg-muted); }
 [data-theme="light"] .text-gray-400 { color: var(--fg-muted); }
 [data-theme="light"] .text-gray-500 { color: var(--fg-subtle); }
 [data-theme="light"] .text-gray-600 { color: var(--fg-subtle); }
+[data-theme="light"] .text-amber-300 { color: var(--warning); }
+[data-theme="light"] .text-blue-300 { color: #2563eb; } /* Blue-600 for contrast */
+[data-theme="light"] .text-emerald-300 { color: var(--success); }
+[data-theme="light"] .text-red-300 { color: var(--danger); }
+[data-theme="light"] .text-orange-300 { color: #ea580c; } /* Orange-600 for contrast */
+[data-theme="light"] .text-slate-300 { color: var(--fg-subtle); }
 [data-theme="light"] .border-white\/10 { border-color: var(--border-color); }
 [data-theme="light"] .border-white\/5 { border-color: rgba(0,0,0,0.06); }
 [data-theme="light"] .bg-white\/5 { background-color: rgba(0,0,0,0.04); }

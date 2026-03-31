@@ -82,17 +82,25 @@ export const JobDetailView: React.FC<JobDetailViewProps> = ({ job, onClose, onJo
         }
       }
     }
+
+    // 3. Check Add Step Form
+    if (isAdding && (newStepName || newStepDate)) {
+      return true;
+    }
     
     return false;
-  }, [isEditingInfo, editFormData, job, editingStepId, editStepForm]);
+  }, [isEditingInfo, editFormData, job, editingStepId, editStepForm, isAdding, newStepName, newStepDate]);
 
   useEffect(() => {
-    const message = editingStepId !== null 
-      ? "You have unsaved changes in the interview step. If you switch now, these changes will be lost."
-      : "You have unsaved changes in the job details. If you switch now, these changes will be lost.";
+    let message = "You have unsaved changes in the job details. If you switch now, these changes will be lost.";
+    if (editingStepId !== null) {
+      message = "You have unsaved changes in the interview step. If you switch now, these changes will be lost.";
+    } else if (isAdding) {
+      message = "You have unsaved changes in the new interview step form. If you switch now, these changes will be lost.";
+    }
     setDirty(isDirty, message);
     return () => setDirty(false); // Clear on close
-  }, [isDirty, setDirty, editingStepId]);
+  }, [isDirty, setDirty, editingStepId, isAdding]);
 
   // Deletion state
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
