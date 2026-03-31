@@ -51,7 +51,7 @@ This document provides a summary of the project's architecture, tech stack, and 
 ### Frontend (`/frontend`)
 - `src/app/`: Next.js routes (Layouts and Pages).
 - `src/components/`: Reusable UI components:
-  - `AppShell.tsx`: Main layout wrapper (Resizable Sidebar + Content area + AI Chat).
+  - `AppShell.tsx`: Main layout wrapper (Resizable Sidebar + Content area + AI Chat). Includes **Mobile Responsive Header** and **Hamburger Menu Drawer** for small screens.
   - `KanbanBoard.tsx`: Drag-and-drop pipeline visualization.
   - `TableView.tsx`: Density-rich list view of applications.
   - `JobCard.tsx`: Individual job item in the Kanban board.

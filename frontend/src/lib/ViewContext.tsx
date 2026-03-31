@@ -13,6 +13,8 @@ interface ViewContextType {
   setSidebarWidth: (width: number) => void;
   jobDetailHeight: number;
   setJobDetailHeight: (height: number) => void;
+  isMobileMenuOpen: boolean;
+  setIsMobileMenuOpen: (open: boolean) => void;
   
   // Dirty state tracking
   isDirty: boolean;
@@ -31,8 +33,9 @@ const ViewContext = createContext<ViewContextType | undefined>(undefined);
 export function ViewProvider({ children }: { children: ReactNode }) {
   const [activeView, setActiveView] = useState<ActiveView>('kanban');
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-  const [sidebarWidth, setSidebarWidth] = useState(120);
+  const [sidebarWidth, setSidebarWidth] = useState(160);
   const [jobDetailHeight, setJobDetailHeight] = useState(45); // in percentage
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   
   // Persistence
   useEffect(() => {
@@ -104,6 +107,8 @@ export function ViewProvider({ children }: { children: ReactNode }) {
       setSidebarWidth,
       jobDetailHeight,
       setJobDetailHeight,
+      isMobileMenuOpen,
+      setIsMobileMenuOpen,
       isDirty,
       dirtyMessage,
       setDirty,

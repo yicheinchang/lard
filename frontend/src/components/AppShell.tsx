@@ -1,7 +1,7 @@
 "use client";
 
 import React from 'react';
-import { Briefcase, LayoutGrid, Table2, ChevronLeft, ChevronRight, Sparkles, Settings } from 'lucide-react';
+import { Briefcase, LayoutGrid, Table2, ChevronLeft, ChevronRight, Sparkles, Settings, Menu, X } from 'lucide-react';
 import { ViewProvider, useView, type ActiveView } from '@/lib/ViewContext';
 import { ChatAssistant } from './ChatAssistant';
 import { useSettings } from '@/lib/SettingsContext';
@@ -20,7 +20,8 @@ function Sidebar() {
     const handleMouseMove = (e: MouseEvent) => {
       if (!isResizing) return;
       
-      const newWidth = Math.min(Math.max(e.clientX, 0), 200); // 200 is user-requested max
+      // Increased max to 280 based on new 160 default
+      const newWidth = Math.min(Math.max(e.clientX, 0), 280); 
       
       if (newWidth < 75) {
         setSidebarCollapsed(true);
@@ -156,6 +157,91 @@ function Sidebar() {
   );
 }
 
+function MobileHeader() {
+  const { setIsMobileMenuOpen } = useView();
+  return (
+    <div className="sm:hidden flex items-center justify-between p-4 border-b border-[var(--border-color)] glass sticky top-0 z-30">
+      <h2 className="text-lg font-bold bg-clip-text text-transparent bg-gradient-to-r from-violet-400 to-fuchsia-400 flex items-center gap-2">
+        <Sparkles className="w-5 h-5 text-violet-400" />
+        Tracker AI
+      </h2>
+      <button 
+        onClick={() => setIsMobileMenuOpen(true)}
+        className="p-2 hover:bg-[var(--surface-hover)] rounded-lg text-[var(--fg-subtle)] hover:text-[var(--fg)] transition-all"
+      >
+        <Menu className="w-6 h-6" />
+      </button>
+    </div>
+  );
+}
+
+function MobileDrawer() {
+  const { isMobileMenuOpen, setIsMobileMenuOpen, activeView, setActiveView, requestAction } = useView();
+  
+  if (!isMobileMenuOpen) return null;
+
+  const navItems = [
+    { id: 'kanban' as const, label: 'Dashboard', icon: LayoutGrid },
+    { id: 'table' as const, label: 'Table View', icon: Table2 },
+    { id: 'settings' as const, label: 'Settings', icon: Settings },
+  ];
+
+  const handleNav = (view: ActiveView) => {
+    setIsMobileMenuOpen(false);
+    if (view === activeView) return;
+    requestAction(() => setActiveView(view));
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 sm:hidden">
+      {/* Backdrop */}
+      <div 
+        className="absolute inset-0 bg-black/60 backdrop-blur-sm animate-fade-in" 
+        onClick={() => setIsMobileMenuOpen(false)} 
+      />
+      
+      {/* Drawer */}
+      <aside className="absolute inset-y-0 left-0 w-72 bg-[var(--bg)] border-r border-[var(--border-color)] flex flex-col shadow-2xl animate-slide-right">
+        <div className="p-6 flex items-center justify-between border-b border-[var(--border-color)]">
+          <h2 className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-violet-400 to-fuchsia-400 flex items-center gap-2">
+            Tracker AI
+          </h2>
+          <button onClick={() => setIsMobileMenuOpen(false)} className="p-2 hover:bg-[var(--surface-hover)] rounded-full transition-all">
+            <X className="w-5 h-5 text-[var(--fg-subtle)]" />
+          </button>
+        </div>
+        
+        <nav className="flex flex-col gap-2 p-4 flex-1">
+          {navItems.map((item) => {
+            const Icon = item.icon;
+            const isActive = activeView === item.id;
+            return (
+              <button
+                key={item.id}
+                onClick={() => handleNav(item.id)}
+                className={`
+                  flex items-center gap-4 p-4 rounded-xl transition-all duration-200
+                  ${isActive
+                    ? 'bg-violet-500/15 text-violet-300 border border-violet-500/20'
+                    : 'text-[var(--fg-subtle)] hover:text-[var(--fg)] hover:bg-[var(--surface-hover)]'
+                  }
+                `}
+              >
+                <Icon className={`w-6 h-6 ${isActive ? 'text-violet-400' : ''}`} />
+                <span className="font-semibold text-base">{item.label}</span>
+              </button>
+            );
+          })}
+        </nav>
+        
+        <div className="p-6 border-t border-[var(--border-color)] text-center text-xs text-[var(--fg-subtle)]">
+          &copy; 2026 Tracker AI
+        </div>
+      </aside>
+    </div>
+  );
+}
+
 function MainContent({ children }: { children: React.ReactNode }) {
   const [isChatOpen, setIsChatOpen] = React.useState(false);
   const { aiEnabled } = useSettings();
@@ -163,6 +249,9 @@ function MainContent({ children }: { children: React.ReactNode }) {
 
   return (
     <main className="flex-1 flex flex-col relative w-full pb-0 min-w-0" style={{ background: `linear-gradient(to bottom, var(--bg), var(--bg))` }}>
+      <MobileHeader />
+      <MobileDrawer />
+      
       {children}
       
       {/* Floating AI Button — hidden when AI is disabled */}
