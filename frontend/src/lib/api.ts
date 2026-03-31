@@ -47,8 +47,8 @@ export interface Job {
   headhunter_email?: string;
   notes?: string;
 
+  created_at: string;
   applied_date?: string;
-  last_updated?: string;
   steps?: InterviewStep[];
   documents?: DocumentMeta[];
 }

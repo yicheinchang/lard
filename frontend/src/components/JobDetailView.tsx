@@ -6,7 +6,7 @@ import MdEditor from 'react-markdown-editor-lite';
 import MarkdownIt from 'markdown-it';
 import 'react-markdown-editor-lite/lib/index.css';
 import { Job, getStepTypes, StepType, addInterviewStep, updateInterviewStep, updateJob, uploadJobDocument, deleteJobDocument, getCompanies } from '../lib/api';
-import { X, Calendar, User, Mail, Plus, Circle, FileText, Edit2, Save, Paperclip, Trash2, ExternalLink, Link as LinkIcon, StickyNote } from 'lucide-react';
+import { X, Calendar, User, Mail, Plus, Circle, FileText, Edit2, Save, Paperclip, Trash2, ExternalLink, Link as LinkIcon, StickyNote, Send } from 'lucide-react';
 import { ConfirmDialog } from './ConfirmDialog';
 import { DocumentPreview } from './DocumentPreview';
 
@@ -130,13 +130,25 @@ export const JobDetailView: React.FC<JobDetailViewProps> = ({ job, onClose, onJo
   }, [jobNotes, job?.id]);
 
   const sortedSteps = useMemo(() => {
-    if (!job?.steps) return [];
-    return [...job.steps].sort((a, b) => {
+    let steps = job?.steps ? [...job.steps] : [];
+    
+    // Inject "Applied" event if applied_date exists
+    if (job?.applied_date) {
+      steps.push({
+        id: -1, // Virtual ID
+        step_type: { id: -1, name: 'Applied' },
+        step_date: job.applied_date,
+        status: 'Completed',
+        notes: 'Application submitted to company.'
+      } as any);
+    }
+
+    return steps.sort((a, b) => {
       const dateA = a.step_date ? new Date(a.step_date).getTime() : Number.MAX_SAFE_INTEGER;
       const dateB = b.step_date ? new Date(b.step_date).getTime() : Number.MAX_SAFE_INTEGER;
       return dateB - dateA;
     });
-  }, [job?.steps]);
+  }, [job?.steps, job?.applied_date]);
 
   if (!job) return null;
 
@@ -307,18 +319,27 @@ export const JobDetailView: React.FC<JobDetailViewProps> = ({ job, onClose, onJo
                 {sortedSteps.length > 0 ? sortedSteps.map((step) => (
                   <div key={step.id} className="relative flex items-start gap-4 flex-col sm:flex-row group/step">
                     <div className="relative z-10 mt-1.5 bg-[var(--bg)] p-1 rounded-full outline-none">
-                      <Circle className={`w-5 h-5 ${step.status === 'Completed' || step.status === 'Passed' ? 'text-green-500 fill-green-500/20' : 'text-[var(--fg-subtle)]'}`} />
+                      {step.id === -1 ? (
+                        <Send className="w-5 h-5 text-violet-500 fill-violet-500/10" />
+                      ) : (
+                        <Circle className={`w-5 h-5 ${step.status === 'Completed' || step.status === 'Passed' ? 'text-green-500 fill-green-500/20' : 'text-[var(--fg-subtle)]'}`} />
+                      )}
                     </div>
                     <div className={`flex flex-col glass p-4 rounded-xl w-full border ${step.status === 'Completed' || step.status === 'Passed' ? 'border-green-500/20 bg-green-500/5' : 'border-[var(--border-color)]'} hover:border-violet-500/30 transition`}>
                       <div className="flex justify-between items-center mb-1">
                         <span className={`font-semibold ${step.status === 'Completed' || step.status === 'Passed' ? 'text-[var(--fg)]' : 'text-[var(--fg-muted)]'}`}>{step.step_type.name}</span>
-                        <select 
-                          className="text-xs font-medium px-2 py-1 rounded-md bg-[var(--input-bg)] text-[var(--fg-muted)] border border-[var(--border-color)] cursor-pointer focus:outline-none focus:border-violet-500 transition-colors"
-                          value={step.status}
-                          onChange={(e) => handleStatusChange(step.id, e.target.value)}
-                        >
-                          {stepStatusOptions.map(opt => <option key={opt} value={opt}>{opt}</option>)}
-                        </select>
+                        {step.id !== -1 && (
+                          <select 
+                            className="text-xs font-medium px-2 py-1 rounded-md bg-[var(--input-bg)] text-[var(--fg-muted)] border border-[var(--border-color)] cursor-pointer focus:outline-none focus:border-violet-500 transition-colors"
+                            value={step.status}
+                            onChange={(e) => handleStatusChange(step.id, e.target.value)}
+                          >
+                            {stepStatusOptions.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+                          </select>
+                        )}
+                        {step.id === -1 && (
+                          <span className="text-[10px] uppercase font-bold text-violet-500/60 tracking-wider">System Event</span>
+                        )}
                       </div>
                       {step.step_date && (
                         <div className="flex items-center gap-1.5 text-xs text-[var(--fg-subtle)] mt-2">
@@ -349,14 +370,18 @@ export const JobDetailView: React.FC<JobDetailViewProps> = ({ job, onClose, onJo
                             {step.notes ? (
                               <div className="text-sm text-[var(--fg-muted)] whitespace-pre-wrap">{step.notes}</div>
                             ) : (
-                              <div className="text-sm text-[var(--fg-subtle)] italic">No notes added.</div>
+                              <div className="text-sm text-[var(--fg-subtle)] italic">
+                                {step.id === -1 ? 'System generated event.' : 'No notes added.'}
+                              </div>
                             )}
-                            <button 
-                              onClick={() => startEditingNote(step.id, step.notes)} 
-                              className="shrink-0 text-xs text-[var(--fg-subtle)] hover:text-violet-500 opacity-0 group-hover/step:opacity-100 transition-all flex items-center gap-1.5 bg-[var(--surface)] hover:bg-[var(--surface-hover)] px-2 py-1 rounded border border-[var(--border-color)]"
-                            >
-                              <Edit2 className="w-3 h-3" /> {step.notes ? 'Edit' : 'Add Note'}
-                            </button>
+                            {step.id !== -1 && (
+                              <button 
+                                onClick={() => startEditingNote(step.id, step.notes)} 
+                                className="shrink-0 text-xs text-[var(--fg-subtle)] hover:text-violet-500 opacity-0 group-hover/step:opacity-100 transition-all flex items-center gap-1.5 bg-[var(--surface)] hover:bg-[var(--surface-hover)] px-2 py-1 rounded border border-[var(--border-color)]"
+                              >
+                                <Edit2 className="w-3 h-3" /> {step.notes ? 'Edit' : 'Add Note'}
+                              </button>
+                            )}
                           </div>
                         )}
                       </div>
@@ -545,6 +570,19 @@ export const JobDetailView: React.FC<JobDetailViewProps> = ({ job, onClose, onJo
                       <input type="date" className="bg-[var(--bg)] border border-[var(--border-color)] rounded-md px-2 py-1 text-sm text-[var(--fg)] focus:outline-none focus:border-violet-500 style-date" value={editFormData.application_deadline ? editFormData.application_deadline.substring(0, 10) : ''} onChange={e => handleEditChange('application_deadline', e.target.value || '')}/>
                     </div>
                     <div className="flex flex-col gap-1">
+                      <label className="text-xs text-[var(--fg-subtle)] mt-2 text-violet-500 font-medium">Record Dates</label>
+                      <div className="space-y-2 pl-1 border-l-2 border-violet-500/20">
+                        <div className="flex flex-col gap-1">
+                          <label className="text-[10px] uppercase tracking-wider text-[var(--fg-subtle)]">Record Created</label>
+                          <input type="date" className="bg-[var(--bg)] border border-[var(--border-color)] rounded-md px-2 py-1 text-sm text-[var(--fg)] focus:outline-none focus:border-violet-500 style-date" value={editFormData.created_at ? editFormData.created_at.substring(0, 10) : ''} onChange={e => handleEditChange('created_at', e.target.value)}/>
+                        </div>
+                        <div className="flex flex-col gap-1">
+                          <label className="text-[10px] uppercase tracking-wider text-[var(--fg-subtle)]">Actually Applied</label>
+                          <input type="date" className="bg-[var(--bg)] border border-[var(--border-color)] rounded-md px-2 py-1 text-sm text-[var(--fg)] focus:outline-none focus:border-violet-500 style-date" value={editFormData.applied_date ? editFormData.applied_date.substring(0, 10) : ''} onChange={e => handleEditChange('applied_date', e.target.value)}/>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="flex flex-col gap-1">
                       <label className="text-xs text-[var(--fg-subtle)] mt-2 text-violet-500 font-medium">Hiring Manager Name</label>
                       <input className="bg-[var(--bg)] border border-[var(--border-color)] rounded-md px-2 py-1 text-sm text-[var(--fg)] focus:outline-none focus:border-violet-500" value={editFormData.hiring_manager_name || ''} onChange={e => handleEditChange('hiring_manager_name', e.target.value)}/>
                     </div>
@@ -604,7 +642,17 @@ export const JobDetailView: React.FC<JobDetailViewProps> = ({ job, onClose, onJo
 
                     <div className="grid grid-cols-2 gap-4 pt-4 border-t border-[var(--border-color)]">
                       <div>
-                        <span className="text-[var(--fg-subtle)] block text-xs mb-1">Posted</span>
+                        <span className="text-[var(--fg-subtle)] block text-xs mb-1">Added to System</span>
+                        <span className="text-[var(--fg-muted)]">{job.created_at ? new Date(job.created_at).toLocaleDateString() : '-'}</span>
+                      </div>
+                      <div>
+                        <span className="text-[var(--fg-subtle)] block text-xs mb-1">Actually Applied</span>
+                        <span className="text-[var(--fg-muted)] font-medium text-violet-400">{job.applied_date ? new Date(job.applied_date).toLocaleDateString() : 'Not Applied'}</span>
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-4 pt-2">
+                      <div>
+                        <span className="text-[var(--fg-subtle)] block text-xs mb-1">Posted Date</span>
                         <span className="text-[var(--fg-muted)]">{job.job_posted_date ? new Date(job.job_posted_date).toLocaleDateString() : '-'}</span>
                       </div>
                       <div>

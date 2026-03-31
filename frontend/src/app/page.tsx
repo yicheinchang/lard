@@ -23,6 +23,10 @@ export default function Home() {
   const [showDiscardConfirm, setShowDiscardConfirm] = useState(false);
   const [pendingJob, setPendingJob] = useState<Job | null>(null);
 
+  // Status transition state
+  const [showAdvanceToApplied, setShowAdvanceToApplied] = useState(false);
+  const [pendingStatusUpdate, setPendingStatusUpdate] = useState<{id: number, status: string} | null>(null);
+
   const fetchJobs = async () => {
     setIsLoading(true);
     try {
@@ -50,6 +54,15 @@ export default function Home() {
   }, [activeView]);
 
   const handleUpdateStatus = async (id: number, status: string, file?: File | null, docType?: string) => {
+    const currentJob = jobs.find(j => j.id === id);
+    
+    // special case: Wishlist -> Applied needs date prompt
+    if (currentJob?.status === 'Wishlist' && status === 'Applied') {
+      setPendingStatusUpdate({ id, status });
+      setShowAdvanceToApplied(true);
+      return;
+    }
+
     try {
       await updateJob(id, { status });
       if (file && docType) {
@@ -58,6 +71,21 @@ export default function Home() {
       await fetchJobs();
     } catch (error) {
       console.error('Failed to update status or upload file', error);
+    }
+  };
+
+  const confirmAdvanceToApplied = async (date?: string) => {
+    if (!pendingStatusUpdate) return;
+    try {
+      await updateJob(pendingStatusUpdate.id, { 
+        status: pendingStatusUpdate.status,
+        applied_date: date ? new Date(date).toISOString() : new Date().toISOString()
+      });
+      setShowAdvanceToApplied(false);
+      setPendingStatusUpdate(null);
+      await fetchJobs();
+    } catch (error) {
+      console.error('Failed to advance to applied', error);
     }
   };
 
@@ -145,6 +173,18 @@ export default function Home() {
         onCancel={() => { setShowDiscardConfirm(false); setPendingJob(null); }}
         confirmLabel="Discard Changes"
         variant="danger"
+      />
+
+      <ConfirmDialog
+        isOpen={showAdvanceToApplied}
+        title="Specify Application Date"
+        message="You are moving this job from Wishlist to Applied. When did you actually submit your application?"
+        onConfirm={confirmAdvanceToApplied}
+        onCancel={() => { setShowAdvanceToApplied(false); setPendingStatusUpdate(null); }}
+        confirmLabel="Move to Applied"
+        showDateInput={true}
+        dateLabel="Application Date"
+        variant="default"
       />
     </div>
   );

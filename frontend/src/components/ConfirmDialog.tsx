@@ -17,6 +17,7 @@ interface ConfirmDialogProps {
   showFileUpload?: boolean;
   fileUploadLabel?: string;
   accept?: string;
+  initialDate?: string;
 }
 
 const variantStyles = {
@@ -54,9 +55,18 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
   showFileUpload = false,
   fileUploadLabel = 'Upload File',
   accept = '*/*',
+  initialDate = '',
 }) => {
-  const [date, setDate] = useState('');
+  const [date, setDate] = useState(initialDate);
   const [file, setFile] = useState<File | null>(null);
+  
+  React.useEffect(() => {
+    if (isOpen && initialDate) {
+      setDate(initialDate);
+    } else if (isOpen && showDateInput && !date) {
+      setDate(new Date().toISOString().substring(0, 10)); // Default to today
+    }
+  }, [isOpen, initialDate, showDateInput, date]);
   const styles = variantStyles[variant];
 
   if (!isOpen) return null;

@@ -77,9 +77,10 @@ The `AppShell` provides the persistent UI (sidebar and chat), while `src/app/pag
 
 ### 2. Job Detail System
 Instead of separate routes, job details are shown in an overlay (`JobDetailView.tsx`). This allows for a fast, responsive user experience. The component handles:
-- Status updates and timeline tracking.
+- Status updates and timeline tracking (includes virtual "Applied" system events).
 - Document uploads and management.
-- Detailed metadata editing.
+- Detailed metadata editing (including independent "Record Created" and "Applied" dates).
+- Application advancement triggers (e.g., prompting for application date when moving from Wishlist to Applied).
 
 ### 3. Contextual AI Integration
 The `ChatAssistant` is a global component accessible from any page. It maintains its own state and can be toggled via a floating action button or keyboard shortcuts.
@@ -132,7 +133,9 @@ Global configuration persisted on the server.
 - `description`: (Text, Markdown)
 - `notes`: (Text, Markdown) User notes.
 - `hr_email`, `hiring_manager_name`, `hiring_manager_email`: (String)
-- `applied_date`, `last_updated`: (DateTime)
+- `applied_date`: (DateTime) The date the application was actually submitted.
+- `created_at`: (DateTime) The date the record was first added to the system.
+- `last_updated`: (DateTime)
 
 #### `interview_steps`
 - `id`: (Integer, PK)

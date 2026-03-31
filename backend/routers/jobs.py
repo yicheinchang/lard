@@ -69,6 +69,8 @@ class JobBase(BaseModel):
     headhunter_name: Optional[str] = None
     headhunter_email: Optional[str] = None
     notes: Optional[str] = None
+    created_at: Optional[datetime] = None
+    applied_date: Optional[datetime] = None
 
 class JobCreate(JobBase):
     pass
@@ -91,10 +93,11 @@ class JobUpdate(BaseModel):
     headhunter_name: Optional[str] = None
     headhunter_email: Optional[str] = None
     notes: Optional[str] = None
+    created_at: Optional[datetime] = None
+    applied_date: Optional[datetime] = None
 
 class JobResponse(JobBase):
     id: int
-    applied_date: datetime
     last_updated: datetime
     steps: List[InterviewStepResponse] = []
     documents: List[DocumentMetaResponse] = []
