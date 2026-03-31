@@ -159,23 +159,24 @@ export const updateInterviewStep = async (stepId: number, updateData: { step_typ
   return response.data;
 };
 
-export const extractJobFromUrl = async (url: string) => {
-  const response = await api.post('/ai/extract-url', { url });
+export const extractJobFromUrl = async (url: string, signal?: AbortSignal) => {
+  const response = await api.post('/ai/extract-url', { url }, { signal });
   return response.data;
 };
 
-export const extractJobFromText = async (text: string) => {
-  const response = await api.post('/ai/extract-text', { text });
+export const extractJobFromText = async (text: string, signal?: AbortSignal) => {
+  const response = await api.post('/ai/extract-text', { text }, { signal });
   return response.data;
 };
 
-export const extractJobFromPdf = async (file: File) => {
+export const extractJobFromPdf = async (file: File, signal?: AbortSignal) => {
   const formData = new FormData();
   formData.append('file', file);
   const response = await api.post('/ai/extract-pdf', formData, {
     headers: {
       'Content-Type': 'multipart/form-data'
-    }
+    },
+    signal
   });
   return response.data;
 };

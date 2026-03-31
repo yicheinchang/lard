@@ -33,11 +33,19 @@ export const AddJobModal: React.FC<AddJobModalProps> = ({ isOpen, onClose, onAdd
   const [companies, setCompanies] = useState<{id: number, name: string}[]>([]);
   const [duplicateCheckResult, setDuplicateCheckResult] = useState<any>(null);
   const [showSimilarConfirm, setShowSimilarConfirm] = useState(false);
+  const [showCancelExtractionConfirm, setShowCancelExtractionConfirm] = useState(false);
+  const abortControllerRef = useRef<AbortController | null>(null);
 
   React.useEffect(() => {
     if (isOpen) {
       getCompanies().then(setCompanies).catch(console.error);
       resetForm();
+    } else {
+      // Abort any pending extraction if modal is closed
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+        abortControllerRef.current = null;
+      }
     }
   }, [isOpen]);
 
@@ -69,13 +77,17 @@ export const AddJobModal: React.FC<AddJobModalProps> = ({ isOpen, onClose, onAdd
   const handleExtract = async () => {
     setError('');
     setIsExtracting(true);
+    
+    // Create new abort controller
+    if (abortControllerRef.current) abortControllerRef.current.abort();
+    abortControllerRef.current = new AbortController();
+
     try {
       let data: any;
       if (selectedFile) {
-        // File has higher priority
-        data = await extractJobFromPdf(selectedFile);
+        data = await extractJobFromPdf(selectedFile, abortControllerRef.current.signal);
       } else if (formData.url) {
-        data = await extractJobFromUrl(formData.url);
+        data = await extractJobFromUrl(formData.url, abortControllerRef.current.signal);
       } else {
         setError('Please provide a URL or upload a file to auto-fill.');
         setIsExtracting(false);
@@ -83,10 +95,23 @@ export const AddJobModal: React.FC<AddJobModalProps> = ({ isOpen, onClose, onAdd
       }
       applyExtraction(data);
     } catch (err: any) {
-      handleExtractError(err);
+      if (err.name === 'AbortError' || err.name === 'CanceledError' || axios.isCancel(err)) {
+        console.log('Extraction aborted');
+      } else {
+        handleExtractError(err);
+      }
     } finally {
       setIsExtracting(false);
+      abortControllerRef.current = null;
     }
+  };
+
+  const handleCancelExtraction = () => {
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+      abortControllerRef.current = null;
+    }
+    setIsExtracting(false);
   };
 
   const applyExtraction = (data: any) => {
@@ -98,10 +123,23 @@ export const AddJobModal: React.FC<AddJobModalProps> = ({ isOpen, onClose, onAdd
         company: data.extracted.company || prev.company,
         role: data.extracted.role || prev.role,
         location: data.extracted.location || prev.location,
+        company_job_id: data.extracted.company_job_id || prev.company_job_id,
+        job_posted_date: data.extracted.job_posted_date || prev.job_posted_date,
+        application_deadline: data.extracted.application_deadline || prev.application_deadline,
         salary_range: data.extracted.salary_range || prev.salary_range,
         description: data.extracted.description || prev.description,
       }));
-      if (data.extracted.location || data.extracted.salary_range || data.extracted.description) {
+      
+      const hasAdvanced = !!(
+        data.extracted.location || 
+        data.extracted.salary_range || 
+        data.extracted.description || 
+        data.extracted.company_job_id ||
+        data.extracted.job_posted_date ||
+        data.extracted.application_deadline
+      );
+      
+      if (hasAdvanced) {
         setShowAdvanced(true);
       }
     }
@@ -126,6 +164,13 @@ export const AddJobModal: React.FC<AddJobModalProps> = ({ isOpen, onClose, onAdd
 
   const handleSubmit = async (e: React.FormEvent, skipCheck = false) => {
     if (e) e.preventDefault();
+    
+    // Guard: Prevent submitting while extracting
+    if (isExtracting && !skipCheck) {
+      setShowCancelExtractionConfirm(true);
+      return;
+    }
+
     if (!formData.company || !formData.role) {
       setError('Company and Role are required.');
       return;
@@ -456,7 +501,12 @@ export const AddJobModal: React.FC<AddJobModalProps> = ({ isOpen, onClose, onAdd
         <div className="pt-4 mt-2 flex justify-end gap-3 border-t border-white/10 shrink-0">
           <button
             type="button"
-            onClick={onClose}
+            onClick={() => {
+              if (isExtracting) {
+                handleCancelExtraction();
+              }
+              onClose();
+            }}
             className="px-4 py-2 rounded-lg text-gray-400 hover:text-white hover:bg-white/5 transition-colors font-medium"
           >
             Cancel
@@ -497,6 +547,23 @@ export const AddJobModal: React.FC<AddJobModalProps> = ({ isOpen, onClose, onAdd
         confirmLabel="Add Anyway"
         cancelLabel="Wait, I'll Check"
         variant="default"
+      />
+
+      {/* Extraction Cancellation Support */}
+      <ConfirmDialog
+        isOpen={showCancelExtractionConfirm}
+        title="Extraction in Progress"
+        message="AI is still extracting job details. Do you want to cancel the extraction and add the job now with your current manual input?"
+        confirmLabel="Cancel AI & Add Job"
+        cancelLabel="Continue Waiting"
+        onConfirm={() => {
+          handleCancelExtraction();
+          setShowCancelExtractionConfirm(false);
+          // Manually trigger submit with skipCheck = true
+          setTimeout(() => handleSubmit(null as any, true), 50);
+        }}
+        onCancel={() => setShowCancelExtractionConfirm(false)}
+        variant="danger"
       />
     </div>
   );

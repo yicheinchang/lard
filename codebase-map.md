@@ -235,6 +235,7 @@ The system uses a multi-stage pipeline to extract job details from URLs, PDFs, a
 - **Extraction Strategies**: Supports two modes of operation:
   - **Single-Agent**: Fast, one-pass extraction for powerful cloud models.
   - **Multi-Agent**: Sequential, granular extraction using dedicated agents for each field, significantly improving accuracy for local/small models (e.g., 3B parameter models).
+- **Cancellation & Safety**: Extraction tasks can be aborted via `AbortController` in the UI. Form submission is guarded with a warning if an extraction is still in progress.
 - **URL Fallback**: Utilizes the source URL as a last-resort context for identifying Job IDs that may be missing from the main text.
 
 ### 6. Document Ingestion
