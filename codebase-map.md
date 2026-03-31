@@ -76,11 +76,11 @@ The frontend is a **Single Page Application (SPA)** built with Next.js 16, utili
 The `AppShell` provides the persistent UI (sidebar and chat), while `src/app/page.tsx` acts as the main view switcher. Transitioning between Dashboard (Kanban) and Table view is handled via the `ViewContext` to ensure state is preserved.
 
 ### 2. Job Detail System
-Instead of separate routes, job details are shown in an overlay (`JobDetailView.tsx`). This allows for a fast, responsive user experience. The component handles:
-- Status updates and timeline tracking (includes virtual "Applied" system events).
-- Document uploads and management.
-- Detailed metadata editing (including independent "Record Created" and "Applied" dates).
-- Application advancement triggers (e.g., prompting for application date when moving from Wishlist to Applied).
+Instead of separate routes, job details are shown in a reactive overlay (`JobDetailView.tsx`). The component organizes data into three primary contexts:
+- **Interview Pipeline**: Chronological timeline of events with inline status, name, and date editing. Supports manual addition and system events (e.g., virtual "Applied" marker).
+- **Job Details**: Editable metadata (Company, Role, Salary, Dates) and Markdown-driven description rendering. Includes document management for Job Posts and Resumes.
+- **Application Notes**: A dedicated Markdown editor for deep-dive research and interview preparation, synchronizing with the RAG system.
+- **Workflow Triggers**: Contextual logic for status advancing (e.g., prompting for `applied_date` when moving from Wishlist to Applied) and deletion guards.
 
 ### 3. Contextual AI Integration
 The `ChatAssistant` is a global component accessible from any page. It maintains its own state and can be toggled via a floating action button or keyboard shortcuts.
@@ -94,27 +94,30 @@ The UI uses Tailwind CSS 4 with `globals.css`: Global CSS containing theme varia
 
 Shared structures used for API communication and state management.
 
-### 1. Job (`Job`)
+### 1. Job Application (`Job`)
 The central entity representing a job application.
-- `id`: Unique identifier.
-- `status`: One of `Wishlist`, `Applied`, `Interviewing`, `Offered`, `Rejected`, `Closed`, `Discontinued`.
-- `company` & `role`: Basic identifiers.
+- `id`: Unique identifier (Integer).
+- `company` & `role`: Brand and position (Strings).
+- `status`: Lifecycle stage (Wishlist ... Discontinued).
 - `steps`: Array of `InterviewStep` objects.
 - `documents`: Array of `DocumentMeta` objects (Job Post, Resume, etc.).
-- `metadata`: Salary range, location, contact info (HR, Hiring Manager, Headhunter).
+- `description`: Markdown job description (Vectorized).
+- `notes`: Markdown user notes (Vectorized).
+- `dates`: includes `created_at`, `applied_date`, `job_posted_date`, and `application_deadline`.
+- `metadata`: Salary range, location, and detailed contact info (HR/HM).
 
 ### 2. Interview Step (`InterviewStep`)
 Timeline events for an application.
-- `step_type`: `Phone Screen`, `Technical`, `Onsite`, etc.
-- `status`: `Scheduled`, `Completed`, `Passed`, `Requested`.
-- `step_date`: ISO timestamp.
+- `step_type`: Object containing `id` and `name` (e.g., "Onsite").
+- `status`: Current state (Requested, Scheduled, Completed, Passed).
+- `step_date`: ISO timestamp (Nullable).
+- `notes`: Personal feedback or preparation notes.
 
 ### 3. App Settings (`AppSettings`)
-Global configuration persisted on the server.
+Global configuration persisted on the server (`app_settings.json`).
 - `theme`: `dark` | `light` | `system`.
-- `ai_enabled`: Global toggle for AI features.
-- `llm_provider`: Choose between `ollama`, `openai`, `anthropic`.
-- `embedding_provider`: Choose between `default` (HuggingFace local), `ollama`, `openai`.
+- `ai_enabled`: Global boolean toggle.
+- `providers`: Configurable LLM and Embedding sources (Ollama, OpenAI, Anthropic).
 
 ---
 
@@ -122,32 +125,45 @@ Global configuration persisted on the server.
 
 ### 1. Relational Database (SQLAlchemy + SQLite: `tracker.db`)
 
+#### `companies`
+- `id`: (Integer, PK)
+- `name`: (String, Unique) Centralized company name for consistency.
+
 #### `job_applications`
 - `id`: (Integer, PK)
-- `company`: (String)
+- `company_id`: (FK -> `companies.id`, Nullable)
+- `company`: (String, index) Redundant company name for display/legacy caching.
 - `role`: (String)
-- `status`: (String) Pipeline stage: Wishlist, Applied, etc.
+- `status`: (String) Pipeline stage: Wishlist, Applied, Interviewing, Offered, Rejected, Closed, Discontinued.
 - `url`: (String) Application web link.
 - `job_posted_date`, `application_deadline`: (DateTime)
 - `company_job_id`, `location`, `salary_range`: (String)
 - `description`: (Text, Markdown)
-- `notes`: (Text, Markdown) User notes.
-- `hr_email`, `hiring_manager_name`, `hiring_manager_email`: (String)
+- `notes`: (Text, Markdown) User notes, automatically vectorized for RAG.
+- `hr_email`, `hiring_manager_name`, `hiring_manager_email`, `headhunter_name`, `headhunter_email`: (String)
 - `applied_date`: (DateTime) The date the application was actually submitted.
 - `created_at`: (DateTime) The date the record was first added to the system.
-- `last_updated`: (DateTime)
+- `last_updated`: (DateTime) Triggered on any record change.
 
 #### `interview_steps`
 - `id`: (Integer, PK)
 - `job_application_id`: (FK -> `job_applications.id`)
 - `step_type_id`: (FK -> `step_types.id`)
-- `step_date`: (DateTime)
-- `status`: (String) Scheduled, Completed, etc.
-- `notes`: (Text) Specific step feedback.
+- `step_date`: (DateTime, Nullable)
+- `status`: (String) Requested, Scheduled, Completed, Passed.
+- `notes`: (Text) Specific step feedback or interview prep.
 
-#### `step_types` & `documents`
-- `step_types`: Configuration table for unique interview types.
-- `documents`: Metadata/paths for PDFs and MD files.
+#### `step_types`
+- `id`: (Integer, PK)
+- `name`: (String, Unique) Unique process step names (e.g., "Phone Screen", "Technical Interview").
+
+#### `documents`
+- `id`: (Integer, PK)
+- `job_id`: (FK -> `job_applications.id`, Nullable)
+- `title`: (String) Corrected filename.
+- `doc_type`: (String) Categorization: job_post, submitted_resume, additional_document.
+- `file_path`: (String) Relative path to `/uploads/`.
+- `uploaded_at`: (DateTime)
 
 ### 2. Vector Store (ChromaDB: `chroma_db/`)
 
@@ -163,23 +179,29 @@ Global configuration persisted on the server.
 
 ## 🔌 API Endpoints (Prefix: `/api`)
 
-### Jobs (`/jobs`)
-- `GET /jobs`: List all applications.
-- `POST /api/jobs/`: Create new application. Performs auto-linkage to `Company`.
-- `POST /api/jobs/check-duplicate`: Logic for exact (URL/JobID) and similar (Role) matches.
-- `GET /api/companies`: List of known companies for suggestions.
-- `PUT /jobs/{id}`: Update application details.
-- `DELETE /jobs/{id}`: Remove application.
-- `POST /jobs/{id}/documents`: Upload and vectorize PDF/Text files.
-- `POST /jobs/{id}/steps`: Add interview timeline steps.
+### Jobs (`/api/jobs`)
+- `GET /jobs`: List all job applications with nested steps and documents.
+- `POST /jobs`: Create a new application with auto-linkage to a `Company`.
+- `PUT /jobs/{id}`: Update job application details (triggers re-vectorization of description/notes).
+- `DELETE /jobs/{id}`: Remove a job application and all associated data.
+- `POST /jobs/check-duplicate`: Performs URL, JobID, and Role-based similarity checks.
+- `GET /companies`: Returns a list of all known companies for autocomplete.
+- `POST /jobs/{id}/documents`: Upload and vectorize PDF/Text documents.
+- `DELETE /documents/{doc_id}`: Remove a document from the system and vector store.
+- `POST /jobs/{id}/steps`: Add a new interview step (auto-creates `StepType`).
+- `PUT /jobs/steps/{step_id}`: Update interview step details (Name, Date, Status, Notes).
 
-### AI (`/ai`)
-- `POST /ai/chat`: Interactive chat with context from stored jobs/docs.
-- `POST /ai/extract`: Extract job metadata from a URL.
+### AI (`/api/ai`)
+- `POST /ai/chat`: LangGraph-driven interactive chat with RAG.
+- `POST /ai/extract-url`: Scrape and extract job data from a webpage.
+- `POST /ai/extract-text`: Process raw text into a structured job.
+- `POST /ai/extract-pdf`: Process uploaded PDF into a structured job.
 
-### Settings (`/settings`)
-- `GET /settings`: Retrieve current app configuration.
-- `POST /settings`: Update LLM/Embedding providers and UI theme.
+### Settings (`/api/settings`)
+- `GET /settings`: Retrieve global app configuration.
+- `PUT /settings`: Update AI providers, models, and UI theme.
+- `POST /settings/rebuild-vectors`: Wipe and re-ingest all data into the vector store.
+- `POST /settings/test-llm`: Verify connectivity for a chosen LLM provider.
 
 ---
 
