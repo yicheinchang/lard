@@ -85,7 +85,7 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
           </div>
           <div className="flex-1 min-w-0">
             <h3 className="text-lg font-semibold text-white mb-1">{title}</h3>
-            <p className="text-sm text-gray-400 leading-relaxed">{message}</p>
+            <div className="text-sm text-gray-400 leading-relaxed">{message}</div>
           </div>
           <button
             onClick={handleCancel}
