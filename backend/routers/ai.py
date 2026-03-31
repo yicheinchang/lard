@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel
 from ai.graph import agent_app
 import httpx
@@ -46,7 +46,7 @@ class TextExtractRequest(BaseModel):
     text: str
 
 @router.post("/extract-url")
-async def extract_from_url(req: ExtractRequest):
+async def extract_from_url(req: ExtractRequest, request: Request):
     _check_ai_enabled()
     async with httpx.AsyncClient() as client:
         try:
@@ -57,7 +57,7 @@ async def extract_from_url(req: ExtractRequest):
         except Exception as e:
             raise HTTPException(status_code=400, detail=str(e))
             
-    result = agent_app.invoke({"text": text, "url": req.url})
+    result = await agent_app.ainvoke({"text": text, "url": req.url, "request": request})
     return {"extracted": result["extracted_data"], "error": result["error"]}
 
 from fastapi import UploadFile, File
@@ -66,14 +66,14 @@ import shutil
 import os
 
 @router.post("/extract-text")
-def extract_from_text(req: TextExtractRequest):
+async def extract_from_text(req: TextExtractRequest, request: Request):
     _check_ai_enabled()
     text = _preprocess_text(req.text)
-    result = agent_app.invoke({"text": text, "url": None})
+    result = await agent_app.ainvoke({"text": text, "url": None, "request": request})
     return {"extracted": result["extracted_data"], "error": result["error"]}
 
 @router.post("/extract-pdf")
-def extract_from_pdf(file: UploadFile = File(...)):
+async def extract_from_pdf(request: Request, file: UploadFile = File(...)):
     _check_ai_enabled()
     # Save temporarily
     os.makedirs("tmp", exist_ok=True)
@@ -86,7 +86,7 @@ def extract_from_pdf(file: UploadFile = File(...)):
         pages = loader.load()
         text = "\n".join([page.page_content for page in pages])
         text = _preprocess_text(text)
-        result = agent_app.invoke({"text": text, "url": None})
+        result = await agent_app.ainvoke({"text": text, "url": None, "request": request})
         return {"extracted": result["extracted_data"], "error": result["error"]}
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
