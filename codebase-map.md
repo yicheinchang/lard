@@ -233,6 +233,7 @@ The system uses a multi-stage pipeline to extract job details from URLs, PDFs, a
 - **HTML Cleaning**: Generic BeautifulSoup-based cleaning removes `script`, `nav`, `footer`, and `header` tags to isolate the job description.
 - **Verbatim Extraction**: The LLM prompt is optimized to extract text VERBATIM without rephrasing or adding inferred labels, preserving the original sentence structure and wording.
 - **Markdown Conversion**: The AI is instructed to convert the extracted job description into structured Markdown (headers, lists, etc.) while keeping the original content intact.
+- **Contextual Metadata**: In addition to the description, the system extracts the company, role, location, salary, internal Job ID, posted date, and application deadline, utilizing the source URL as a fallback context for Job ID identification.
 
 ### 6. Document Ingestion
 Supports PDF and plain text. PDFs are parsed using `pypdf` and split into chunks before vectorization.

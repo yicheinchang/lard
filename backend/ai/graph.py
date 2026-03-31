@@ -5,6 +5,7 @@ from ai.chains import extraction_prompt, JobDetails
 
 class AgentState(TypedDict):
     text: str
+    url: str | None
     extracted_data: dict | None
     error: str | None
 
@@ -12,7 +13,10 @@ def extract_node(state: AgentState):
     llm = get_llm()
     try:
         extractor = extraction_prompt | llm.with_structured_output(JobDetails)
-        result = extractor.invoke({"text": state["text"]})
+        result = extractor.invoke({
+            "text": state["text"],
+            "url": state.get("url") or "Not provided"
+        })
         return {"extracted_data": result.model_dump(), "error": None}
     except Exception as e:
         return {"extracted_data": None, "error": str(e)}

@@ -57,7 +57,7 @@ async def extract_from_url(req: ExtractRequest):
         except Exception as e:
             raise HTTPException(status_code=400, detail=str(e))
             
-    result = agent_app.invoke({"text": text})
+    result = agent_app.invoke({"text": text, "url": req.url})
     return {"extracted": result["extracted_data"], "error": result["error"]}
 
 from fastapi import UploadFile, File
@@ -69,7 +69,7 @@ import os
 def extract_from_text(req: TextExtractRequest):
     _check_ai_enabled()
     text = _preprocess_text(req.text)
-    result = agent_app.invoke({"text": text})
+    result = agent_app.invoke({"text": text, "url": None})
     return {"extracted": result["extracted_data"], "error": result["error"]}
 
 @router.post("/extract-pdf")
@@ -86,7 +86,7 @@ def extract_from_pdf(file: UploadFile = File(...)):
         pages = loader.load()
         text = "\n".join([page.page_content for page in pages])
         text = _preprocess_text(text)
-        result = agent_app.invoke({"text": text})
+        result = agent_app.invoke({"text": text, "url": None})
         return {"extracted": result["extracted_data"], "error": result["error"]}
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
