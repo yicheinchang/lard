@@ -14,9 +14,10 @@ interface JobDetailViewProps {
   job: Job | null;
   onClose: () => void;
   onJobUpdated: () => void;
+  onDirtyStateChange?: (isDirty: boolean) => void;
 }
 
-export const JobDetailView: React.FC<JobDetailViewProps> = ({ job, onClose, onJobUpdated }) => {
+export const JobDetailView: React.FC<JobDetailViewProps> = ({ job, onClose, onJobUpdated, onDirtyStateChange }) => {
   const [activeTab, setActiveTab] = useState<'info' | 'pipeline' | 'notes'>('pipeline');
   const mdParser = new MarkdownIt();
   const [stepTypes, setStepTypes] = useState<StepType[]>([]);
@@ -35,6 +36,28 @@ export const JobDetailView: React.FC<JobDetailViewProps> = ({ job, onClose, onJo
   const [jobNotes, setJobNotes] = useState<string>('');
   const [isSavingNotes, setIsSavingNotes] = useState(false);
   const [isEditingJobNotes, setIsEditingJobNotes] = useState(false);
+  
+  const isDirty = useMemo(() => {
+    if (!isEditingInfo || !job) return false;
+    
+    // Compare essential fields
+    const fields: (keyof Job)[] = [
+      'company', 'role', 'url', 'status', 'location', 
+      'description', 'salary_range', 'hr_email', 
+      'hiring_manager_name', 'hiring_manager_email',
+      'company_job_id'
+    ];
+    
+    return fields.some(field => {
+      const original = job[field] || '';
+      const current = editFormData[field] || '';
+      return String(original) !== String(current);
+    });
+  }, [isEditingInfo, editFormData, job]);
+
+  useEffect(() => {
+    onDirtyStateChange?.(isDirty);
+  }, [isDirty, onDirtyStateChange]);
 
   // Deletion state
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);

@@ -1,12 +1,13 @@
 "use client";
 
 import { useEffect, useState } from 'react';
-import { Plus, Briefcase } from 'lucide-react';
+import { Plus, Briefcase, AlertTriangle } from 'lucide-react';
 import { KanbanBoard } from '@/components/KanbanBoard';
 import { TableView } from '@/components/TableView';
 import { AddJobModal } from '@/components/AddJobModal';
 import { JobDetailView } from '@/components/JobDetailView';
 import { SettingsPage } from '@/components/SettingsPage';
+import { ConfirmDialog } from '@/components/ConfirmDialog';
 import { Job, getJobs, createJob, updateJob, uploadJobDocument } from '@/lib/api';
 import { useView } from '@/lib/ViewContext';
 
@@ -16,6 +17,11 @@ export default function Home() {
   const [selectedJob, setSelectedJob] = useState<Job | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const { activeView } = useView();
+  
+  // Unsaved changes state
+  const [isDetailDirty, setIsDetailDirty] = useState(false);
+  const [showDiscardConfirm, setShowDiscardConfirm] = useState(false);
+  const [pendingJob, setPendingJob] = useState<Job | null>(null);
 
   const fetchJobs = async () => {
     setIsLoading(true);
@@ -61,6 +67,22 @@ export default function Home() {
     return created; // return so modal can attach documents to the new job
   };
 
+  const handleJobClick = (job: Job) => {
+    if (isDetailDirty) {
+      setPendingJob(job);
+      setShowDiscardConfirm(true);
+    } else {
+      setSelectedJob(job);
+    }
+  };
+
+  const confirmDiscardChanges = () => {
+    setIsDetailDirty(false);
+    setSelectedJob(pendingJob);
+    setPendingJob(null);
+    setShowDiscardConfirm(false);
+  };
+
   // If settings view, render settings page directly
   if (activeView === 'settings') {
     return <SettingsPage />;
@@ -96,18 +118,33 @@ export default function Home() {
             <Briefcase className="w-12 h-12 animate-pulse" />
           </div>
         ) : activeView === 'kanban' ? (
-          <KanbanBoard jobs={jobs} onUpdateStatus={handleUpdateStatus} onJobClick={(job) => setSelectedJob(job)} />
+          <KanbanBoard jobs={jobs} onUpdateStatus={handleUpdateStatus} onJobClick={handleJobClick} />
         ) : (
-          <TableView jobs={jobs} onUpdateStatus={handleUpdateStatus} onJobClick={(job) => setSelectedJob(job)} />
+          <TableView jobs={jobs} onUpdateStatus={handleUpdateStatus} onJobClick={handleJobClick} />
         )}
       </div>
 
-      <JobDetailView job={selectedJob} onClose={() => setSelectedJob(null)} onJobUpdated={fetchJobs} />
+      <JobDetailView 
+        job={selectedJob} 
+        onClose={() => handleJobClick(null as any)} // Use same check for closing
+        onJobUpdated={fetchJobs} 
+        onDirtyStateChange={setIsDetailDirty}
+      />
 
       <AddJobModal 
         isOpen={isModalOpen} 
         onClose={() => setIsModalOpen(false)} 
         onAddJob={handleAddJob} 
+      />
+
+      <ConfirmDialog
+        isOpen={showDiscardConfirm}
+        title="Unsaved Changes"
+        message="You have unsaved changes in the current job details. If you switch now, these changes will be lost. Do you want to discard them?"
+        onConfirm={confirmDiscardChanges}
+        onCancel={() => { setShowDiscardConfirm(false); setPendingJob(null); }}
+        confirmLabel="Discard Changes"
+        variant="danger"
       />
     </div>
   );
