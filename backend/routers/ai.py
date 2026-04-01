@@ -28,7 +28,8 @@ def _clean_html(html: str) -> tuple[str, dict | None]:
     structured_data = None
     for ld_script in soup.find_all("script", type="application/ld+json"):
         try:
-            data = json.loads(ld_script.string or "")
+            content = ld_script.get_text()
+            data = json.loads(content or "")
             # Handle both single objects and lists
             items = data if isinstance(data, list) else [data]
             for item in items:
@@ -59,7 +60,7 @@ def _clean_html(html: str) -> tuple[str, dict | None]:
         
     return text, structured_data
 
-def _preprocess_text(text: str, max_chars: int = 24000) -> str:
+def _preprocess_text(text: str, max_chars: int = 100000) -> str:
     """Common text preprocessing for all input types."""
     # Remove excessive blank lines
     lines = [l.strip() for l in text.splitlines() if l.strip()]
