@@ -239,7 +239,10 @@ export const JobDetailView: React.FC<JobDetailViewProps> = ({ job, onClose, onJo
     const timeoutId = setTimeout(async () => {
       setIsSavingNotes(true);
       try {
-        await updateJob(job.id!, { notes: jobNotes });
+        await updateJob(job.id!, { 
+          notes: jobNotes,
+          last_operation: "Updated Notes"
+        } as any);
       } catch (err) {
         console.error("Failed to auto-save notes", err);
       } finally {
@@ -411,13 +414,37 @@ export const JobDetailView: React.FC<JobDetailViewProps> = ({ job, onClose, onJo
         Object.entries(editFormData).map(([k, v]) => [k, v === '' ? null : v])
       );
 
-      // Restriction: Wishlist (no date) can ONLY move to Discontinued or Closed terminal status
+      const currentStatus = cleanData.status as string;
       const allowedWishlistTransitions = ['Wishlist', 'Discontinued', 'Closed'];
-      if (!cleanData.applied_date && cleanData.status && !allowedWishlistTransitions.includes(cleanData.status)) {
+
+      // Item 4: Wishlist Guard - Wishlist status MUST NOT have an applied_date
+      if (currentStatus === 'Wishlist' && cleanData.applied_date) {
         setAlertDialog({
           isOpen: true,
           title: 'Lifecycle Guard',
-          message: `An application in the 'Wishlist' stage (no applied date) can only be moved to 'Closed' or 'Discontinued'. 'Offered' or 'Rejected' require an application date.`,
+          message: "To move an application back to 'Wishlist', you must first clear the 'Actually Applied' date.",
+          variant: 'danger'
+        });
+        return;
+      }
+
+      // Item 3: Applied Guard - Applied status MUST NOT have any interview steps
+      if (currentStatus === 'Applied' && (job.steps || []).length > 0) {
+        setAlertDialog({
+          isOpen: true,
+          title: 'Lifecycle Guard',
+          message: "The 'Applied' status is reserved for applications without interview steps. Since this application has interview events, please use the 'Interviewing' status instead.",
+          variant: 'danger'
+        });
+        return;
+      }
+
+      // Item 1: Refined Wishlist Message - Restriction: Wishlist (no date) can ONLY move to Discontinued or Closed terminal status
+      if (!cleanData.applied_date && currentStatus && !allowedWishlistTransitions.includes(currentStatus)) {
+        setAlertDialog({
+          isOpen: true,
+          title: 'Lifecycle Guard',
+          message: `An application in the 'Wishlist' stage (no applied date) can only be moved to 'Closed' or 'Discontinued'. 'Applied', 'Interviewing', 'Offered' or 'Rejected' require an application date.`,
           variant: 'danger'
         });
         return;
@@ -812,7 +839,7 @@ export const JobDetailView: React.FC<JobDetailViewProps> = ({ job, onClose, onJo
                 </div>
                 
                 {isEditingInfo ? (
-                  <div className="space-y-3 bg-[var(--input-bg)] p-4 rounded-xl border border-violet-500/30">
+                  <div className="space-y-4 bg-[var(--input-bg)] p-4 rounded-xl border border-violet-500/30">
                     <div className="flex flex-col gap-1">
                       <label className="text-xs text-[var(--fg-subtle)]">Company *</label>
                       <input 
@@ -867,38 +894,39 @@ export const JobDetailView: React.FC<JobDetailViewProps> = ({ job, onClose, onJo
                       <label className="text-xs text-[var(--fg-subtle)]">Deadline</label>
                       <input type="date" className="bg-[var(--bg)] border border-[var(--border-color)] rounded-md px-2 py-1 text-sm text-[var(--fg)] focus:outline-none focus:border-violet-500 style-date" value={editFormData.application_deadline ? editFormData.application_deadline.substring(0, 10) : ''} onChange={e => handleEditChange('application_deadline', e.target.value || '')}/>
                     </div>
-                    <div className="flex flex-col gap-1">
-                      <label className="text-xs text-[var(--fg-subtle)] mt-2 text-violet-500 font-medium">Record Dates</label>
-                      <div className="space-y-2 pl-1 border-l-2 border-violet-500/20">
-                          <label className="text-[10px] uppercase tracking-wider text-[var(--fg-subtle)]">Actually Applied</label>
-                          <input type="date" className="bg-[var(--bg)] border border-[var(--border-color)] rounded-md px-2 py-1 text-sm text-[var(--fg)] focus:outline-none focus:border-violet-500 style-date" value={editFormData.applied_date ? editFormData.applied_date.substring(0, 10) : ''} onChange={e => handleEditChange('applied_date', e.target.value)}/>
-                        </div>
-                        <div className="flex flex-col gap-1">
-                          <label className="text-[10px] uppercase tracking-wider text-[var(--fg-subtle)]">Job Closed Date</label>
-                          <input type="date" className="bg-[var(--bg)] border border-[var(--border-color)] rounded-md px-2 py-1 text-sm text-[var(--fg)] focus:outline-none focus:border-violet-500 style-date" value={editFormData.closed_date ? editFormData.closed_date.substring(0, 10) : ''} onChange={e => handleEditChange('closed_date', e.target.value)}/>
-                        </div>
-                        <div className="flex flex-col gap-1">
-                          <label className="text-[10px] uppercase tracking-wider text-[var(--fg-subtle)]">Record Created</label>
-                          <input type="date" className="bg-[var(--bg)] border border-[var(--border-color)] rounded-md px-2 py-1 text-sm text-[var(--fg)] focus:outline-none focus:border-violet-500 style-date" value={editFormData.created_at ? editFormData.created_at.substring(0, 10) : ''} onChange={e => handleEditChange('created_at', e.target.value)}/>
-                        </div>
-                        </div>
-                        <div className="flex flex-col gap-1">
-                          <label className="text-[10px] uppercase tracking-wider text-[var(--fg-subtle)]">Actually Applied</label>
-                          <input type="date" className="bg-[var(--bg)] border border-[var(--border-color)] rounded-md px-2 py-1 text-sm text-[var(--fg)] focus:outline-none focus:border-violet-500 style-date" value={editFormData.applied_date ? editFormData.applied_date.substring(0, 10) : ''} onChange={e => handleEditChange('applied_date', e.target.value)}/>
-                        </div>
+
+                    <div className="space-y-3 pt-2 border-t border-violet-500/10">
+                      <label className="text-xs text-violet-500 font-medium">Record Settings</label>
+                      
+                      <div className="flex flex-col gap-1">
+                        <label className="text-[10px] uppercase tracking-wider text-[var(--fg-subtle)]">Actually Applied Date</label>
+                        <input type="date" className="bg-[var(--bg)] border border-[var(--border-color)] rounded-md px-2 py-1 text-sm text-[var(--fg)] focus:outline-none focus:border-violet-500 style-date" value={editFormData.applied_date ? editFormData.applied_date.substring(0, 10) : ''} onChange={e => handleEditChange('applied_date', e.target.value)}/>
+                      </div>
+
+                      <div className="flex flex-col gap-1">
+                        <label className="text-[10px] uppercase tracking-wider text-[var(--fg-subtle)]">Job Closed Date</label>
+                        <input type="date" className="bg-[var(--bg)] border border-[var(--border-color)] rounded-md px-2 py-1 text-sm text-[var(--fg)] focus:outline-none focus:border-violet-500 style-date" value={editFormData.closed_date ? editFormData.closed_date.substring(0, 10) : ''} onChange={e => handleEditChange('closed_date', e.target.value)}/>
+                      </div>
+
+                      <div className="flex flex-col gap-1">
+                        <label className="text-[10px] uppercase tracking-wider text-[var(--fg-subtle)]">System Record Created</label>
+                        <input type="date" className="bg-[var(--bg)] border border-[var(--border-color)] rounded-md px-2 py-1 text-sm text-[var(--fg)] focus:outline-none focus:border-violet-500 style-date" value={editFormData.created_at ? editFormData.created_at.substring(0, 10) : ''} onChange={e => handleEditChange('created_at', e.target.value)}/>
                       </div>
                     </div>
-                    <div className="flex flex-col gap-1">
-                      <label className="text-xs text-[var(--fg-subtle)] mt-2 text-violet-500 font-medium">Hiring Manager Name</label>
-                      <input className="bg-[var(--bg)] border border-[var(--border-color)] rounded-md px-2 py-1 text-sm text-[var(--fg)] focus:outline-none focus:border-violet-500" value={editFormData.hiring_manager_name || ''} onChange={e => handleEditChange('hiring_manager_name', e.target.value)}/>
-                    </div>
-                    <div className="flex flex-col gap-1">
-                      <label className="text-xs text-[var(--fg-subtle)]">Hiring Manager Email</label>
-                      <input className="bg-[var(--bg)] border border-[var(--border-color)] rounded-md px-2 py-1 text-sm text-[var(--fg)] focus:outline-none focus:border-violet-500" type="email" value={editFormData.hiring_manager_email || ''} onChange={e => handleEditChange('hiring_manager_email', e.target.value)}/>
-                    </div>
-                    <div className="flex flex-col gap-1">
-                      <label className="text-xs text-[var(--fg-subtle)] mt-2 text-violet-500 font-medium">HR / Recruiter Email</label>
-                      <input className="bg-[var(--bg)] border border-[var(--border-color)] rounded-md px-2 py-1 text-sm text-[var(--fg)] focus:outline-none focus:border-violet-500" value={editFormData.hr_email || ''} onChange={e => handleEditChange('hr_email', e.target.value)}/>
+
+                    <div className="flex flex-col gap-3 pt-4 border-t border-[var(--border-color)]">
+                      <div className="flex flex-col gap-1">
+                        <label className="text-xs text-[var(--fg-subtle)]">Hiring Manager Name</label>
+                        <input className="bg-[var(--bg)] border border-[var(--border-color)] rounded-md px-2 py-1 text-sm text-[var(--fg)] focus:outline-none focus:border-violet-500" value={editFormData.hiring_manager_name || ''} onChange={e => handleEditChange('hiring_manager_name', e.target.value)}/>
+                      </div>
+                      <div className="flex flex-col gap-1">
+                        <label className="text-xs text-[var(--fg-subtle)]">Hiring Manager Email</label>
+                        <input className="bg-[var(--bg)] border border-[var(--border-color)] rounded-md px-2 py-1 text-sm text-[var(--fg)] focus:outline-none focus:border-violet-500" type="email" value={editFormData.hiring_manager_email || ''} onChange={e => handleEditChange('hiring_manager_email', e.target.value)}/>
+                      </div>
+                      <div className="flex flex-col gap-1">
+                        <label className="text-xs text-[var(--fg-subtle)]">HR / Recruiter Email</label>
+                        <input className="bg-[var(--bg)] border border-[var(--border-color)] rounded-md px-2 py-1 text-sm text-[var(--fg)] focus:outline-none focus:border-violet-500" value={editFormData.hr_email || ''} onChange={e => handleEditChange('hr_email', e.target.value)}/>
+                      </div>
                     </div>
                     
                     <button onClick={handleSaveInfo} className="w-full mt-4 bg-violet-600 hover:bg-violet-500 text-white rounded-lg px-4 py-2 font-medium flex items-center justify-center gap-2 transition-colors shadow-lg shadow-violet-500/20">

@@ -4,7 +4,7 @@ import os
 import shutil
 from pydantic import BaseModel, ConfigDict
 from typing import List, Optional
-from datetime import datetime
+from datetime import datetime, timezone
 from database.relational import get_db
 from database.models import JobApplication, InterviewStep, StepType, DocumentMeta, Company
 
@@ -115,10 +115,9 @@ def update_job_status(db_job: JobApplication, db: Session, operation: Optional[s
     """
     Automatically recalculate and update the application status based on internal logic.
     """
-    if operation:
-        db_job.last_operation = operation
-        db_job.last_updated = datetime.now(timezone.utc)
-        
+    original_status = db_job.status
+    has_meaningful_change = False
+    
     # 1. Terminal statuses stay as-is unless manually changed
     if db_job.status in TERMINAL_STATUSES:
         # One exception: Wishlist jobs can only be Discontinued or Closed.
@@ -132,6 +131,22 @@ def update_job_status(db_job: JobApplication, db: Session, operation: Optional[s
             db_job.status = "Interviewing"
         else:
             db_job.status = "Applied"
+    
+    status_changed = db_job.status != original_status
+    
+    # Update last_operation and last_updated ONLY if something changed or explicit operation provided
+    if operation or status_changed:
+        # If both a manual operation and a status change occurred, prefer the status change for clarity
+        # unless the status change was to "Wishlist/Applied/Interviewing" (automated)
+        if status_changed:
+            db_job.last_operation = f"Status Change: {db_job.status}"
+            has_meaningful_change = True
+        elif operation:
+            db_job.last_operation = operation
+            has_meaningful_change = True
+            
+        if has_meaningful_change:
+            db_job.last_updated = datetime.now(timezone.utc)
     
     db.commit()
 
@@ -199,7 +214,22 @@ def update_job(job_id: int, job_update: JobUpdate, db: Session = Depends(get_db)
     
     # Very permissive dict update to allow dynamic patch from the UI form
     
+    # 0. Check for actual changes to avoid "Ghost" updates (Item 5)
     update_data = job_update.model_dump(exclude_unset=True)
+    
+    # Special check: is the updated data actually different from current?
+    is_actually_different = False
+    for key, value in update_data.items():
+        if hasattr(db_job, key):
+            current_val = getattr(db_job, key)
+            # Normalize ISO strings for date comparison if needed, or rely on loose equality
+            if current_val != value:
+                is_actually_different = True
+                break
+    
+    if not is_actually_different:
+        return db_job
+
     status_changed = "status" in update_data and update_data["status"] != db_job.status
     description_changed = "description" in update_data and update_data["description"] != db_job.description
     notes_changed = "notes" in update_data and update_data["notes"] != db_job.notes
@@ -214,20 +244,11 @@ def update_job(job_id: int, job_update: JobUpdate, db: Session = Depends(get_db)
         if hasattr(db_job, key):
             setattr(db_job, key, value)
     
-    # Validation based on user rules
-    if not db_job.applied_date and db_job.steps:
-        # Should not happen if frontend is correct, but safety:
-        # Application with steps MUST have an applied_date.
-        # If it doesn't, it stays in Wishlist but can't have steps.
-        # Actually, let's let the status calculator handle it but this is a warning sign.
-        pass
-
     db.commit()
     
-    operation = "Modified Job Details"
-    if status_changed:
-        operation = f"Status Change: {db_job.status}"
-        
+    # Determine operation. If caller provided last_operation (e.g. "Updated Notes" from UI), use it
+    operation = update_data.get("last_operation") or "Modified Job Details"
+    
     update_job_status(db_job, db, operation=operation)
     db.refresh(db_job)
     

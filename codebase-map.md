@@ -83,7 +83,10 @@ Instead of separate routes, job details are shown in a reactive overlay (`JobDet
   - Supports variant-based styling (`default`, `danger`, `success`) with glassmorphism and subtle animations.
 - **Job Detail Header**:
   - Real-time display of application status and the `last_operation` audit log.
-  - Status overrides and lifecycle guards to prevent invalid data transitions (e.g., clearing applied data with existing steps).
+  - Advanced Lifecycle Guards:
+    - Blocks "Applied" status if interview steps exist.
+    - Blocks "Wishlist" status if an application date is set.
+    - Blocks status moves without required dates.
  Supports manual addition, **deletion**, and system events (e.g., virtual "Applied" marker). "Add Step" is disabled for wishlist items.
 - **Job Details**: Editable metadata (Company, Role, Salary, Dates) and Markdown-driven description rendering. Includes document management for Job Posts and Resumes. Status can be manually overridden.
 - **Application Notes**: A dedicated Markdown editor for deep-dive research and interview preparation, synchronizing with the RAG system.
@@ -142,8 +145,8 @@ Global configuration persisted on the server (`app_settings.json`).
 - `company_id`: (FK -> `companies.id`, Nullable)
 - `company`: (String, index) Redundant company name for display/legacy caching.
   - `closed_date`: Optional date when the job listing was closed.
-  - `last_operation`: Controlled vocabulary string (e.g., "Added interview step", "Status Change: Rejected") for audit trails.
-  - `last_updated`: Automatically refreshed timestamp on every application-related change.
+  - `last_operation`: Controlled vocabulary string for audit trails. Automatically managed by `update_job_status`.
+  - `last_updated`: Refreshed on successful, meaningful application-related changes.
   - Automated status logic in `update_job_status` handles transitions between "Wishlist", "Applied", and "Interviewing".
 , Offered, Rejected, Closed, Discontinued.
 - `url`: (String) Application web link.
