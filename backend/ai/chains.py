@@ -54,15 +54,26 @@ class DeadlineDate(BaseModel):
 class JobDescription(BaseModel):
     description: str | None = Field(default=None, description="The FULL job description, extracted VERBATIM from the source and formatted in Markdown.")
 
-# Specialized Multi-Agent Prompts
-multi_metadata_prompt = ChatPromptTemplate.from_messages([
-    ("system", "You are an expert at extracting specific job details. Extract ONLY the requested field verbatim. "
-               "\n\n### JOB ID GUIDANCE:\n"
-               "- If extracting company_job_id, prioritize finding it in the text (labels like 'Job ID', 'Req #').\n"
-               "- ONLY fallback to searching the URL if the text does not contain it.\n"
-               "- Examples of Job IDs: REQ-12345, R8822, 10074553."),
-    ("user", "SOURCE URL: {url}\n\nCONTENT:\n\"\"\"\n{text}\n\"\"\"")
-])
+# --- Specialized Multi-Agent Prompts ---
+
+def _create_metadata_prompt(field_name: str, guidance: str = ""):
+    return ChatPromptTemplate.from_messages([
+        ("system", f"You are an expert at extracting job details. Extract ONLY the '{field_name}' verbatim from the text. "
+                   f"{guidance} "
+                   "If not explicitly found, return null."),
+        ("user", "SOURCE URL: {url}\n\nCONTENT:\n\"\"\"\n{text}\n\"\"\"")
+    ])
+
+company_prompt = _create_metadata_prompt("company", "Look for the employer or organization name.")
+role_prompt = _create_metadata_prompt("role", "Extract the professional job title only (e.g., 'Senior Software Engineer'). Skip internal codes unless they are part of the title.")
+location_prompt = _create_metadata_prompt("location", "Extract the city, state/region, and country if available.")
+salary_prompt = _create_metadata_prompt("salary_range", "Extract the compensation range (e.g., '$100k - $150k per year').")
+job_id_prompt = _create_metadata_prompt("company_job_id", 
+    "Look for 'Job ID', 'Req #', or 'Reference'. "
+    "Prioritize text content. Fallback to URL only if text is missing it.")
+
+posted_date_prompt = _create_metadata_prompt("job_posted_date", "Extract the date the job was published. Return in YYYY-MM-DD format.")
+deadline_date_prompt = _create_metadata_prompt("application_deadline", "Extract the date applications close. Return in YYYY-MM-DD format.")
 
 description_extraction_prompt = ChatPromptTemplate.from_messages([
     ("system", "You are an expert at extracting job details from a job posting."
@@ -72,4 +83,21 @@ description_extraction_prompt = ChatPromptTemplate.from_messages([
                "SKIP legal boilerplate, EEO statements, and cookie notices. "
                "Do not make up information if it is not present in the text."),
     ("user", "CONTENT TO PROCESS:\n\"\"\"\n{text}\n\"\"\"")
+])
+
+# --- JSON-LD Support ---
+
+structured_data_validation_prompt = ChatPromptTemplate.from_messages([
+    ("system", "You are an expert at processing Schema.org JobPosting data. "
+               "You will be given raw JSON data extracted from a webpage. "
+               "Map and clean these fields into the target schema. "
+               "GUIDANCE:\n"
+               "- 'role': Use the JSON 'title' field. Clean it by removing obvious job codes if they are redundant.\n"
+               "- 'company': Use 'hiringOrganization.name'.\n"
+               "- 'description': This is likely HTML. Convert it to clean Markdown, preserving hierarchy.\n"
+               "- 'job_posted_date': Convert to YYYY-MM-DD.\n"
+               "- 'application_deadline': Use 'validThrough'. Convert to YYYY-MM-DD.\n"
+               "- 'salary_range': Combine 'baseSalary' currency/min/max into a string (e.g., 'USD 80,000 - 120,000').\n"
+               "Return ONLY the valid JSON matching the schema."),
+    ("user", "RAW JSON-LD DATA:\n{json_ld_data}")
 ])

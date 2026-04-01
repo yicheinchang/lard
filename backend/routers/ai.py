@@ -17,42 +17,29 @@ def _check_ai_enabled():
     if not s.get("ai_enabled", True):
         raise HTTPException(status_code=403, detail="AI assistant is disabled. Enable it in Settings.")
 
-def _clean_html(html: str) -> str:
+def _clean_html(html: str) -> tuple[str, dict | None]:
     """Generic HTML cleaning to extract main content while removing noise, with JSON-LD support."""
     soup = BeautifulSoup(html, 'html.parser')
 
     # 1. Look for application/ld+json (Schema.org JobPosting)
-    # This is often the most reliable source for modern job boards (like Workday/Moderna)
-    json_ld_content = ""
+    structured_data = None
     for ld_script in soup.find_all("script", type="application/ld+json"):
         try:
             data = json.loads(ld_script.string or "")
             # Handle both single objects and lists
             items = data if isinstance(data, list) else [data]
             for item in items:
-                if item.get("@type") == "JobPosting" or "JobPosting" in str(item.get("@type", "")):
-                    # Extract high-fidelity fields
-                    title = item.get("title")
-                    desc = item.get("description")
-                    org = item.get("hiringOrganization", {}).get("name")
-                    # Job ID is often in 'identifier.value' or 'identifier'
-                    job_id = item.get("identifier")
-                    if isinstance(job_id, dict): job_id = job_id.get("value")
-                    
-                    loc = item.get("jobLocation", {})
-                    if isinstance(loc, dict):
-                        addr = loc.get("address", {})
-                        if isinstance(addr, dict):
-                            loc_str = f"{addr.get('addressLocality', '')}, {addr.get('addressRegion', '')} {addr.get('addressCountry', '')}"
-                            loc = loc_str.strip(", ")
-                    
-                    json_ld_content += f"SOURCE_METADATA (JSON-LD):\n"
-                    if org: json_ld_content += f"Company: {org}\n"
-                    if title: json_ld_content += f"Title: {title}\n"
-                    if job_id: json_ld_content += f"Job ID: {job_id}\n"
-                    if loc: json_ld_content += f"Location: {loc}\n"
-                    if desc: json_ld_content += f"FULL_DESCRIPTION:\n{desc}\n"
-                    json_ld_content += "-" * 20 + "\n\n"
+                # Some sites use @type: ["JobPosting", "something_else"]
+                types = item.get("@type", "")
+                if isinstance(types, list):
+                    is_job = "JobPosting" in types
+                else:
+                    is_job = types == "JobPosting" or "JobPosting" in str(types)
+                
+                if is_job:
+                    structured_data = item
+                    break
+            if structured_data: break
         except Exception as e:
             print(f"Error parsing JSON-LD: {e}")
 
@@ -67,14 +54,7 @@ def _clean_html(html: str) -> str:
     else:
         text = soup.get_text(separator='\n', strip=True)
         
-    # Combine JSON-LD (priority) with secondary body text
-    combined_result = ""
-    if json_ld_content:
-        combined_result += json_ld_content
-        combined_result += "SECONDARY_SOURCE (HTML Body):\n"
-    
-    combined_result += text
-    return combined_result
+    return text, structured_data
 
 def _preprocess_text(text: str, max_chars: int = 24000) -> str:
     """Common text preprocessing for all input types."""
@@ -106,6 +86,7 @@ async def _extract_stream_generator(request: Request, url: str = None, text: str
     _check_ai_enabled()
     
     # 1. Initial Status
+    structured_data = None
     if url:
         yield f"data: {json.dumps({'event': 'progress', 'msg': f'Reading URL: {url[:60]}...'})}\n\n"
         try:
@@ -113,7 +94,7 @@ async def _extract_stream_generator(request: Request, url: str = None, text: str
                 resp = await client.get(url, timeout=15)
                 resp.raise_for_status()
                 yield f"data: {json.dumps({'event': 'progress', 'msg': 'Cleaning HTML content...'})}\n\n"
-                text = _clean_html(resp.text)
+                text, structured_data = _clean_html(resp.text)
                 snippet = _preprocess_text(text, max_chars=100)
                 yield f"data: {json.dumps({'event': 'progress', 'msg': f'Processing text: {snippet[:60]}...'})}\n\n"
                 text = _preprocess_text(text)
@@ -152,7 +133,13 @@ async def _extract_stream_generator(request: Request, url: str = None, text: str
 
     async def run_ai():
         try:
-            result = await agent_app.ainvoke({"text": text, "url": url, "request": request, "progress_callback": progress_callback})
+            result = await agent_app.ainvoke({
+                "text": text, 
+                "url": url, 
+                "request": request, 
+                "progress_callback": progress_callback,
+                "structured_data": structured_data
+            })
             await q.put(f"data: {json.dumps({'event': 'final_result', 'extracted': result['extracted_data'], 'error': result['error']})}\n\n")
         except Exception as e:
             await q.put(f"data: {json.dumps({'event': 'error', 'msg': str(e)})}\n\n")

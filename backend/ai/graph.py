@@ -6,7 +6,10 @@ from ai.chains import (
     extraction_prompt, JobDetails,
     JobCompany, JobRole, JobLocation, JobSalary, JobId, 
     PostedDate, DeadlineDate, JobDescription,
-    multi_metadata_prompt, description_extraction_prompt
+    description_extraction_prompt,
+    company_prompt, role_prompt, location_prompt, salary_prompt,
+    job_id_prompt, posted_date_prompt, deadline_date_prompt,
+    structured_data_validation_prompt
 )
 from config import load_app_settings
 
@@ -17,6 +20,7 @@ class AgentState(TypedDict):
     error: str | None
     request: Any | None # fastapi.Request
     progress_callback: Callable | None # Async callback for streaming
+    structured_data: dict | None
 
 async def _run_field_extraction(field, schema, prompt, text, url, request, semaphore, progress_cb=None):
     """Async helper to execute a single agent task within a concurrency limit."""
@@ -79,13 +83,13 @@ async def _run_multi_agent_extraction(text: str, url: str, request: Any = None, 
     semaphore = asyncio.Semaphore(1)
     
     metadata_tasks = [
-        ("company", JobCompany, multi_metadata_prompt),
-        ("role", JobRole, multi_metadata_prompt),
-        ("location", JobLocation, multi_metadata_prompt),
-        ("salary_range", JobSalary, multi_metadata_prompt),
-        ("company_job_id", JobId, multi_metadata_prompt),
-        ("job_posted_date", PostedDate, multi_metadata_prompt),
-        ("application_deadline", DeadlineDate, multi_metadata_prompt),
+        ("company", JobCompany, company_prompt),
+        ("role", JobRole, role_prompt),
+        ("location", JobLocation, location_prompt),
+        ("salary_range", JobSalary, salary_prompt),
+        ("company_job_id", JobId, job_id_prompt),
+        ("job_posted_date", PostedDate, posted_date_prompt),
+        ("application_deadline", DeadlineDate, deadline_date_prompt),
         ("description", JobDescription, description_extraction_prompt),
     ]
     
@@ -114,6 +118,20 @@ async def extract_node(state: AgentState):
     progress_cb = state.get("progress_callback")
     
     try:
+        if state.get("structured_data"):
+            # --- PATH A: JSON-LD Structured Data found ---
+            if progress_cb:
+                await progress_cb({"event": "progress", "msg": "AI: JSON-LD found! Validating and converting description..."})
+            
+            # Use Single-Agent logic with the validation prompt
+            llm = get_llm(num_ctx=8190)
+            chain = structured_data_validation_prompt | llm.with_structured_output(JobDetails)
+            result = await asyncio.wait_for(
+                chain.ainvoke({"json_ld_data": json.dumps(state["structured_data"], indent=2)}),
+                timeout=300
+            )
+            return {"extracted_data": result.model_dump(), "error": None}
+
         if mode == "multi":
             results = await _run_multi_agent_extraction(state["text"], state.get("url"), request, progress_cb)
             return {"extracted_data": results, "error": None}

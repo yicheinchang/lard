@@ -242,7 +242,8 @@ The system uses a multi-stage pipeline to extract job details from URLs, PDFs, a
     - **Fixed Context**: Standardized `num_ctx` to 8,190 tokens for all extraction tasks (optimized for local RAM footprint).
     - **Raw Pass (Job Description)**: Specifically skips structured JSON extraction for the description field, using a direct verbatim retrieval prompt for maximum reliability and speed.
     - **Structured Pass (Metadata)**: Continues to use JSON schema enforcement for small fields like Company, Role, and ID.
-    - **JSON-LD Support**: Prioritizes `application/ld+json` script tags (Schema.org `JobPosting`) for metadata extraction. This ensures high-fidelity results for modern, client-side rendered job boards (e.g., Workday/Moderna) where the primary page content is dynamic.
+    - **JSON-LD First Strategy**: Prioritizes `application/ld+json` script tags (Schema.org `JobPosting`) for metadata extraction. This provides high-fidelity, structured data which the AI then "finalizes" by normalizing fields (stripping codes from titles, etc.) and converting HTML descriptions to Markdown.
+    - **Unique Field Prompts**: Each metadata field in "Multi-Agent" mode has its own highly-focused prompt (e.g., specific instructions for role vs company vs salary) to maximize accuracy. 
     - **Date Constraints**: Extraction prompts explicitly require `YYYY-MM-DD` format or `null` for date fields to ensure Pydantic validation success.
 
 ### 6. Document Ingestion
