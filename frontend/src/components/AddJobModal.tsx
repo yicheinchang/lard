@@ -16,7 +16,7 @@ const initialFormData: Partial<Job> = {
   location: '', company_job_id: '', hr_email: '', hiring_manager_name: '',
   hiring_manager_email: '', headhunter_name: '', headhunter_email: '',
   job_posted_date: '', application_deadline: '', description: '', salary_range: '',
-  applied_date: ''
+  applied_date: '', closed_date: ''
 };
 
 export const AddJobModal: React.FC<AddJobModalProps> = ({ isOpen, onClose, onAddJob }) => {
@@ -58,9 +58,11 @@ export const AddJobModal: React.FC<AddJobModalProps> = ({ isOpen, onClose, onAdd
     setFormData(prev => {
       const newData = { ...prev, [field]: value };
       
-      // Auto-set applied_date if moving FROM Wishlist to something else
+      // Auto-set applied_date if moving FROM Wishlist to something else (except Closed/Discontinued)
       if (field === 'status') {
-        if (value !== 'Wishlist' && (prev.status === 'Wishlist' || !prev.status)) {
+        const isTerminalNoDate = value === 'Closed' || value === 'Discontinued';
+        
+        if (value !== 'Wishlist' && !isTerminalNoDate && (prev.status === 'Wishlist' || !prev.status)) {
           // Only set if not already set
           if (!prev.applied_date) {
             newData.applied_date = new Date().toISOString().substring(0, 10);
@@ -332,10 +334,10 @@ export const AddJobModal: React.FC<AddJobModalProps> = ({ isOpen, onClose, onAdd
       >
         <option value="Wishlist" className="bg-[#1a1a24] text-white">Wishlist</option>
         <option value="Applied" className="bg-[#1a1a24] text-white">Applied</option>
-        <option value="Interviewing" className="bg-[#1a1a24] text-white" disabled={!formData.applied_date}>Interviewing (Requires Date)</option>
-        <option value="Offered" className="bg-[#1a1a24] text-white" disabled={!formData.applied_date}>Offered (Requires Date)</option>
-        <option value="Rejected" className="bg-[#1a1a24] text-white" disabled={!formData.applied_date}>Rejected (Requires Date)</option>
-        <option value="Closed" className="bg-[#1a1a24] text-white" disabled={!formData.applied_date}>Closed (Requires Date)</option>
+        <option value="Interviewing" className="bg-[#1a1a24] text-white" disabled={!formData.applied_date}>Interviewing (Requires Applied Date)</option>
+        <option value="Offered" className="bg-[#1a1a24] text-white" disabled={!formData.applied_date}>Offered (Requires Applied Date)</option>
+        <option value="Rejected" className="bg-[#1a1a24] text-white" disabled={!formData.applied_date}>Rejected (Requires Applied Date)</option>
+        <option value="Closed" className="bg-[#1a1a24] text-white">Closed</option>
         <option value="Discontinued" className="bg-[#1a1a24] text-white">Discontinued</option>
       </select>
     </div>
@@ -558,14 +560,25 @@ export const AddJobModal: React.FC<AddJobModalProps> = ({ isOpen, onClose, onAdd
 
               <StatusSelect />
 
-              {formData.status !== 'Wishlist' && (
+              {formData.status !== 'Wishlist' && formData.applied_date && (
                 <div className="animate-fade-in">
                   <InputField 
                     label="Actually Applied Date" 
                     field="applied_date" 
                     type="date" 
                   />
-                  <p className="text-[10px] text-violet-400/60 mt-1 pl-1">Defaulted to today. Adjust if you applied on a different date.</p>
+                  <p className="text-[10px] text-violet-400/60 mt-1 pl-1">Adjust if you applied on a different date.</p>
+                </div>
+              )}
+
+              {formData.status === 'Closed' && (
+                <div className="animate-fade-in">
+                  <InputField 
+                    label="Job Closed Date" 
+                    field="closed_date" 
+                    type="date" 
+                  />
+                  <p className="text-[10px] text-violet-400/60 mt-1 pl-1 italic">Leave blank if the exact date is unknown.</p>
                 </div>
               )}
             </div>

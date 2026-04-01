@@ -76,8 +76,15 @@ The frontend is a **Single Page Application (SPA)** built with Next.js 16, utili
 The `AppShell` provides the persistent UI (sidebar and chat), while `src/app/page.tsx` acts as the main view switcher. Transitioning between Dashboard (Kanban) and Table view is handled via the `ViewContext` to ensure state is preserved.
 
 ### 2. Job Detail System
-Instead of separate routes, job details are shown in a reactive overlay (`JobDetailView.tsx`). The component organizes data into three primary contexts:
-- **Interview Pipeline**: Chronological timeline of events with inline status, name, and date editing. Supports manual addition, **deletion**, and system events (e.g., virtual "Applied" marker). "Add Step" is disabled for wishlist items.
+Instead of separate routes, job details are shown in a reactive overlay (`JobDetailView.tsx`). The component organizes data into three primary### UI Patterns
+- **Premium Dialog & Modal System**:
+  - `ConfirmDialog`: Centrally managed, modern React modal for all alerts and confirmations, replacing native `alert()` and `window.confirm()`.
+  - Supports `hideCancel` mode for simple alerts with only "OK" action.
+  - Supports variant-based styling (`default`, `danger`, `success`) with glassmorphism and subtle animations.
+- **Job Detail Header**:
+  - Real-time display of application status and the `last_operation` audit log.
+  - Status overrides and lifecycle guards to prevent invalid data transitions (e.g., clearing applied data with existing steps).
+ Supports manual addition, **deletion**, and system events (e.g., virtual "Applied" marker). "Add Step" is disabled for wishlist items.
 - **Job Details**: Editable metadata (Company, Role, Salary, Dates) and Markdown-driven description rendering. Includes document management for Job Posts and Resumes. Status can be manually overridden.
 - **Application Notes**: A dedicated Markdown editor for deep-dive research and interview preparation, synchronizing with the RAG system.
 - **Workflow Triggers**: Contextual logic for automated status advancing and deletion guards.
@@ -134,8 +141,11 @@ Global configuration persisted on the server (`app_settings.json`).
 - `id`: (Integer, PK)
 - `company_id`: (FK -> `companies.id`, Nullable)
 - `company`: (String, index) Redundant company name for display/legacy caching.
-- `role`: (String)
-- `status`: (String) Pipeline stage: Wishlist, Applied, Interviewing, Offered, Rejected, Closed, Discontinued.
+  - `closed_date`: Optional date when the job listing was closed.
+  - `last_operation`: Controlled vocabulary string (e.g., "Added interview step", "Status Change: Rejected") for audit trails.
+  - `last_updated`: Automatically refreshed timestamp on every application-related change.
+  - Automated status logic in `update_job_status` handles transitions between "Wishlist", "Applied", and "Interviewing".
+, Offered, Rejected, Closed, Discontinued.
 - `url`: (String) Application web link.
 - `job_posted_date`, `application_deadline`: (DateTime)
 - `company_job_id`, `location`, `salary_range`: (String)

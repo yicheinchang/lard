@@ -18,6 +18,7 @@ interface ConfirmDialogProps {
   fileUploadLabel?: string;
   accept?: string;
   initialDate?: string;
+  hideCancel?: boolean;
 }
 
 const variantStyles = {
@@ -56,6 +57,7 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
   fileUploadLabel = 'Upload File',
   accept = '*/*',
   initialDate = '',
+  hideCancel = false,
 }) => {
   const [date, setDate] = useState(initialDate);
   const [file, setFile] = useState<File | null>(null);
@@ -130,12 +132,14 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
         )}
 
         <div className="flex justify-end gap-3 mt-6">
-          <button
-            onClick={handleCancel}
-            className="px-4 py-2 rounded-lg text-gray-400 hover:text-white hover:bg-white/5 transition-colors font-medium text-sm"
-          >
-            {cancelLabel}
-          </button>
+          {!hideCancel && (
+            <button
+              onClick={handleCancel}
+              className="px-4 py-2 rounded-lg text-gray-400 hover:text-white hover:bg-white/5 transition-colors font-medium text-sm"
+            >
+              {cancelLabel}
+            </button>
+          )}
           <button
             onClick={handleConfirm}
             className={`px-5 py-2 rounded-lg font-medium text-sm transition-all hover:scale-105 active:scale-95 ${styles.button}`}

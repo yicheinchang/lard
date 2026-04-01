@@ -149,6 +149,37 @@ export const JobDetailView: React.FC<JobDetailViewProps> = ({ job, onClose, onJo
     onConfirm: () => void 
   }>({ isOpen: false, nextStatus: '', onConfirm: () => {} });
 
+  // Modern Alert/Confirm replacements
+  const [alertDialog, setAlertDialog] = useState<{ isOpen: boolean, title: string, message: string, variant?: 'default' | 'danger' | 'success' }>({
+    isOpen: false, title: '', message: ''
+  });
+  const [confirmDialog, setConfirmDialog] = useState<{ 
+    isOpen: boolean, 
+    title: string, 
+    message: React.ReactNode, 
+    onConfirm: () => void, 
+    variant?: 'default' | 'danger' | 'success' 
+  }>({ 
+    isOpen: false, 
+    title: '', 
+    message: '', 
+    onConfirm: () => {} 
+  });
+
+  const getRelativeTimeString = (dateStr?: string) => {
+    if (!dateStr) return '';
+    const date = new Date(dateStr);
+    const now = new Date();
+    const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000);
+    
+    if (diffInSeconds < 60) return 'Just now';
+    if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)}m ago`;
+    if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)}h ago`;
+    if (diffInSeconds < 2592000) return `${Math.floor(diffInSeconds / 86400)}d ago`;
+    
+    return date.toLocaleDateString();
+  };
+
   // Document preview state
   const [previewDoc, setPreviewDoc] = useState<{ isOpen: boolean; title: string; fileUrl: string | null }>({
     isOpen: false,
@@ -167,22 +198,29 @@ export const JobDetailView: React.FC<JobDetailViewProps> = ({ job, onClose, onJo
         onJobUpdated();
       } catch (err) {
         console.error('Failed to attach document', err);
-        alert('Failed to upload document.');
+        setAlertDialog({ isOpen: true, title: 'Upload Failed', message: 'Failed to upload document.', variant: 'danger' });
       }
     }
   };
 
   const handleDeleteDocument = async (e: React.MouseEvent, docId: number) => {
     e.stopPropagation();
-    if (window.confirm("Are you sure you want to delete this document?")) {
-      try {
-        await deleteJobDocument(docId);
-        onJobUpdated();
-      } catch (err) {
-        console.error('Failed to delete document', err);
-        alert('Failed to delete document.');
+    setConfirmDialog({
+      isOpen: true,
+      title: 'Delete Document',
+      message: 'Are you sure you want to delete this document? This action cannot be undone.',
+      variant: 'danger',
+      onConfirm: async () => {
+        try {
+          await deleteJobDocument(docId);
+          onJobUpdated();
+          setConfirmDialog(prev => ({ ...prev, isOpen: false }));
+        } catch (err) {
+          console.error('Failed to delete document', err);
+          setAlertDialog({ isOpen: true, title: 'Delete Failed', message: 'Failed to delete document.', variant: 'danger' });
+        }
       }
-    }
+    });
   };
 
   useEffect(() => {
@@ -287,31 +325,39 @@ export const JobDetailView: React.FC<JobDetailViewProps> = ({ job, onClose, onJo
   };
 
   const handleDeleteStep = async (stepId: number) => {
-    if (window.confirm("Are you sure you want to delete this interview step?")) {
-      try {
-        await deleteInterviewStep(stepId);
-        onJobUpdated();
-        
-        const terminalStatuses = ["Rejected", "Offered", "Discontinued", "Closed"];
-        if (terminalStatuses.includes(job.status)) {
-          // If we delete a step and we are terminal, we might want to go back to Applied (if 0 steps) or stay
-          const hasRemainingSteps = (job.steps?.length || 0) > 1;
-          const calculatedNext = hasRemainingSteps ? 'Interviewing' : 'Applied';
+    setConfirmDialog({
+      isOpen: true,
+      title: 'Delete Interview Step',
+      message: 'Are you sure you want to delete this interview step? The associated notes will also be lost.',
+      variant: 'danger',
+      onConfirm: async () => {
+        try {
+          await deleteInterviewStep(stepId);
+          onJobUpdated();
+          setConfirmDialog(prev => ({ ...prev, isOpen: false }));
           
-          setTerminalStatusConfirm({
-            isOpen: true,
-            nextStatus: calculatedNext,
-            onConfirm: async () => {
-               await updateJob(job.id!, { status: calculatedNext });
-               onJobUpdated();
-               setTerminalStatusConfirm(prev => ({ ...prev!, isOpen: false }));
-            }
-          });
+          const terminalStatuses = ["Rejected", "Offered", "Discontinued", "Closed"];
+          if (terminalStatuses.includes(job.status)) {
+            // If we delete a step and we are terminal, we might want to go back to Applied (if 0 steps) or stay
+            const hasRemainingSteps = (job.steps?.length || 0) > 1;
+            const calculatedNext = hasRemainingSteps ? 'Interviewing' : 'Applied';
+            
+            setTerminalStatusConfirm({
+              isOpen: true,
+              nextStatus: calculatedNext,
+              onConfirm: async () => {
+                 await updateJob(job.id!, { status: calculatedNext });
+                 onJobUpdated();
+                 setTerminalStatusConfirm(prev => ({ ...prev!, isOpen: false }));
+              }
+            });
+          }
+        } catch (err) {
+          console.error('Failed to delete step', err);
+          setAlertDialog({ isOpen: true, title: 'Delete Failed', message: 'Failed to delete interview step.', variant: 'danger' });
         }
-      } catch (err) {
-        console.error('Failed to delete step', err);
       }
-    }
+    });
   };
 
   const startEditingStep = (step: InterviewStep) => {
@@ -351,7 +397,12 @@ export const JobDetailView: React.FC<JobDetailViewProps> = ({ job, onClose, onJo
   const handleSaveInfo = async () => {
     // Validation: cannot clear applied_date if steps exist
     if (!editFormData.applied_date && job.steps && job.steps.length > 0) {
-      alert("Cannot clear the 'Actually Applied' date while interview steps exist. Please delete all interview steps first.");
+      setAlertDialog({ 
+        isOpen: true, 
+        title: 'Validation Error', 
+        message: "Cannot clear the 'Actually Applied' date while interview steps exist. Please delete all interview steps first.",
+        variant: 'danger'
+      });
       return;
     }
 
@@ -360,9 +411,15 @@ export const JobDetailView: React.FC<JobDetailViewProps> = ({ job, onClose, onJo
         Object.entries(editFormData).map(([k, v]) => [k, v === '' ? null : v])
       );
 
-      // Restriction: Wishlist (no date) can ONLY move to Discontinued terminal status
-      if (!cleanData.applied_date && cleanData.status && cleanData.status !== 'Wishlist' && cleanData.status !== 'Discontinued') {
-        alert(`An application in the 'Wishlist' stage (no applied date) can only be moved to 'Discontinued'. 'Offered' or 'Rejected' require an application date.`);
+      // Restriction: Wishlist (no date) can ONLY move to Discontinued or Closed terminal status
+      const allowedWishlistTransitions = ['Wishlist', 'Discontinued', 'Closed'];
+      if (!cleanData.applied_date && cleanData.status && !allowedWishlistTransitions.includes(cleanData.status)) {
+        setAlertDialog({
+          isOpen: true,
+          title: 'Lifecycle Guard',
+          message: `An application in the 'Wishlist' stage (no applied date) can only be moved to 'Closed' or 'Discontinued'. 'Offered' or 'Rejected' require an application date.`,
+          variant: 'danger'
+        });
         return;
       }
 
@@ -372,26 +429,34 @@ export const JobDetailView: React.FC<JobDetailViewProps> = ({ job, onClose, onJo
     } catch (error: any) {
       console.error("Failed to update job info", error);
       const detail = error?.response?.data?.detail;
-      if (Array.isArray(detail)) {
-        alert(detail.map((d: any) => d.msg || JSON.stringify(d)).join(', '));
-      } else {
-        alert(typeof detail === 'string' ? detail : (error.message || 'Failed to update info'));
-      }
+      const errorMsg = Array.isArray(detail) 
+        ? detail.map((d: any) => d.msg || JSON.stringify(d)).join(', ')
+        : (typeof detail === 'string' ? detail : (error.message || 'Failed to update info'));
+      
+      setAlertDialog({ isOpen: true, title: 'Update Failed', message: errorMsg, variant: 'danger' });
     }
   };
 
   const handleDeleteJob = async () => {
     if (!job?.id) return;
-    try {
-      const { deleteJob } = await import('../lib/api');
-      await deleteJob(job.id);
-      onJobUpdated();
-      onClose();
-    } catch (err) {
-      console.error("Failed to delete job", err);
-      alert("Failed to delete application.");
-    }
-    setShowDeleteConfirm(false);
+    setConfirmDialog({
+      isOpen: true,
+      title: 'Delete Application',
+      message: `Are you sure you want to delete ${job.company} - ${job.role}? All notes, steps, and documents will be permanently removed.`,
+      variant: 'danger',
+      onConfirm: async () => {
+        try {
+          const { deleteJob } = await import('../lib/api');
+          await deleteJob(job.id!);
+          onJobUpdated();
+          onClose();
+        } catch (err) {
+          console.error("Failed to delete job", err);
+          setAlertDialog({ isOpen: true, title: 'Delete Failed', message: 'Failed to delete application.', variant: 'danger' });
+        }
+        setConfirmDialog(prev => ({ ...prev, isOpen: false }));
+      }
+    });
   };
 
   const stepStatusOptions = ['Requested', 'Scheduled', 'Passed', 'Completed'];
@@ -409,12 +474,22 @@ export const JobDetailView: React.FC<JobDetailViewProps> = ({ job, onClose, onJo
         />
         {/* Header */}
         <div className="flex justify-between items-center p-4 md:px-8 border-b border-[var(--border-color)] bg-[var(--surface)] backdrop-blur-md shrink-0">
-          <div>
-            <h2 className="text-2xl font-bold text-[var(--fg)] flex items-center gap-3">
-              {job.company}
-              <span className="text-sm px-2.5 py-1 bg-[var(--surface-hover)] rounded-full font-medium" style={{ color: 'var(--fg-muted)' }}>{job.status}</span>
-            </h2>
-            <p className="text-[var(--fg-muted)]">{job.role} {job.location && <span className="text-[var(--fg-subtle)]">• {job.location}</span>}</p>
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-3 mb-0.5">
+              <h2 className="text-2xl font-bold text-[var(--fg)] truncate">
+                {job.company}
+              </h2>
+              <div className="flex items-center gap-2 shrink-0">
+                <span className="text-sm px-2.5 py-1 bg-[var(--surface-hover)] rounded-full font-medium" style={{ color: 'var(--fg-muted)' }}>{job.status}</span>
+                {job.last_operation && (
+                  <span className="text-[10px] px-2 py-1 bg-violet-500/10 text-violet-400 border border-violet-500/10 rounded-md font-medium flex items-center gap-1.5 whitespace-nowrap">
+                    <span className="w-1 h-1 bg-violet-400 rounded-full animate-pulse"></span>
+                    {job.last_operation} • {getRelativeTimeString(job.last_updated)}
+                  </span>
+                )}
+              </div>
+            </div>
+            <p className="text-[var(--fg-muted)] truncate">{job.role} {job.location && <span className="text-[var(--fg-subtle)]">• {job.location}</span>}</p>
           </div>
           <button onClick={onClose} className="p-2 hover:bg-[var(--surface-hover)] rounded-full text-[var(--fg-subtle)] hover:text-[var(--fg)] transition">
             <X className="w-5 h-5" />
@@ -795,9 +870,17 @@ export const JobDetailView: React.FC<JobDetailViewProps> = ({ job, onClose, onJo
                     <div className="flex flex-col gap-1">
                       <label className="text-xs text-[var(--fg-subtle)] mt-2 text-violet-500 font-medium">Record Dates</label>
                       <div className="space-y-2 pl-1 border-l-2 border-violet-500/20">
+                          <label className="text-[10px] uppercase tracking-wider text-[var(--fg-subtle)]">Actually Applied</label>
+                          <input type="date" className="bg-[var(--bg)] border border-[var(--border-color)] rounded-md px-2 py-1 text-sm text-[var(--fg)] focus:outline-none focus:border-violet-500 style-date" value={editFormData.applied_date ? editFormData.applied_date.substring(0, 10) : ''} onChange={e => handleEditChange('applied_date', e.target.value)}/>
+                        </div>
+                        <div className="flex flex-col gap-1">
+                          <label className="text-[10px] uppercase tracking-wider text-[var(--fg-subtle)]">Job Closed Date</label>
+                          <input type="date" className="bg-[var(--bg)] border border-[var(--border-color)] rounded-md px-2 py-1 text-sm text-[var(--fg)] focus:outline-none focus:border-violet-500 style-date" value={editFormData.closed_date ? editFormData.closed_date.substring(0, 10) : ''} onChange={e => handleEditChange('closed_date', e.target.value)}/>
+                        </div>
                         <div className="flex flex-col gap-1">
                           <label className="text-[10px] uppercase tracking-wider text-[var(--fg-subtle)]">Record Created</label>
                           <input type="date" className="bg-[var(--bg)] border border-[var(--border-color)] rounded-md px-2 py-1 text-sm text-[var(--fg)] focus:outline-none focus:border-violet-500 style-date" value={editFormData.created_at ? editFormData.created_at.substring(0, 10) : ''} onChange={e => handleEditChange('created_at', e.target.value)}/>
+                        </div>
                         </div>
                         <div className="flex flex-col gap-1">
                           <label className="text-[10px] uppercase tracking-wider text-[var(--fg-subtle)]">Actually Applied</label>
@@ -883,6 +966,12 @@ export const JobDetailView: React.FC<JobDetailViewProps> = ({ job, onClose, onJo
                         <span className="text-[var(--fg-muted)]">{job.application_deadline ? new Date(job.application_deadline).toLocaleDateString() : '-'}</span>
                       </div>
                     </div>
+                    {job.status === 'Closed' && (
+                      <div className="pt-2">
+                        <span className="text-[var(--fg-subtle)] block text-xs mb-1">Job Closed Date</span>
+                        <span className="text-[var(--fg-muted)] font-medium text-red-400/80">{job.closed_date ? new Date(job.closed_date).toLocaleDateString() : 'Unknown'}</span>
+                      </div>
+                    )}
 
                     <div className="mt-auto pt-8">
                       <button 
@@ -961,11 +1050,35 @@ export const JobDetailView: React.FC<JobDetailViewProps> = ({ job, onClose, onJo
         variant="danger"
       />
 
-      <DocumentPreview 
+      <ConfirmDialog 
         isOpen={previewDoc.isOpen}
         title={previewDoc.title}
-        fileUrl={previewDoc.fileUrl}
-        onClose={() => setPreviewDoc({ ...previewDoc, isOpen: false })}
+        message="Document Preview"
+        onConfirm={() => setPreviewDoc({ ...previewDoc, isOpen: false })}
+        onCancel={() => setPreviewDoc({ ...previewDoc, isOpen: false })}
+        confirmLabel="Close"
+        hideCancel={true}
+      />
+
+      <ConfirmDialog
+        isOpen={alertDialog.isOpen}
+        title={alertDialog.title}
+        message={alertDialog.message}
+        onConfirm={() => setAlertDialog(prev => ({ ...prev, isOpen: false }))}
+        onCancel={() => setAlertDialog(prev => ({ ...prev, isOpen: false }))}
+        confirmLabel="OK"
+        variant={alertDialog.variant || 'default'}
+        hideCancel={true}
+      />
+
+      <ConfirmDialog
+        isOpen={confirmDialog.isOpen}
+        title={confirmDialog.title}
+        message={confirmDialog.message}
+        onConfirm={confirmDialog.onConfirm}
+        onCancel={() => setConfirmDialog(prev => ({ ...prev, isOpen: false }))}
+        confirmLabel="Confirm"
+        variant={confirmDialog.variant || 'default'}
       />
     </>
   );

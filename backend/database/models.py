@@ -58,7 +58,9 @@ class JobApplication(Base):
     
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
     applied_date = Column(DateTime, nullable=True)
+    closed_date = Column(DateTime, nullable=True)
     last_updated = Column(DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
+    last_operation = Column(String, nullable=True)
     notes = Column(Text, nullable=True) # Additional user notes in Markdown
 
     steps = relationship("InterviewStep", back_populates="job_application", cascade="all, delete-orphan")

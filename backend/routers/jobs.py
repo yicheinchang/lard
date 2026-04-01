@@ -71,6 +71,8 @@ class JobBase(BaseModel):
     notes: Optional[str] = None
     created_at: Optional[datetime] = None
     applied_date: Optional[datetime] = None
+    closed_date: Optional[datetime] = None
+    last_operation: Optional[str] = None
 
 class JobCreate(JobBase):
     pass
@@ -95,6 +97,8 @@ class JobUpdate(BaseModel):
     notes: Optional[str] = None
     created_at: Optional[datetime] = None
     applied_date: Optional[datetime] = None
+    closed_date: Optional[datetime] = None
+    last_operation: Optional[str] = None
 
 class JobResponse(JobBase):
     id: int
@@ -107,25 +111,27 @@ class JobResponse(JobBase):
 
 TERMINAL_STATUSES = ["Rejected", "Offered", "Discontinued", "Closed"]
 
-def update_job_status(db_job: JobApplication, db: Session):
+def update_job_status(db_job: JobApplication, db: Session, operation: Optional[str] = None):
     """
     Automatically recalculate and update the application status based on internal logic.
     """
-    # 1. Terminal statuses stay as-is unless manually changed (handled in routers)
+    if operation:
+        db_job.last_operation = operation
+        db_job.last_updated = datetime.now(timezone.utc)
+        
+    # 1. Terminal statuses stay as-is unless manually changed
     if db_job.status in TERMINAL_STATUSES:
-        # One exception: Wishlist jobs can only be Discontinued. 
-        # If it's Offered/Rejected but has no applied date, force it back to Wishlist (safety).
-        if not db_job.applied_date and db_job.status != "Discontinued":
+        # One exception: Wishlist jobs can only be Discontinued or Closed.
+        if not db_job.applied_date and db_job.status not in ["Discontinued", "Closed"]:
             db_job.status = "Wishlist"
-        return
-    
-    # 2. Progress logic
-    if not db_job.applied_date:
-        db_job.status = "Wishlist"
-    elif db_job.steps:
-        db_job.status = "Interviewing"
     else:
-        db_job.status = "Applied"
+        # 2. Progress logic
+        if not db_job.applied_date:
+            db_job.status = "Wishlist"
+        elif db_job.steps:
+            db_job.status = "Interviewing"
+        else:
+            db_job.status = "Applied"
     
     db.commit()
 
@@ -181,7 +187,7 @@ def create_job(job: JobCreate, db: Session = Depends(get_db)):
             print(f"Warning: Failed to vectorize job description {db_job.id}: {e}")
             
     # Initial status calculation
-    update_job_status(db_job, db)
+    update_job_status(db_job, db, operation="Job Created")
     db.refresh(db_job)
     return db_job
 
@@ -194,6 +200,7 @@ def update_job(job_id: int, job_update: JobUpdate, db: Session = Depends(get_db)
     # Very permissive dict update to allow dynamic patch from the UI form
     
     update_data = job_update.model_dump(exclude_unset=True)
+    status_changed = "status" in update_data and update_data["status"] != db_job.status
     description_changed = "description" in update_data and update_data["description"] != db_job.description
     notes_changed = "notes" in update_data and update_data["notes"] != db_job.notes
     
@@ -216,7 +223,12 @@ def update_job(job_id: int, job_update: JobUpdate, db: Session = Depends(get_db)
         pass
 
     db.commit()
-    update_job_status(db_job, db)
+    
+    operation = "Modified Job Details"
+    if status_changed:
+        operation = f"Status Change: {db_job.status}"
+        
+    update_job_status(db_job, db, operation=operation)
     db.refresh(db_job)
     
     if description_changed and db_job.description:
@@ -346,7 +358,7 @@ def add_interview_step(job_id: int, step: InterviewStepCreate, db: Session = Dep
     db.commit()
     
     # Recalculate job status
-    update_job_status(db_job, db)
+    update_job_status(db_job, db, operation=f"Added Interview Step: {st.name}")
     
     db.refresh(new_step)
     return new_step
@@ -372,7 +384,7 @@ def update_interview_step(step_id: int, step_update: InterviewStepUpdate, db: Se
     # Recalculate associated job status
     db_job = db.query(JobApplication).filter(JobApplication.id == db_step.job_application_id).first()
     if db_job:
-        update_job_status(db_job, db)
+        update_job_status(db_job, db, operation=f"Updated Interview Step: {db_step.step_type.name}")
         
     return db_step
 
@@ -389,7 +401,7 @@ def delete_interview_step(step_id: int, db: Session = Depends(get_db)):
     # Recalculate status
     db_job = db.query(JobApplication).filter(JobApplication.id == job_id).first()
     if db_job:
-        update_job_status(db_job, db)
+        update_job_status(db_job, db, operation="Deleted Interview Step")
         
     return {"status": "deleted"}
 
@@ -437,6 +449,10 @@ def upload_job_document(job_id: int, file: UploadFile = File(...), doc_type: str
     except Exception as e:
         print(f"Warning: Failed to vectorize document {doc.id}: {e}")
         
+        
+    # Update Job status and operation
+    update_job_status(db_job, db, operation=f"Attached Document: {doc.title}")
+    
     return doc
 
 @router.delete("/documents/{doc_id}")
@@ -452,6 +468,13 @@ def delete_document(doc_id: int, db: Session = Depends(get_db)):
         except Exception as e:
             print(f"Error deleting file {local_path}: {e}")
             
+    job_id = doc.job_id
     db.delete(doc)
     db.commit()
+
+    if job_id:
+        db_job = db.query(JobApplication).filter(JobApplication.id == job_id).first()
+        if db_job:
+            update_job_status(db_job, db, operation="Deleted Document")
+
     return {"status": "deleted"}
