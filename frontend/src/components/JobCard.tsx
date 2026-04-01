@@ -144,15 +144,27 @@ export const JobCard: React.FC<JobCardProps> = ({ job, onUpdateStatus, onClick, 
                 </button>
               </>
             ) : !isTerminal ? (
-              <button
-                onClick={handleAdvance}
-                className="text-xs text-violet-400 hover:text-violet-300 font-medium py-0.5 px-1.5 rounded hover:bg-violet-500/10 transition-colors"
-                title="Advance to Next Stage"
-              >
-                Advance →
-              </button>
+              <div className="flex items-center gap-1">
+                <button
+                  onClick={handleAdvance}
+                  className="text-xs text-violet-400 hover:text-violet-300 font-medium py-0.5 px-1.5 rounded hover:bg-violet-500/10 transition-colors"
+                  title="Advance to Next Stage"
+                >
+                  Advance →
+                </button>
+                {job.status === 'Applied' && (
+                  <button
+                    onClick={(e) => openConfirm('Rejected', e)}
+                    className="text-xs text-red-400 hover:text-red-300 font-medium py-0.5 px-1.5 rounded hover:bg-red-500/10 transition-colors flex items-center gap-1"
+                    title="Mark as Rejected"
+                  >
+                    <XCircle className="w-3 h-3" />
+                    <span>Rejected</span>
+                  </button>
+                )}
+              </div>
             ) : null}
-            
+
             {(job.status === 'Applied' || job.status === 'Interviewing') && (
               <button
                 onClick={(e) => openConfirm('Discontinued', e)}

@@ -428,6 +428,17 @@ export const JobDetailView: React.FC<JobDetailViewProps> = ({ job, onClose, onJo
         return;
       }
 
+      // Item 2: Interviewing Guard - Cannot move to Interviewing if zero steps
+      if (currentStatus === 'Interviewing' && (job.steps || []).length === 0) {
+        setAlertDialog({
+          isOpen: true,
+          title: 'Lifecycle Guard',
+          message: "You cannot move an application to 'Interviewing' without at least one interview step. Please add a step in the Timeline first or use the 'Applied' status.",
+          variant: 'danger'
+        });
+        return;
+      }
+
       // Item 3: Applied Guard - Applied status MUST NOT have any interview steps
       if (currentStatus === 'Applied' && (job.steps || []).length > 0) {
         setAlertDialog({
