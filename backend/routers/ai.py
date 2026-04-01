@@ -1,11 +1,14 @@
 from fastapi import APIRouter, HTTPException, Request, UploadFile, File
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
-from ai.graph import agent_app
 import httpx
 import json
 import asyncio
+import os
+import shutil
 from bs4 import BeautifulSoup
+from langchain_community.document_loaders import PyPDFLoader
+from ai.graph import agent_app
 from config import load_app_settings
 
 router = APIRouter(prefix="/api/ai", tags=["AI"])
@@ -74,11 +77,18 @@ async def extract_from_url(req: ExtractRequest, request: Request):
     # Backward compatibility: Wait for stream to finish and return JSON
     result = {"extracted": None, "error": None}
     async for event in _extract_stream_generator(request, url=req.url):
-        data = json.loads(event.replace("data: ", ""))
-        if data["event"] == "final_result":
-            result["extracted"] = data.get("extracted")
-        elif data.get("event") == "error":
-            result["error"] = data.get("msg")
+        event_str = event.strip()
+        if not event_str.startswith("data: "):
+            continue
+        try:
+            payload = event_str.replace("data: ", "", 1)
+            data = json.loads(payload)
+            if data.get("event") == "final_result":
+                result["extracted"] = data.get("extracted")
+            elif data.get("event") == "error":
+                result["error"] = data.get("msg")
+        except json.JSONDecodeError:
+            continue
     return result
 
 async def _extract_stream_generator(request: Request, url: str = None, text: str = None):
@@ -90,8 +100,14 @@ async def _extract_stream_generator(request: Request, url: str = None, text: str
     if url:
         yield f"data: {json.dumps({'event': 'progress', 'msg': f'Reading URL: {url[:60]}...'})}\n\n"
         try:
-            async with httpx.AsyncClient() as client:
-                resp = await client.get(url, timeout=15)
+            # Add browser-standard headers to avoid being blocked by anti-bot systems
+            headers = {
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
+                "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8",
+                "Accept-Language": "en-US,en;q=0.9",
+            }
+            async with httpx.AsyncClient(follow_redirects=True) as client:
+                resp = await client.get(url, timeout=20, headers=headers)
                 resp.raise_for_status()
                 yield f"data: {json.dumps({'event': 'progress', 'msg': 'Cleaning HTML content...'})}\n\n"
                 text, structured_data = _clean_html(resp.text)
@@ -178,10 +194,6 @@ async def extract_url_stream(req: ExtractRequest, request: Request):
 async def extract_text_stream(req: TextExtractRequest, request: Request):
     return StreamingResponse(_extract_stream_generator(request, text=req.text), media_type="text/event-stream")
 
-from fastapi import UploadFile, File
-from langchain_community.document_loaders import PyPDFLoader
-import shutil
-import os
 
 @router.post("/extract-text")
 async def extract_from_text(req: TextExtractRequest, request: Request):

@@ -94,10 +94,11 @@ structured_data_validation_prompt = ChatPromptTemplate.from_messages([
                "GUIDANCE:\n"
                "- 'role': Use the JSON 'title' field. Clean it by removing obvious job codes if they are redundant.\n"
                "- 'company': Use 'hiringOrganization.name'.\n"
+               "- 'location': Use 'jobLocation' (city, region, country).\n"
+               "- 'salary_range': Look for 'baseSalary' fields (currency, min, max).\n"
                "- 'description': This is likely HTML. Convert it to clean Markdown, preserving hierarchy.\n"
-               "- 'job_posted_date': Convert to YYYY-MM-DD.\n"
+               "- 'job_posted_date': Convert 'datePosted' to YYYY-MM-DD.\n"
                "- 'application_deadline': Use 'validThrough'. Convert to YYYY-MM-DD.\n"
-               "- 'salary_range': Combine 'baseSalary' currency/min/max into a string (e.g., 'USD 80,000 - 120,000').\n"
                "Return ONLY the valid JSON matching the schema."),
     ("user", "RAW JSON-LD DATA:\n{json_ld_data}")
 ])
