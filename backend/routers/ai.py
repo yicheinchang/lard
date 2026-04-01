@@ -8,7 +8,7 @@ import os
 import shutil
 from bs4 import BeautifulSoup
 from langchain_community.document_loaders import PyPDFLoader
-from ai.graph import agent_app
+from ai.graph import get_agent_app
 from config import load_app_settings
 
 router = APIRouter(prefix="/api/ai", tags=["AI"])
@@ -150,7 +150,7 @@ async def _extract_stream_generator(request: Request, url: str = None, text: str
 
     async def run_ai():
         try:
-            result = await agent_app.ainvoke({
+            result = await get_agent_app().ainvoke({
                 "text": text, 
                 "url": url, 
                 "request": request, 
@@ -200,7 +200,7 @@ async def extract_text_stream(req: TextExtractRequest, request: Request):
 async def extract_from_text(req: TextExtractRequest, request: Request):
     _check_ai_enabled()
     text = _preprocess_text(req.text)
-    result = await agent_app.ainvoke({"text": text, "url": None, "request": request})
+    result = await get_agent_app().ainvoke({"text": text, "url": None, "request": request})
     return {"extracted": result["extracted_data"], "error": result["error"]}
 
 @router.post("/extract-pdf-stream")

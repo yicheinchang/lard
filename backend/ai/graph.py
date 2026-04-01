@@ -1,7 +1,6 @@
 import asyncio
 import json
 from typing import TypedDict, Any, Callable
-from langgraph.graph import StateGraph, END
 from ai.llm_factory import get_llm
 from ai.chains import (
     extraction_prompt, JobDetails,
@@ -74,7 +73,7 @@ async def _run_field_extraction(field, schema, prompt, text, url, request, semap
                 
             return field, val
 
-        except (asyncio.TimeoutError, Exception) as e:
+    except (import('asyncio').TimeoutError, Exception) as e:
             print(f"Error extracting {field}: {e}")
             return field, None
 
@@ -127,6 +126,8 @@ async def extract_node(state: AgentState):
             # Use Single-Agent logic with the validation prompt
             llm = get_llm(num_ctx=8190)
             chain = structured_data_validation_prompt | llm.with_structured_output(JobDetails)
+            import json
+            import asyncio
             result = await asyncio.wait_for(
                 chain.ainvoke({"json_ld_data": json.dumps(state["structured_data"], indent=2)}),
                 timeout=300
@@ -137,6 +138,7 @@ async def extract_node(state: AgentState):
             results = await _run_multi_agent_extraction(state["text"], state.get("url"), request, progress_cb)
             return {"extracted_data": results, "error": None}
         else:
+            import asyncio
             # Single-Agent (Default) using fixed 8190 context
             llm = get_llm(num_ctx=8190)
             if request and await request.is_disconnected():
@@ -159,9 +161,15 @@ async def extract_node(state: AgentState):
     except Exception as e:
         return {"extracted_data": None, "error": str(e)}
 
-workflow = StateGraph(AgentState)
-workflow.add_node("extract", extract_node)
-workflow.set_entry_point("extract")
-workflow.add_edge("extract", END)
+_agent_app_instance = None
 
-agent_app = workflow.compile()
+def get_agent_app():
+    global _agent_app_instance
+    if _agent_app_instance is None:
+        from langgraph.graph import StateGraph, END
+        workflow = StateGraph(AgentState)
+        workflow.add_node("extract", extract_node)
+        workflow.set_entry_point("extract")
+        workflow.add_edge("extract", END)
+        _agent_app_instance = workflow.compile()
+    return _agent_app_instance

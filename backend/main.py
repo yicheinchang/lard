@@ -2,12 +2,20 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 import os
+from contextlib import asynccontextmanager
 from database.relational import engine, Base
 from routers import jobs, ai, settings
 
-Base.metadata.create_all(bind=engine)
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Startup: Ensure database tables exist
+    Base.metadata.create_all(bind=engine)
+    print("INFO:     Application startup complete (Database Ready)")
+    yield
+    # Shutdown: Clean up if needed
+    pass
 
-app = FastAPI(title="Job Tracker API")
+app = FastAPI(title="Job Tracker API", lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,

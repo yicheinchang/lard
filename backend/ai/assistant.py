@@ -3,7 +3,7 @@ from langchain_core.messages import SystemMessage
 from langgraph.prebuilt import create_react_agent
 from ai.llm_factory import get_llm
 from database.relational import run_query
-from database.vector_store import vector_store
+from database.vector_store import get_vector_store_manager
 import json
 
 # --- SQL Database Tool --- #
@@ -38,7 +38,7 @@ def search_documents(query: str, job_id: Optional[int] = None):
         search_kwargs = {"k": 5}
         if job_id:
             search_kwargs["filter"] = {"job_id": job_id}
-        store = vector_store.get_store()
+        store = get_vector_store_manager().get_store()
         docs = store.similarity_search(query, **search_kwargs)
         formatted_docs = []
         for doc in docs:

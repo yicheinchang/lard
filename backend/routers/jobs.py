@@ -146,8 +146,8 @@ def create_job(job: JobCreate, db: Session = Depends(get_db)):
     
     if db_job.description:
         try:
-            from database.vector_store import vector_store
-            vector_store.ingest_text(
+            from database.vector_store import get_vector_store_manager
+            get_vector_store_manager().ingest_text(
                 document_id=f"job_{db_job.id}",
                 text=db_job.description,
                 metadata={"job_id": db_job.id, "source": f"{db_job.company} - {db_job.role}", "type": "job_description"}
@@ -184,8 +184,8 @@ def update_job(job_id: int, job_update: JobUpdate, db: Session = Depends(get_db)
     
     if description_changed and db_job.description:
         try:
-            from database.vector_store import vector_store
-            vector_store.ingest_text(
+            from database.vector_store import get_vector_store_manager
+            get_vector_store_manager().ingest_text(
                 document_id=f"job_{db_job.id}",
                 text=db_job.description,
                 metadata={"job_id": db_job.id, "source": f"{db_job.company} - {db_job.role}", "type": "job_description"}
@@ -195,8 +195,8 @@ def update_job(job_id: int, job_update: JobUpdate, db: Session = Depends(get_db)
             
     if notes_changed and db_job.notes:
         try:
-            from database.vector_store import vector_store
-            vector_store.ingest_text(
+            from database.vector_store import get_vector_store_manager
+            get_vector_store_manager().ingest_text(
                 document_id=f"job_notes_{db_job.id}",
                 text=db_job.notes,
                 metadata={"job_id": db_job.id, "source": f"{db_job.company} - {db_job.role} (Notes)", "type": "job_notes"}
@@ -364,8 +364,8 @@ def upload_job_document(job_id: int, file: UploadFile = File(...), doc_type: str
             with open(file_path, "r", encoding="utf-8") as f:
                 text = f.read()
                 
-        from database.vector_store import vector_store
-        vector_store.ingest_text(
+        from database.vector_store import get_vector_store_manager
+        get_vector_store_manager().ingest_text(
             document_id=f"doc_{doc.id}", 
             text=text, 
             metadata={"job_id": job_id, "source": doc.title, "type": "document"}

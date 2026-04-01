@@ -28,7 +28,7 @@ This document provides a summary of the project's architecture, tech stack, and 
 - `.agents/rules/`: Operational rules and roles for AI completion.
 
 ### Backend (`/backend`)
-- `main.py`: Application entry point and router integration.
+- `main.py`: Application entry point and router integration. Uses a `lifespan` handler for database initialization to ensure non-blocking startup.
 - `config.py`: Settings management (env vars + `app_settings.json`).
 - `routers/`:
   - `jobs.py`: 
@@ -40,12 +40,12 @@ This document provides a summary of the project's architecture, tech stack, and 
 - `database/`:
   - `models.py`: SQLAlchemy relational models.
   - `relational.py`: Database engine and session setup.
-  - `vector_store.py`: ChromaDB integration for RAG.
+  - `vector_store.py`: ChromaDB integration for RAG. Uses lazy initialization for the `PersistentClient` and `HuggingFaceEmbeddings` (with local model caching in `/chroma_db/models/`).
 - `ai/`:
-  - `assistant.py`: LangGraph-based conversational agent logic.
+  - `assistant.py`: LangGraph-based conversational agent logic. Uses lazy loading for the vector store manager.
   - `llm_factory.py`: Multi-provider support (Ollama, OpenAI, Anthropic).
   - `chains.py`: Specific LangChain sequences (e.g., for extraction).
-  - `graph.py`: LangGraph state machine definitions.
+  - `graph.py`: LangGraph state machine definitions. Uses a `get_agent_app()` lazy loader to defer graph compilation and heavy library imports.
 - `uploads/`: Local storage for uploaded job documents.
 
 ### Frontend (`/frontend`)
@@ -229,7 +229,14 @@ The AI assistant uses **LangGraph** to manage conversational state, enabling mul
 ### 4. Dynamic Configuration
 Settings are not just environment variables. They are persisted in `backend/app_settings.json`, allowing the user to change providers or themes at runtime via the UI without restarting the server.
 
-### 5. AI Extraction & Preprocessing
+### 5. Backend Startup Optimization
+The backend is optimized for instant startup (< 30s) even with heavy AI dependencies:
+- **Reloader Exclusions**: The `uvicorn` reloader is configured to ignore the `.venv` directory to prevent massive file system scans.
+- **Lazy Loading**: Heavy libraries like `langchain-openai` and `langgraph` are loaded only when the first AI request is made.
+- **Lifespan Initialization**: Database table creation is handled by an `asynccontextmanager` lifespan handler, ensuring it doesn't block the initial server process.
+- **Persistent Model Cache**: Embedding models are cached locally in `backend/chroma_db/models/` to bypass re-downloads.
+
+### 6. AI Extraction & Preprocessing
 The system uses a multi-stage pipeline to extract job details from URLs, PDFs, and text:
 - **Contextual Metadata**: In addition to the description, the system extracts the company, role, location, salary, internal Job ID, posted date, and application deadline.
 - **Extraction Strategies**: Supports two modes of operation:
@@ -274,7 +281,7 @@ Modals (like `AddJobModal.tsx`) are designed to be idempotent. They utilize `use
 ```bash
 cd backend
 source .venv/bin/activate
-uvicorn main:app --reload
+uv run uvicorn main:app --host 0.0.0.0 --port 8000 --reload --reload-exclude ".venv/*"
 ```
 
 ### Frontend
