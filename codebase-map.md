@@ -231,10 +231,10 @@ Settings are not just environment variables. They are persisted in `backend/app_
 
 ### 5. Backend Startup Optimization (Extreme v2)
 The backend is optimized for instant startup (< 5s) even with heavy AI dependencies:
-- **Reloader Indexing**: The `uvicorn` reloader is configured to watch only source directories (`ai`, `routers`, `database`) via the `start-backend.sh` script, bypassing the scan of 15,000 files in the root.
+- **Reloader Indexing**: The `uvicorn` reloader is configured to watch only source directories (`ai`, `routers`, `database`) via the unified `run.sh` script, bypassing the scan of 15,000 files in the root.
 - **Factory Pattern & Lazy Routers**: `main.py` uses a `create_app()` factory that defers router inclusion and framework initialization until the worker is spawned.
 - **Deep Lazy Loading**: All heavy AI prompts and `langchain` utilities are imported strictly inside the functions that need them.
-- **Production Ready**: Use `./start-prod.sh` for optimized concurrency (multiple workers) without file watching.
+- **Production Ready**: Use `./run.sh prod` for optimized concurrency (multiple workers) without file watching.
 - **Persistent Model Cache**: Embedding models are cached locally in `backend/chroma_db/models/`.
  to bypass re-downloads.
 
@@ -282,10 +282,10 @@ Modals (like `AddJobModal.tsx`) are designed to be idempotent. They utilize `use
 ### Backend
 ```bash
 cd backend
-chmod +x start-backend.sh start-prod.sh
-./start-backend.sh # Development
+chmod +x run.sh
+./run.sh dev   # Development
 # OR
-./start-prod.sh    # Production
+./run.sh prod  # Production
 ```
 
 ### Frontend

@@ -16,15 +16,15 @@ uv sync
 ### 3. Development Mode
 Optimized for instant reloads by targeting only source code directories.
 ```bash
-chmod +x start-backend.sh
-./start-backend.sh
+chmod +x run.sh
+./run.sh dev
 ```
 
 ### 4. Production Mode
 Optimized for performance and concurrency (4 workers).
 ```bash
-chmod +x start-prod.sh
-./start-prod.sh
+chmod +x run.sh
+./run.sh prod
 ```
 
 ## ⚡ Architecture & Optimization

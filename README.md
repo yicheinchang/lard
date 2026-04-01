@@ -48,7 +48,7 @@ npm install
 ```bash
 # Start Backend (Optimized Reload)
 cd backend
-./start-backend.sh
+./run.sh dev
 
 # Start Frontend
 cd frontend
@@ -59,7 +59,7 @@ npm run dev
 ```bash
 # Start Backend (4 Workers, No Reload)
 cd backend
-./start-prod.sh
+./run.sh prod
 ```
 
 ---
