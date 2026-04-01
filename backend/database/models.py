@@ -57,7 +57,7 @@ class JobApplication(Base):
     headhunter_email = Column(String, nullable=True)
     
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
-    applied_date = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+    applied_date = Column(DateTime, nullable=True)
     last_updated = Column(DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
     notes = Column(Text, nullable=True) # Additional user notes in Markdown
 

@@ -8,8 +8,8 @@ class JobDetails(BaseModel):
     location: str | None = Field(default=None, description="The location of the job, if specified.")
     salary_range: str | None = Field(default=None, description="The salary range, if specified.")
     company_job_id: str | None = Field(default=None, description="The internal Job ID or Reference Number (e.g., REQ-12345, R8822, or a simple number).")
-    job_posted_date: str | None = Field(default=None, description="The date the job was posted, if visible.")
-    application_deadline: str | None = Field(default=None, description="The application deadline, if visible.")
+    job_posted_date: str | None = Field(default=None, description="The date the job was posted. Use YYYY-MM-DD format if possible, otherwise null.")
+    application_deadline: str | None = Field(default=None, description="The application deadline. Use YYYY-MM-DD format if possible, otherwise null.")
     description: str | None = Field(default=None, description="The FULL job description, extracted VERBATIM from the source and formatted in Markdown. Do not rephrase. Preserve original hierarchy and bullet points.")
 
 extraction_prompt = ChatPromptTemplate.from_messages([
@@ -46,10 +46,10 @@ class JobId(BaseModel):
     company_job_id: str | None = Field(default=None, description="The internal Job ID (e.g., REQ-1234, R09384, or a simple number). Use URL ONLY if text does not contain it.")
 
 class PostedDate(BaseModel):
-    job_posted_date: str | None = Field(default=None, description="The date the job was posted.")
+    job_posted_date: str | None = Field(default=None, description="The date the job was posted (YYYY-MM-DD format preferred, or null).")
 
 class DeadlineDate(BaseModel):
-    application_deadline: str | None = Field(default=None, description="The application deadline.")
+    application_deadline: str | None = Field(default=None, description="The application deadline (YYYY-MM-DD format preferred, or null).")
 
 class JobDescription(BaseModel):
     description: str | None = Field(default=None, description="The FULL job description, extracted VERBATIM from the source and formatted in Markdown.")

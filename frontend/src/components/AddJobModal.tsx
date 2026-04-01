@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Sparkles, Loader2, Link as LinkIcon, Building2, Briefcase, Plus, ChevronDown, ChevronUp, FileText, Upload, Zap, Paperclip } from 'lucide-react';
+import { Sparkles, Loader2, Link as LinkIcon, Building2, Briefcase, Plus, ChevronDown, ChevronUp, FileText, Upload, Zap, Paperclip, AlertTriangle } from 'lucide-react';
 import { extractJobFromUrl, extractJobFromPdf, uploadJobDocument, checkJobDuplicate, getCompanies, Job } from '../lib/api';
 import { useSettings } from '@/lib/SettingsContext';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
@@ -183,8 +183,8 @@ export const AddJobModal: React.FC<AddJobModalProps> = ({ isOpen, onClose, onAdd
         role: data.extracted.role || prev.role,
         location: data.extracted.location || prev.location,
         company_job_id: data.extracted.company_job_id || prev.company_job_id,
-        job_posted_date: data.extracted.job_posted_date || prev.job_posted_date,
-        application_deadline: data.extracted.application_deadline || prev.application_deadline,
+        job_posted_date: isValidDate(data.extracted.job_posted_date) ? data.extracted.job_posted_date : prev.job_posted_date,
+        application_deadline: isValidDate(data.extracted.application_deadline) ? data.extracted.application_deadline : prev.application_deadline,
         salary_range: data.extracted.salary_range || prev.salary_range,
         description: data.extracted.description || prev.description,
       }));
@@ -219,6 +219,14 @@ export const AddJobModal: React.FC<AddJobModalProps> = ({ isOpen, onClose, onAdd
     setSelectedFile(null);
     setError('');
     if (fileInputRef.current) fileInputRef.current.value = '';
+  };
+
+  const isValidDate = (dateStr: any) => {
+    if (!dateStr || typeof dateStr !== 'string') return false;
+    // Basic YYYY-MM-DD check
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) return false;
+    const d = new Date(dateStr);
+    return d instanceof Date && !isNaN(d.getTime());
   };
 
   const handleSubmit = async (e: React.FormEvent, skipCheck = false) => {
@@ -490,8 +498,18 @@ export const AddJobModal: React.FC<AddJobModalProps> = ({ isOpen, onClose, onAdd
           {/* ── Main Form ── */}
           <form id="add-job-form" onSubmit={handleSubmit} className="space-y-4">
             {error && (
-              <div className="text-red-400 text-sm p-3 bg-red-400/10 rounded-lg border border-red-400/20">
-                {typeof error === 'string' ? error : JSON.stringify(error)}
+              <div className="text-red-400 text-sm p-4 bg-red-400/10 rounded-xl border border-red-400/20 shadow-lg animate-pulse-subtle">
+                <div className="flex items-start gap-3">
+                   <AlertTriangle className="w-5 h-5 shrink-0 mt-0.5" />
+                   <div className="flex-1">
+                      <p className="font-semibold mb-1">Could not add application:</p>
+                      <ul className="list-disc list-inside space-y-1 text-xs opacity-90">
+                        {error.split(', ').map((err, i) => (
+                          <li key={i}>{err}</li>
+                        ))}
+                      </ul>
+                   </div>
+                </div>
               </div>
             )}
 

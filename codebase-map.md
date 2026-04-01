@@ -142,7 +142,7 @@ Global configuration persisted on the server (`app_settings.json`).
 - `description`: (Text, Markdown)
 - `notes`: (Text, Markdown) User notes, automatically vectorized for RAG.
 - `hr_email`, `hiring_manager_name`, `hiring_manager_email`, `headhunter_name`, `headhunter_email`: (String)
-- `applied_date`: (DateTime) The date the application was actually submitted.
+- `applied_date`: (DateTime, Nullable) The date the application was actually submitted. No default; null for Wishlist items.
 - `created_at`: (DateTime) The date the record was first added to the system.
 - `last_updated`: (DateTime) Triggered on any record change.
 
@@ -243,6 +243,7 @@ The system uses a multi-stage pipeline to extract job details from URLs, PDFs, a
     - **Raw Pass (Job Description)**: Specifically skips structured JSON extraction for the description field, using a direct verbatim retrieval prompt for maximum reliability and speed.
     - **Structured Pass (Metadata)**: Continues to use JSON schema enforcement for small fields like Company, Role, and ID.
     - **JSON-LD Support**: Prioritizes `application/ld+json` script tags (Schema.org `JobPosting`) for metadata extraction. This ensures high-fidelity results for modern, client-side rendered job boards (e.g., Workday/Moderna) where the primary page content is dynamic.
+    - **Date Constraints**: Extraction prompts explicitly require `YYYY-MM-DD` format or `null` for date fields to ensure Pydantic validation success.
 
 ### 6. Document Ingestion
 Supports PDF and plain text. PDFs are parsed using `pypdf` and split into chunks before vectorization.
