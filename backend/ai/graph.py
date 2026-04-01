@@ -2,15 +2,6 @@ import asyncio
 import json
 from typing import TypedDict, Any, Callable
 from ai.llm_factory import get_llm
-from ai.chains import (
-    extraction_prompt, JobDetails,
-    JobCompany, JobRole, JobLocation, JobSalary, JobId, 
-    PostedDate, DeadlineDate, JobDescription,
-    description_extraction_prompt,
-    company_prompt, role_prompt, location_prompt, salary_prompt,
-    job_id_prompt, posted_date_prompt, deadline_date_prompt,
-    structured_data_validation_prompt
-)
 from config import load_app_settings
 
 class AgentState(TypedDict):
@@ -82,6 +73,13 @@ async def _run_multi_agent_extraction(text: str, url: str, request: Any = None, 
     # Concurrency limit (Keep at 1 for stability when processing large descriptions on local LLM)
     semaphore = asyncio.Semaphore(1)
     
+    from ai.chains import (
+        JobCompany, JobRole, JobLocation, JobSalary, JobId, 
+        PostedDate, DeadlineDate, JobDescription,
+        company_prompt, role_prompt, location_prompt, salary_prompt,
+        job_id_prompt, posted_date_prompt, deadline_date_prompt,
+        description_extraction_prompt
+    )
     metadata_tasks = [
         ("company", JobCompany, company_prompt),
         ("role", JobRole, role_prompt),
@@ -118,7 +116,11 @@ async def extract_node(state: AgentState):
     progress_cb = state.get("progress_callback")
     
     try:
-        if state.get("structured_data"):
+        from ai.chains import (
+        extraction_prompt, JobDetails,
+        description_extraction_prompt, structured_data_validation_prompt
+    )
+    if state.get("structured_data"):
             # --- PATH A: JSON-LD Structured Data found ---
             if progress_cb:
                 await progress_cb({"event": "progress", "msg": "AI: JSON-LD found! Validating and converting description..."})

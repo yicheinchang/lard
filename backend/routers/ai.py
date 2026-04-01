@@ -6,8 +6,6 @@ import json
 import asyncio
 import os
 import shutil
-from bs4 import BeautifulSoup
-from langchain_community.document_loaders import PyPDFLoader
 from ai.graph import get_agent_app
 from config import load_app_settings
 
@@ -22,6 +20,7 @@ def _check_ai_enabled():
 
 def _clean_html(html: str) -> tuple[str, dict | None]:
     """Generic HTML cleaning to extract main content while removing noise, with JSON-LD support."""
+    from bs4 import BeautifulSoup
     soup = BeautifulSoup(html, 'html.parser')
 
     # 1. Look for application/ld+json (Schema.org JobPosting)
@@ -215,6 +214,7 @@ async def extract_pdf_stream(request: Request, file: UploadFile = File(...)):
     async def pdf_gen():
         try:
             yield f"data: {json.dumps({'event': 'progress', 'msg': f'Parsing PDF: {file.filename}'})}\n\n"
+            from langchain_community.document_loaders import PyPDFLoader
             loader = PyPDFLoader(temp_path)
             pages = await asyncio.to_thread(loader.load) # Run blocking load in thread
             text = "\n".join([page.page_content for page in pages])

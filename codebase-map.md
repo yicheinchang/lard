@@ -229,12 +229,13 @@ The AI assistant uses **LangGraph** to manage conversational state, enabling mul
 ### 4. Dynamic Configuration
 Settings are not just environment variables. They are persisted in `backend/app_settings.json`, allowing the user to change providers or themes at runtime via the UI without restarting the server.
 
-### 5. Backend Startup Optimization
-The backend is optimized for instant startup (< 30s) even with heavy AI dependencies:
-- **Reloader Exclusions**: The `uvicorn` reloader is configured to ignore the `.venv` directory to prevent massive file system scans.
-- **Lazy Loading**: Heavy libraries like `langchain-openai` and `langgraph` are loaded only when the first AI request is made.
-- **Lifespan Initialization**: Database table creation is handled by an `asynccontextmanager` lifespan handler, ensuring it doesn't block the initial server process.
-- **Persistent Model Cache**: Embedding models are cached locally in `backend/chroma_db/models/` to bypass re-downloads.
+### 5. Backend Startup Optimization (Extreme v2)
+The backend is optimized for instant startup (< 5s) even with heavy AI dependencies:
+- **Reloader Indexing**: The `uvicorn` reloader is configured to watch only source directories (`ai`, `routers`, `database`) via the `start-backend.sh` script, bypassing the scan of 15,000 files in the root.
+- **Factory Pattern & Lazy Routers**: `main.py` uses a `create_app()` factory that defers router inclusion and framework initialization until the worker is spawned.
+- **Deep Lazy Loading**: All heavy AI prompts and `langchain` utilities are imported strictly inside the functions that need them.
+- **Persistent Model Cache**: Embedding models are cached locally in `backend/chroma_db/models/`.
+ to bypass re-downloads.
 
 ### 6. AI Extraction & Preprocessing
 The system uses a multi-stage pipeline to extract job details from URLs, PDFs, and text:
@@ -280,8 +281,8 @@ Modals (like `AddJobModal.tsx`) are designed to be idempotent. They utilize `use
 ### Backend
 ```bash
 cd backend
-source .venv/bin/activate
-uv run uvicorn main:app --host 0.0.0.0 --port 8000 --reload --reload-exclude ".venv/*"
+chmod +x start-backend.sh
+./start-backend.sh
 ```
 
 ### Frontend
