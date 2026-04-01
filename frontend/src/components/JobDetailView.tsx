@@ -5,8 +5,8 @@ import ReactMarkdown from 'react-markdown';
 import MdEditor from 'react-markdown-editor-lite';
 import MarkdownIt from 'markdown-it';
 import 'react-markdown-editor-lite/lib/index.css';
-import { Job, getStepTypes, StepType, addInterviewStep, updateInterviewStep, updateJob, uploadJobDocument, deleteJobDocument, getCompanies, InterviewStep } from '../lib/api';
-import { X, Calendar, User, Mail, Plus, Circle, FileText, Edit2, Save, Paperclip, Trash2, ExternalLink, Link as LinkIcon, StickyNote, Send } from 'lucide-react';
+import { Job, getStepTypes, StepType, addInterviewStep, updateInterviewStep, deleteInterviewStep, updateJob, uploadJobDocument, deleteJobDocument, getCompanies, InterviewStep } from '../lib/api';
+import { X, Calendar, User, Mail, Plus, Circle, FileText, Edit2, Save, Paperclip, Trash2, ExternalLink, Link as LinkIcon, StickyNote, Send, AlertTriangle } from 'lucide-react';
 import { ConfirmDialog } from './ConfirmDialog';
 import { DocumentPreview } from './DocumentPreview';
 
@@ -142,8 +142,12 @@ export const JobDetailView: React.FC<JobDetailViewProps> = ({ job, onClose, onJo
   // Deletion state
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
-  // Advance state
-  const [showAdvanceConfirm, setShowAdvanceConfirm] = useState(false);
+  // Terminal status confirm
+  const [terminalStatusConfirm, setTerminalStatusConfirm] = useState<{ 
+    isOpen: boolean, 
+    nextStatus: string, 
+    onConfirm: () => void 
+  }>({ isOpen: false, nextStatus: '', onConfirm: () => {} });
 
   // Document preview state
   const [previewDoc, setPreviewDoc] = useState<{ isOpen: boolean; title: string; fileUrl: string | null }>({
@@ -240,30 +244,73 @@ export const JobDetailView: React.FC<JobDetailViewProps> = ({ job, onClose, onJo
       setIsAdding(false);
       onJobUpdated();
 
-      if (job.status === 'Wishlist' || job.status === 'Applied') {
-        setShowAdvanceConfirm(true);
+      const terminalStatuses = ["Rejected", "Offered", "Discontinued", "Closed"];
+      if (terminalStatuses.includes(job.status)) {
+        const calculatedNext = 'Interviewing'; 
+        setTerminalStatusConfirm({
+          isOpen: true,
+          nextStatus: calculatedNext,
+          onConfirm: async () => {
+             await updateJob(job.id!, { status: calculatedNext });
+             onJobUpdated();
+             setTerminalStatusConfirm(prev => ({ ...prev!, isOpen: false }));
+          }
+        });
       }
     } catch (err) {
       console.error('Failed to add step', err);
     }
   };
 
-  const advanceToInterviewing = async () => {
-    try {
-      await updateJob(job.id!, { status: 'Interviewing' });
-      onJobUpdated();
-    } catch (err) {
-      console.error('Failed to advance to Interviewing', err);
-    }
-    setShowAdvanceConfirm(false);
-  };
-
   const handleStatusChange = async (stepId: number, nextStatus: string) => {
     try {
       await updateInterviewStep(stepId, { status: nextStatus });
       onJobUpdated();
+      
+      const terminalStatuses = ["Rejected", "Offered", "Discontinued", "Closed"];
+      if (terminalStatuses.includes(job.status)) {
+        // Recalculate what the status OUGHT to be
+        const calculatedNext = 'Interviewing'; 
+        setTerminalStatusConfirm({
+          isOpen: true,
+          nextStatus: calculatedNext,
+          onConfirm: async () => {
+             await updateJob(job.id!, { status: calculatedNext });
+             onJobUpdated();
+             setTerminalStatusConfirm(prev => ({ ...prev!, isOpen: false }));
+          }
+        });
+      }
     } catch (err) {
       console.error(err);
+    }
+  };
+
+  const handleDeleteStep = async (stepId: number) => {
+    if (window.confirm("Are you sure you want to delete this interview step?")) {
+      try {
+        await deleteInterviewStep(stepId);
+        onJobUpdated();
+        
+        const terminalStatuses = ["Rejected", "Offered", "Discontinued", "Closed"];
+        if (terminalStatuses.includes(job.status)) {
+          // If we delete a step and we are terminal, we might want to go back to Applied (if 0 steps) or stay
+          const hasRemainingSteps = (job.steps?.length || 0) > 1;
+          const calculatedNext = hasRemainingSteps ? 'Interviewing' : 'Applied';
+          
+          setTerminalStatusConfirm({
+            isOpen: true,
+            nextStatus: calculatedNext,
+            onConfirm: async () => {
+               await updateJob(job.id!, { status: calculatedNext });
+               onJobUpdated();
+               setTerminalStatusConfirm(prev => ({ ...prev!, isOpen: false }));
+            }
+          });
+        }
+      } catch (err) {
+        console.error('Failed to delete step', err);
+      }
     }
   };
 
@@ -302,10 +349,23 @@ export const JobDetailView: React.FC<JobDetailViewProps> = ({ job, onClose, onJo
   };
 
   const handleSaveInfo = async () => {
+    // Validation: cannot clear applied_date if steps exist
+    if (!editFormData.applied_date && job.steps && job.steps.length > 0) {
+      alert("Cannot clear the 'Actually Applied' date while interview steps exist. Please delete all interview steps first.");
+      return;
+    }
+
     try {
       const cleanData = Object.fromEntries(
         Object.entries(editFormData).map(([k, v]) => [k, v === '' ? null : v])
       );
+
+      // Restriction: Wishlist (no date) can ONLY move to Discontinued terminal status
+      if (!cleanData.applied_date && cleanData.status && cleanData.status !== 'Wishlist' && cleanData.status !== 'Discontinued') {
+        alert(`An application in the 'Wishlist' stage (no applied date) can only be moved to 'Discontinued'. 'Offered' or 'Rejected' require an application date.`);
+        return;
+      }
+
       await updateJob(job.id!, cleanData);
       setIsEditingInfo(false);
       onJobUpdated();
@@ -383,9 +443,20 @@ export const JobDetailView: React.FC<JobDetailViewProps> = ({ job, onClose, onJo
             <div className="max-w-3xl">
               <div className="flex items-center justify-between mb-6">
                 <h3 className="text-lg font-semibold text-[var(--fg)] opacity-90">Timeline</h3>
-                <button onClick={() => setIsAdding(!isAdding)} className="text-sm bg-violet-600 hover:bg-violet-500 text-white px-3 py-1.5 rounded-lg flex items-center gap-2 transition-colors">
-                  <Plus className="w-4 h-4" /> Add Step
-                </button>
+                <div className="relative group/addstep">
+                  <button 
+                    disabled={!job.applied_date}
+                    onClick={() => setIsAdding(!isAdding)} 
+                    className={`text-sm bg-violet-600 hover:bg-violet-500 text-white px-3 py-1.5 rounded-lg flex items-center gap-2 transition-colors disabled:opacity-40 disabled:cursor-not-allowed`}
+                  >
+                    <Plus className="w-4 h-4" /> Add Step
+                  </button>
+                  {!job.applied_date && (
+                    <div className="absolute bottom-full right-0 mb-2 w-48 p-2 bg-black/80 backdrop-blur text-[10px] text-white rounded-lg opacity-0 group-hover/addstep:opacity-100 pointer-events-none transition-opacity border border-white/10 shadow-xl">
+                      You must provide an "Actually Applied" date in the Job Details tab before adding interview steps.
+                    </div>
+                  )}
+                </div>
               </div>
 
               {isAdding && (
@@ -503,12 +574,20 @@ export const JobDetailView: React.FC<JobDetailViewProps> = ({ job, onClose, onJo
                               </div>
                             )}
                             {step.id !== -1 && (
-                              <button 
-                                onClick={() => startEditingStep(step)} 
-                                className="shrink-0 text-xs text-[var(--fg-subtle)] hover:text-violet-500 opacity-0 group-hover/step:opacity-100 transition-all flex items-center gap-1.5 bg-[var(--surface)] hover:bg-[var(--surface-hover)] px-2 py-1 rounded border border-[var(--border-color)]"
-                              >
-                                <Edit2 className="w-3 h-3" /> Edit Step
-                              </button>
+                              <div className="flex items-center gap-2 opacity-0 group-hover/step:opacity-100 transition-all">
+                                <button 
+                                  onClick={() => startEditingStep(step)} 
+                                  className="shrink-0 text-xs text-[var(--fg-subtle)] hover:text-violet-500 transition-all flex items-center gap-1.5 bg-[var(--surface)] hover:bg-[var(--surface-hover)] px-2 py-1 rounded border border-[var(--border-color)]"
+                                >
+                                  <Edit2 className="w-3 h-3" /> Edit
+                                </button>
+                                <button 
+                                  onClick={() => handleDeleteStep(step.id)} 
+                                  className="shrink-0 text-xs text-red-500/70 hover:text-red-500 transition-all flex items-center gap-1.5 bg-[var(--surface)] hover:bg-red-500/5 px-2 py-1 rounded border border-[var(--border-color)]"
+                                >
+                                  <Trash2 className="w-3 h-3" /> Delete
+                                </button>
+                              </div>
                             )}
                           </div>
                         )}
@@ -678,6 +757,22 @@ export const JobDetailView: React.FC<JobDetailViewProps> = ({ job, onClose, onJo
                       <input className="bg-[var(--bg)] border border-[var(--border-color)] rounded-md px-2 py-1 text-sm text-[var(--fg)] focus:outline-none focus:border-violet-500" value={editFormData.role || ''} onChange={e => handleEditChange('role', e.target.value)}/>
                     </div>
                     <div className="flex flex-col gap-1">
+                      <label className="text-xs text-[var(--fg-subtle)]">Current Status</label>
+                      <select 
+                        className="bg-[var(--bg)] border border-[var(--border-color)] rounded-md px-2 py-1 text-sm text-[var(--fg)] focus:outline-none focus:border-violet-500 outline-none cursor-pointer"
+                        value={editFormData.status || 'Wishlist'}
+                        onChange={e => handleEditChange('status', e.target.value)}
+                      >
+                        <option value="Wishlist">Wishlist</option>
+                        <option value="Applied">Applied</option>
+                        <option value="Interviewing">Interviewing</option>
+                        <option value="Offered">Offered</option>
+                        <option value="Rejected">Rejected</option>
+                        <option value="Closed">Closed</option>
+                        <option value="Discontinued">Discontinued</option>
+                      </select>
+                    </div>
+                    <div className="flex flex-col gap-1">
                       <label className="text-xs text-[var(--fg-subtle)] flex items-center gap-1"><LinkIcon className="w-3 h-3" /> Application URL</label>
                       <input type="url" className="bg-[var(--bg)] border border-[var(--border-color)] rounded-md px-2 py-1 text-sm text-[var(--fg)] focus:outline-none focus:border-violet-500" value={editFormData.url || ''} onChange={e => handleEditChange('url', e.target.value)} placeholder="https://..."/>
                     </div>
@@ -836,12 +931,23 @@ export const JobDetailView: React.FC<JobDetailViewProps> = ({ job, onClose, onJo
       </div>
 
       <ConfirmDialog
-        isOpen={showAdvanceConfirm}
-        title="Advance Pipeline?"
-        message={`Adding this step means the interview process has started. Would you like to explicitly move the application to the "Interviewing" stage?`}
-        onConfirm={advanceToInterviewing}
-        onCancel={() => setShowAdvanceConfirm(false)}
-        confirmLabel="Move to Interviewing"
+        isOpen={terminalStatusConfirm.isOpen}
+        title="Resume Application Progress?"
+        message={(
+          <div className="space-y-3">
+            <div className="flex items-start gap-3 p-3 bg-violet-500/10 border border-violet-500/20 rounded-xl">
+              <AlertTriangle className="w-5 h-5 text-violet-400 shrink-0 mt-0.5" />
+              <p className="text-sm text-[var(--fg-muted)]">
+                This application is currently in a terminal stage (<span className="text-violet-400 font-bold">{job.status}</span>), but you've modified the interview steps.
+              </p>
+            </div>
+            <p className="text-sm">Would you like to keep it as <span className="font-bold">{job.status}</span> or move it back to <span className="text-violet-400 font-bold">{terminalStatusConfirm.nextStatus}</span>?</p>
+          </div>
+        )}
+        onConfirm={terminalStatusConfirm.onConfirm}
+        onCancel={() => setTerminalStatusConfirm(prev => ({ ...prev, isOpen: false }))}
+        confirmLabel={`Move to ${terminalStatusConfirm.nextStatus}`}
+        cancelLabel={`Stay ${job.status}`}
         variant="default"
       />
 

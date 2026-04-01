@@ -160,6 +160,11 @@ export const updateInterviewStep = async (stepId: number, updateData: { step_typ
   return response.data;
 };
 
+export const deleteInterviewStep = async (stepId: number) => {
+  const response = await api.delete(`/jobs/steps/${stepId}`);
+  return response.data;
+};
+
 export const extractJobFromUrl = async (url: string, signal?: AbortSignal) => {
   const response = await api.post('/ai/extract-url', { url }, { signal });
   return response.data;

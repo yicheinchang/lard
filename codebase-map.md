@@ -77,10 +77,10 @@ The `AppShell` provides the persistent UI (sidebar and chat), while `src/app/pag
 
 ### 2. Job Detail System
 Instead of separate routes, job details are shown in a reactive overlay (`JobDetailView.tsx`). The component organizes data into three primary contexts:
-- **Interview Pipeline**: Chronological timeline of events with inline status, name, and date editing. Supports manual addition and system events (e.g., virtual "Applied" marker).
-- **Job Details**: Editable metadata (Company, Role, Salary, Dates) and Markdown-driven description rendering. Includes document management for Job Posts and Resumes.
+- **Interview Pipeline**: Chronological timeline of events with inline status, name, and date editing. Supports manual addition, **deletion**, and system events (e.g., virtual "Applied" marker). "Add Step" is disabled for wishlist items.
+- **Job Details**: Editable metadata (Company, Role, Salary, Dates) and Markdown-driven description rendering. Includes document management for Job Posts and Resumes. Status can be manually overridden.
 - **Application Notes**: A dedicated Markdown editor for deep-dive research and interview preparation, synchronizing with the RAG system.
-- **Workflow Triggers**: Contextual logic for status advancing (e.g., prompting for `applied_date` and **Resume/CV attachment** when moving from Wishlist to Applied) and deletion guards.
+- **Workflow Triggers**: Contextual logic for automated status advancing and deletion guards.
 
 ### 3. Contextual AI Integration
 The `ChatAssistant` is a global component accessible from any page. It maintains its own state and can be toggled via a floating action button or keyboard shortcuts.
@@ -142,7 +142,7 @@ Global configuration persisted on the server (`app_settings.json`).
 - `description`: (Text, Markdown)
 - `notes`: (Text, Markdown) User notes, automatically vectorized for RAG.
 - `hr_email`, `hiring_manager_name`, `hiring_manager_email`, `headhunter_name`, `headhunter_email`: (String)
-- `applied_date`: (DateTime, Nullable) The date the application was actually submitted. No default; null for Wishlist items.
+- `applied_date`: (DateTime, Nullable) The date the application was actually submitted. No default; null for Wishlist items. Clearing this date while steps exist is blocked. An entry here triggers an automatic move to "Applied" (or "Interviewing" if steps exist).
 - `created_at`: (DateTime) The date the record was first added to the system.
 - `last_updated`: (DateTime) Triggered on any record change.
 
@@ -191,6 +191,7 @@ Global configuration persisted on the server (`app_settings.json`).
 - `DELETE /documents/{doc_id}`: Remove a document from the system and vector store.
 - `POST /jobs/{id}/steps`: Add a new interview step (auto-creates `StepType`).
 - `PUT /jobs/steps/{step_id}`: Update interview step details (Name, Date, Status, Notes).
+- `DELETE /api/jobs/steps/{step_id}`: Permanently remove an interview step (triggers status recalculation).
 
 ### AI (`/api/ai`)
 - `POST /ai/chat`: LangGraph-driven interactive chat with RAG.
@@ -211,7 +212,15 @@ Global configuration persisted on the server (`app_settings.json`).
 ### 1. Note Ingestion & RAG
 When `JobApplication.notes` is updated via the integrated editor in the **Job Details** tab, the change triggers an automatic re-ingestion of the text into ChromaDB under the `job_notes` type. This ensures the AI Assistant can retrieve the user's personal thoughts and research during chat sessions.
 
-### 2. Multi-Provider AI
+### 2. Job Lifecycle & Automated Advancement
+The system enforces strict status integrity based on the application's progress:
+- **Wishlist**: Default state when `applied_date` is missing. "Add Step" is disabled. Can only move manually to "Discontinued".
+- **Applied**: Automatically advanced when `applied_date` is set and no steps exist.
+- **Interviewing**: Automatically advanced when an interview step is added.
+- **Terminal Stages**: (Rejected, Offered, Discontinued, Closed). If a step is modified while in these stages, the UI prompts the user to decide whether to resume progress (move to Interviewing/Applied) or stay in the terminal stage.
+- **Reversion**: Deleting the last interview step automatically moves the job back to "Applied". Clearing the `applied_date` (only if no steps remain) moves it back to "Wishlist".
+
+### 3. Multi-Provider AI
 The system is designed to be model-agnostic. Through `llm_factory.py`, it can switch between:
 - **Local**: Ollama (default: `gemma3:4b-it-qat`)
 - **Cloud**: OpenAI (GPT-4o) or Anthropic (Claude 3)

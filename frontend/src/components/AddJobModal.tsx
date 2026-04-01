@@ -69,7 +69,15 @@ export const AddJobModal: React.FC<AddJobModalProps> = ({ isOpen, onClose, onAdd
           newData.applied_date = '';
         }
       }
-      
+
+      if (field === 'applied_date') {
+        if (!value && prev.status !== 'Wishlist' && prev.status !== 'Discontinued') {
+          newData.status = 'Wishlist';
+        } else if (value && prev.status === 'Wishlist') {
+          newData.status = 'Applied';
+        }
+      }
+
       return newData;
     });
   };
@@ -324,10 +332,10 @@ export const AddJobModal: React.FC<AddJobModalProps> = ({ isOpen, onClose, onAdd
       >
         <option value="Wishlist" className="bg-[#1a1a24] text-white">Wishlist</option>
         <option value="Applied" className="bg-[#1a1a24] text-white">Applied</option>
-        <option value="Interviewing" className="bg-[#1a1a24] text-white">Interviewing</option>
-        <option value="Offered" className="bg-[#1a1a24] text-white">Offered</option>
-        <option value="Rejected" className="bg-[#1a1a24] text-white">Rejected</option>
-        <option value="Closed" className="bg-[#1a1a24] text-white">Closed</option>
+        <option value="Interviewing" className="bg-[#1a1a24] text-white" disabled={!formData.applied_date}>Interviewing (Requires Date)</option>
+        <option value="Offered" className="bg-[#1a1a24] text-white" disabled={!formData.applied_date}>Offered (Requires Date)</option>
+        <option value="Rejected" className="bg-[#1a1a24] text-white" disabled={!formData.applied_date}>Rejected (Requires Date)</option>
+        <option value="Closed" className="bg-[#1a1a24] text-white" disabled={!formData.applied_date}>Closed (Requires Date)</option>
         <option value="Discontinued" className="bg-[#1a1a24] text-white">Discontinued</option>
       </select>
     </div>

@@ -104,6 +104,31 @@ class JobResponse(JobBase):
     
     model_config = ConfigDict(from_attributes=True)
 
+
+TERMINAL_STATUSES = ["Rejected", "Offered", "Discontinued", "Closed"]
+
+def update_job_status(db_job: JobApplication, db: Session):
+    """
+    Automatically recalculate and update the application status based on internal logic.
+    """
+    # 1. Terminal statuses stay as-is unless manually changed (handled in routers)
+    if db_job.status in TERMINAL_STATUSES:
+        # One exception: Wishlist jobs can only be Discontinued. 
+        # If it's Offered/Rejected but has no applied date, force it back to Wishlist (safety).
+        if not db_job.applied_date and db_job.status != "Discontinued":
+            db_job.status = "Wishlist"
+        return
+    
+    # 2. Progress logic
+    if not db_job.applied_date:
+        db_job.status = "Wishlist"
+    elif db_job.steps:
+        db_job.status = "Interviewing"
+    else:
+        db_job.status = "Applied"
+    
+    db.commit()
+
 # --- Routes ---
 
 def get_or_create_company(db: Session, name: str) -> Company:
@@ -155,6 +180,9 @@ def create_job(job: JobCreate, db: Session = Depends(get_db)):
         except Exception as e:
             print(f"Warning: Failed to vectorize job description {db_job.id}: {e}")
             
+    # Initial status calculation
+    update_job_status(db_job, db)
+    db.refresh(db_job)
     return db_job
 
 @router.put("/jobs/{job_id}", response_model=JobResponse)
@@ -178,8 +206,17 @@ def update_job(job_id: int, job_update: JobUpdate, db: Session = Depends(get_db)
     for key, value in update_data.items():
         if hasattr(db_job, key):
             setattr(db_job, key, value)
-        
+    
+    # Validation based on user rules
+    if not db_job.applied_date and db_job.steps:
+        # Should not happen if frontend is correct, but safety:
+        # Application with steps MUST have an applied_date.
+        # If it doesn't, it stays in Wishlist but can't have steps.
+        # Actually, let's let the status calculator handle it but this is a warning sign.
+        pass
+
     db.commit()
+    update_job_status(db_job, db)
     db.refresh(db_job)
     
     if description_changed and db_job.description:
@@ -307,6 +344,10 @@ def add_interview_step(job_id: int, step: InterviewStepCreate, db: Session = Dep
     )
     db.add(new_step)
     db.commit()
+    
+    # Recalculate job status
+    update_job_status(db_job, db)
+    
     db.refresh(new_step)
     return new_step
 
@@ -327,7 +368,30 @@ def update_interview_step(step_id: int, step_update: InterviewStepUpdate, db: Se
     
     db.commit()
     db_step = db.query(InterviewStep).filter(InterviewStep.id == step_id).first() # Reload with type
+    
+    # Recalculate associated job status
+    db_job = db.query(JobApplication).filter(JobApplication.id == db_step.job_application_id).first()
+    if db_job:
+        update_job_status(db_job, db)
+        
     return db_step
+
+@router.delete("/jobs/steps/{step_id}")
+def delete_interview_step(step_id: int, db: Session = Depends(get_db)):
+    db_step = db.query(InterviewStep).filter(InterviewStep.id == step_id).first()
+    if not db_step:
+        raise HTTPException(status_code=404, detail="Step not found")
+    
+    job_id = db_step.job_application_id
+    db.delete(db_step)
+    db.commit()
+    
+    # Recalculate status
+    db_job = db.query(JobApplication).filter(JobApplication.id == job_id).first()
+    if db_job:
+        update_job_status(db_job, db)
+        
+    return {"status": "deleted"}
 
 @router.post("/jobs/{job_id}/documents", response_model=DocumentMetaResponse)
 def upload_job_document(job_id: int, file: UploadFile = File(...), doc_type: str = Form(...), db: Session = Depends(get_db)):
