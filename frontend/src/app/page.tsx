@@ -48,18 +48,23 @@ export default function Home() {
     setIsModalOpen(false);
   }, [activeView]);
 
-  const handleUpdateStatus = async (id: number, status: string, file?: File | null, docType?: string) => {
+  const handleUpdateStatus = async (id: number, status: string, date?: string, file?: File | null, docType?: string) => {
     const currentJob = jobs.find(j => j.id === id);
     
-    // special case: Wishlist -> Applied needs date prompt
-    if (currentJob?.status === 'Wishlist' && status === 'Applied') {
+    // special case: Wishlist -> Applied needs date prompt (from this component's local modal)
+    if (currentJob?.status === 'Wishlist' && status === 'Applied' && !date) {
       setPendingStatusUpdate({ id, status });
       setShowAdvanceToApplied(true);
       return;
     }
 
     try {
-      await updateJob(id, { status });
+      const updateData: any = { status };
+      if (date) {
+        updateData.applied_date = new Date(date).toISOString();
+      }
+      
+      await updateJob(id, updateData);
       if (file && docType) {
         await uploadJobDocument(id, file, docType);
       }
@@ -69,13 +74,16 @@ export default function Home() {
     }
   };
 
-  const confirmAdvanceToApplied = async (date?: string) => {
+  const confirmAdvanceToApplied = async (date?: string, file?: File | null) => {
     if (!pendingStatusUpdate) return;
     try {
       await updateJob(pendingStatusUpdate.id, { 
         status: pendingStatusUpdate.status,
         applied_date: date ? new Date(date).toISOString() : new Date().toISOString()
       });
+      if (file) {
+        await uploadJobDocument(pendingStatusUpdate.id, file, 'resume');
+      }
       setShowAdvanceToApplied(false);
       setPendingStatusUpdate(null);
       await fetchJobs();
@@ -164,6 +172,9 @@ export default function Home() {
         confirmLabel="Move to Applied"
         showDateInput={true}
         dateLabel="Application Date"
+        showFileUpload={true}
+        fileUploadLabel="Attach Resume / CV (Optional)"
+        accept=".pdf,.md"
         variant="default"
       />
     </div>

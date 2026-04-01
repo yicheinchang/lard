@@ -49,6 +49,7 @@ export interface Job {
 
   created_at: string;
   applied_date?: string;
+  last_updated?: string;
   steps?: InterviewStep[];
   documents?: DocumentMeta[];
 }

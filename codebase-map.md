@@ -57,7 +57,7 @@ This document provides a summary of the project's architecture, tech stack, and 
   - `JobCard.tsx`: Individual job item in the Kanban board.
   - `JobDetailView.tsx`: Core component for job application management. Features a resizable overlay height. Consists of multiple tabs including "Interview Pipeline", "Job Details", and "Application Notes". Integrates `MdEditor` for rich text editing and `ReactMarkdown` with `prose` for rendering.
   - `AddJobModal.tsx`: Core form for new applications. Includes AI Auto-fill, file attachment, and **Duplication Detection** prompts.
-  - `ConfirmDialog.tsx`: Reusable modal for user confirmations (e.g., "Add Anyway", "Discard Changes").
+  - `ConfirmDialog.tsx`: Reusable modal for user confirmations (e.g., "Add Anyway", "Discard Changes"). Supports inputs for **Dates** and **File Uploads** (Resumes/CVs).
   - `MdEditor`: Markdown editor component.
   - `ChatAssistant.tsx`: Semi-permanent drawer for the AI conversational agent.
   - `SettingsPage.tsx`: Integrated configuration for LLMs, themes, and system toggles.
@@ -80,7 +80,7 @@ Instead of separate routes, job details are shown in a reactive overlay (`JobDet
 - **Interview Pipeline**: Chronological timeline of events with inline status, name, and date editing. Supports manual addition and system events (e.g., virtual "Applied" marker).
 - **Job Details**: Editable metadata (Company, Role, Salary, Dates) and Markdown-driven description rendering. Includes document management for Job Posts and Resumes.
 - **Application Notes**: A dedicated Markdown editor for deep-dive research and interview preparation, synchronizing with the RAG system.
-- **Workflow Triggers**: Contextual logic for status advancing (e.g., prompting for `applied_date` when moving from Wishlist to Applied) and deletion guards.
+- **Workflow Triggers**: Contextual logic for status advancing (e.g., prompting for `applied_date` and **Resume/CV attachment** when moving from Wishlist to Applied) and deletion guards.
 
 ### 3. Contextual AI Integration
 The `ChatAssistant` is a global component accessible from any page. It maintains its own state and can be toggled via a floating action button or keyboard shortcuts.

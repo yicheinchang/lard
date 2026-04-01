@@ -5,7 +5,7 @@ import { JobCard } from './JobCard';
 
 interface KanbanBoardProps {
   jobs: Job[];
-  onUpdateStatus: (id: number, status: string, file?: File | null, docType?: string) => void;
+  onUpdateStatus: (id: number, status: string, date?: string, file?: File | null, docType?: string) => void;
   onJobClick: (job: Job) => void;
 }
 

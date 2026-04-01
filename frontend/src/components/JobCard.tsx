@@ -7,7 +7,7 @@ import { ConfirmDialog } from './ConfirmDialog';
 
 interface JobCardProps {
   job: Job;
-  onUpdateStatus: (id: number, status: string, file?: File | null, docType?: string) => void;
+  onUpdateStatus: (id: number, status: string, date?: string, file?: File | null, docType?: string) => void;
   onClick?: () => void;
   columnKey?: string;
 }
@@ -60,10 +60,10 @@ export const JobCard: React.FC<JobCardProps> = ({ job, onUpdateStatus, onClick, 
   };
 
   const handleConfirm = (date?: string, file?: File | null) => {
-    // We pass docType="resume" specifically when transitioning to 'Applied'
     onUpdateStatus(
       job.id!, 
       confirmState.nextStatus, 
+      date,
       file, 
       confirmState.nextStatus === 'Applied' ? 'resume' : undefined
     );
@@ -186,10 +186,10 @@ export const JobCard: React.FC<JobCardProps> = ({ job, onUpdateStatus, onClick, 
         onCancel={() => setConfirmState({ isOpen: false, nextStatus: '', variant: 'default' })}
         confirmLabel={`Move to ${confirmState.nextStatus}`}
         variant={confirmState.variant}
-        showDateInput={['Offered', 'Rejected', 'Closed', 'Discontinued'].includes(confirmState.nextStatus)}
-        dateLabel={confirmState.nextStatus === 'Offered' ? 'Offer received date' : 'Status change date'}
+        showDateInput={['Applied', 'Offered', 'Rejected', 'Closed', 'Discontinued'].includes(confirmState.nextStatus)}
+        dateLabel={confirmState.nextStatus === 'Applied' ? 'Actually applied date' : confirmState.nextStatus === 'Offered' ? 'Offer received date' : 'Status change date'}
         showFileUpload={confirmState.nextStatus === 'Applied'}
-        fileUploadLabel="Attach Resume / CV"
+        fileUploadLabel="Attach Resume / CV (Optional)"
         accept=".pdf,.md"
       />
     </>
