@@ -117,10 +117,10 @@ async def extract_node(state: AgentState):
     
     try:
         from ai.chains import (
-        extraction_prompt, JobDetails,
-        description_extraction_prompt, structured_data_validation_prompt
-    )
-    if state.get("structured_data"):
+            extraction_prompt, JobDetails,
+            description_extraction_prompt, structured_data_validation_prompt
+        )
+        if state.get("structured_data"):
             # --- PATH A: JSON-LD Structured Data found ---
             if progress_cb:
                 await progress_cb({"event": "progress", "msg": "AI: JSON-LD found! Validating and converting description..."})
