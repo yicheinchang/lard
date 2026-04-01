@@ -73,7 +73,7 @@ async def _run_field_extraction(field, schema, prompt, text, url, request, semap
                 
             return field, val
 
-    except (import('asyncio').TimeoutError, Exception) as e:
+        except (asyncio.TimeoutError, Exception) as e:
             print(f"Error extracting {field}: {e}")
             return field, None
 
