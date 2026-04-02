@@ -202,7 +202,8 @@ Global configuration persisted on the server (`app_settings.json`).
 ### Jobs (`/api/jobs`)
 - `GET /jobs`: List all job applications with nested steps and documents.
 - `POST /jobs`: Create a new application with auto-linkage to a `Company`.
-- `PUT /jobs/{id}`: Update job application details (triggers re-vectorization of description/notes).
+- `PUT /api/jobs/{id}/stream`: Streamed job info update.
+- `PUT /api/jobs/{id}`: Standard (atomic) job info update.
 - `DELETE /jobs/{id}`: Remove a job application and all associated data.
 - `POST /jobs/check-duplicate`: Performs URL, JobID, and Role-based similarity checks.
 - `GET /companies`: Returns a list of all known companies for autocomplete.
