@@ -12,6 +12,9 @@ interface TableViewProps {
   jobs: Job[];
   onUpdateStatus: (id: number, status: string, date?: string, file?: File | null, docType?: string) => void;
   onJobClick: (job: Job) => void;
+  globalSortKey: string;
+  globalSortDir: 'asc' | 'desc';
+  onGlobalSortChange: (key: string) => void;
 }
 
 const ALL_STATUSES = ['Wishlist', 'Applied', 'Interviewing', 'Offered', 'Rejected', 'Closed', 'Discontinued'];
@@ -29,11 +32,8 @@ const statusBadgeColors: Record<string, string> = {
 type SortKey = 'company' | 'role' | 'status' | 'location' | 'applied_date' | 'last_updated';
 type SortDir = 'asc' | 'desc';
 
-export const TableView: React.FC<TableViewProps> = ({ jobs, onUpdateStatus, onJobClick }) => {
-  const [searchQuery, setSearchQuery] = useState('');
+export const TableView: React.FC<TableViewProps> = ({ jobs, onUpdateStatus, onJobClick, globalSortKey, globalSortDir, onGlobalSortChange }) => {
   const [selectedStatuses, setSelectedStatuses] = useState<Set<string>>(new Set(ALL_STATUSES));
-  const [sortKey, setSortKey] = useState<SortKey>('last_updated');
-  const [sortDir, setSortDir] = useState<SortDir>('desc');
   const [showFilters, setShowFilters] = useState(false);
 
   const toggleStatus = (status: string) => {
@@ -49,58 +49,16 @@ export const TableView: React.FC<TableViewProps> = ({ jobs, onUpdateStatus, onJo
   };
 
   const handleSort = (key: SortKey) => {
-    if (sortKey === key) {
-      setSortDir(d => d === 'asc' ? 'desc' : 'asc');
-    } else {
-      setSortKey(key);
-      setSortDir('asc');
-    }
+    onGlobalSortChange(key);
   };
 
   const filteredAndSorted = useMemo(() => {
-    let result = jobs.filter(job => {
-      if (!selectedStatuses.has(job.status)) return false;
-      if (searchQuery) {
-        const q = searchQuery.toLowerCase();
-        return (
-          job.company.toLowerCase().includes(q) ||
-          job.role.toLowerCase().includes(q) ||
-          (job.location || '').toLowerCase().includes(q)
-        );
-      }
-      return true;
-    });
-
-    result.sort((a, b) => {
-      let valA: string | number = '';
-      let valB: string | number = '';
-
-      switch (sortKey) {
-        case 'company': valA = a.company.toLowerCase(); valB = b.company.toLowerCase(); break;
-        case 'role': valA = a.role.toLowerCase(); valB = b.role.toLowerCase(); break;
-        case 'status': valA = a.status; valB = b.status; break;
-        case 'location': valA = (a.location || '').toLowerCase(); valB = (b.location || '').toLowerCase(); break;
-        case 'applied_date':
-          valA = a.applied_date ? new Date(a.applied_date).getTime() : 0;
-          valB = b.applied_date ? new Date(b.applied_date).getTime() : 0;
-          break;
-        case 'last_updated':
-          valA = a.last_updated ? new Date(a.last_updated).getTime() : 0;
-          valB = b.last_updated ? new Date(b.last_updated).getTime() : 0;
-          break;
-      }
-
-      if (valA < valB) return sortDir === 'asc' ? -1 : 1;
-      if (valA > valB) return sortDir === 'asc' ? 1 : -1;
-      return 0;
-    });
-
-    return result;
-  }, [jobs, searchQuery, selectedStatuses, sortKey, sortDir]);
+    return jobs.filter(job => selectedStatuses.has(job.status));
+  }, [jobs, selectedStatuses]);
 
   const SortIcon = ({ column }: { column: SortKey }) => {
-    if (sortKey !== column) return <ChevronsUpDown className="w-3.5 h-3.5 text-white/20" />;
-    return sortDir === 'asc'
+    if (globalSortKey !== column) return <ChevronsUpDown className="w-3.5 h-3.5 text-white/20" />;
+    return globalSortDir === 'asc'
       ? <ChevronUp className="w-3.5 h-3.5 text-violet-400" />
       : <ChevronDown className="w-3.5 h-3.5 text-violet-400" />;
   };
@@ -116,37 +74,18 @@ export const TableView: React.FC<TableViewProps> = ({ jobs, onUpdateStatus, onJo
 
   return (
     <div className="flex flex-col gap-4 h-full">
-      {/* Search & Filter Bar */}
       <div className="flex flex-wrap items-center gap-3">
-        <div className="relative flex-1 min-w-[200px] max-w-md">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
-          <input
-            type="text"
-            placeholder="Search by company, role, or location..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full bg-black/30 border border-white/10 rounded-xl pl-10 pr-4 py-2.5 text-white placeholder-gray-500 focus:outline-none focus:border-violet-500 transition-colors text-sm"
-          />
-          {searchQuery && (
-            <button
-              onClick={() => setSearchQuery('')}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-white transition-colors"
-            >
-              <X className="w-4 h-4" />
-            </button>
-          )}
-        </div>
-
+        {/* Status Filter Toggle */}
         <button
           onClick={() => setShowFilters(!showFilters)}
-          className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium transition-all border ${
+          className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all border ${
             showFilters
               ? 'bg-violet-500/15 text-violet-300 border-violet-500/20'
-              : 'bg-white/5 text-gray-400 border-white/10 hover:text-white hover:border-white/20'
+              : 'bg-[var(--surface)] text-[var(--fg-subtle)] border-[var(--border-color)] hover:text-[var(--fg)] hover:border-violet-500/30'
           }`}
         >
           <Filter className="w-4 h-4" />
-          Filters
+          Status Filters
           {selectedStatuses.size < ALL_STATUSES.length && (
             <span className="bg-violet-500 text-white text-xs w-5 h-5 rounded-full flex items-center justify-center">
               {selectedStatuses.size}

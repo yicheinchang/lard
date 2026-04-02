@@ -52,12 +52,12 @@ This document provides a summary of the project's architecture, tech stack, and 
 - `src/app/`: Next.js routes (Layouts and Pages).
 - `src/components/`: Reusable UI components:
   - `AppShell.tsx`: Main layout wrapper (Resizable Sidebar + Content area + AI Chat). Includes **Mobile Responsive Header** and **Hamburger Menu Drawer** for small screens.
-  - `KanbanBoard.tsx`: Drag-and-drop pipeline visualization.
-  - `TableView.tsx`: Density-rich list view of applications.
-  - `JobCard.tsx`: Individual job item in the Kanban board.
+  - `KanbanBoard.tsx`: Drag-and-drop pipeline visualization featuring a compact grid layout.
+  - `TableView.tsx`: Density-rich list view of applications. Inherits global sort and search filters.
+  - `JobCard.tsx`: Individual job item in the Kanban board. Features a compact design with inline footer actions, tooltips for truncated text, and integrated interview step creation via the `ConfirmDialog`.
   - `JobDetailView.tsx`: Core component for job application management. Features a resizable overlay height. Consists of multiple tabs including "Interview Pipeline", "Job Details", and "Application Notes". Integrates `MdEditor` for rich text editing and `ReactMarkdown` with `prose` for rendering.
   - `AddJobModal.tsx`: Core form for new applications. Includes AI Auto-fill, file attachment, and **Duplication Detection** prompts.
-  - `ConfirmDialog.tsx`: Reusable modal for user confirmations (e.g., "Add Anyway", "Discard Changes"). Supports inputs for **Dates** and **File Uploads** (Resumes/CVs).
+  - `ConfirmDialog.tsx`: Reusable modal for user confirmations (e.g., "Add Anyway", "Discard Changes", "Advance Stage"). Supports inputs for **Dates**, **File Uploads**, and **Combobox Text Inputs** (with custom `<datalist>` support).
   - `MdEditor`: Markdown editor component.
   - `ChatAssistant.tsx`: Semi-permanent drawer for the AI conversational agent.
   - `SettingsPage.tsx`: Integrated configuration for LLMs, themes, and system toggles.
@@ -72,8 +72,10 @@ This document provides a summary of the project's architecture, tech stack, and 
 
 The frontend is a **Single Page Application (SPA)** built with Next.js 16, utilizing a "Master-Detail" pattern with an overlay-based detailing system.
 
-### 1. View Orchestration
-The `AppShell` provides the persistent UI (sidebar and chat), while `src/app/page.tsx` acts as the main view switcher. Transitioning between Dashboard (Kanban) and Table view is handled via the `ViewContext` to ensure state is preserved.
+### 1. View Orchestration & Global State
+The `AppShell` provides the persistent UI (sidebar and chat), while `src/app/page.tsx` acts as the main view switcher and global data manager.
+- `page.tsx` centrally handles global state for `searchQuery`, `sortKey`, and `sortDir`.
+- Transitioning between Dashboard (Kanban) and Table view is handled via the `ViewContext`, but the dataset filtering and sorting remain unified and preserved across views.
 
 ### 2. Job Detail System
 Instead of separate routes, job details are shown in a reactive overlay (`JobDetailView.tsx`). The component organizes data into three primary### UI Patterns

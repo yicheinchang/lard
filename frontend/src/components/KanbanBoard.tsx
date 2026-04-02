@@ -7,6 +7,7 @@ interface KanbanBoardProps {
   jobs: Job[];
   onUpdateStatus: (id: number, status: string, date?: string, file?: File | null, docType?: string) => void;
   onJobClick: (job: Job) => void;
+  onAddInterviewStep?: (id: number, stepName: string, date?: string) => void;
 }
 
 // Visual columns — "Decision" merges Offered + Rejected + Discontinued
@@ -24,7 +25,7 @@ const columnAccents: Record<string, string> = {
   Decision: 'bg-violet-500/10 border-violet-500/10',
 };
 
-export const KanbanBoard: React.FC<KanbanBoardProps> = ({ jobs, onUpdateStatus, onJobClick }) => {
+export const KanbanBoard: React.FC<KanbanBoardProps> = ({ jobs, onUpdateStatus, onJobClick, onAddInterviewStep }) => {
   const [showClosed, setShowClosed] = useState(false);
 
   return (
@@ -55,7 +56,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({ jobs, onUpdateStatus, 
               <span className="bg-[var(--surface-hover)] text-[var(--fg-subtle)] text-xs px-2 py-0.5 rounded-full font-medium">{columnJobs.length}</span>
             </div>
             
-            <div className={`flex flex-col gap-3 min-h-[400px] p-2.5 rounded-2xl border ${columnAccents[column.key] || 'bg-[var(--surface)] border-[var(--border-color)]'}`}>
+            <div className={`flex flex-col gap-2 min-h-[400px] p-2 rounded-2xl border ${columnAccents[column.key] || 'bg-[var(--surface)] border-[var(--border-color)]'}`}>
               {columnJobs.length === 0 ? (
                 <div className="h-full flex items-center justify-center text-sm text-[var(--fg-subtle)] opacity-40 italic py-10">
                   No jobs here
@@ -66,6 +67,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({ jobs, onUpdateStatus, 
                     key={job.id}
                     job={job}
                     onUpdateStatus={onUpdateStatus}
+                    onAddInterviewStep={onAddInterviewStep}
                     onClick={() => onJobClick(job)}
                     columnKey={column.key}
                   />

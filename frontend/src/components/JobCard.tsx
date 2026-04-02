@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { Briefcase, Building2, CheckCircle2, Clock, XCircle, Globe, ChevronRight, ThumbsUp, ThumbsDown, Lock, Ban } from 'lucide-react';
-import { Job } from '../lib/api';
+import { Job, getStepTypes, StepType } from '../lib/api';
 import { ConfirmDialog } from './ConfirmDialog';
 
 interface JobCardProps {
@@ -10,6 +10,7 @@ interface JobCardProps {
   onUpdateStatus: (id: number, status: string, date?: string, file?: File | null, docType?: string) => void;
   onClick?: () => void;
   columnKey?: string;
+  onAddInterviewStep?: (id: number, stepName: string, date?: string) => void;
 }
 
 const statusColors: Record<string, string> = {
@@ -39,12 +40,13 @@ const decisionBorders: Record<string, string> = {
   Discontinued: 'border-slate-500/30 hover:border-slate-500/40',
 };
 
-export const JobCard: React.FC<JobCardProps> = ({ job, onUpdateStatus, onClick, columnKey }) => {
+export const JobCard: React.FC<JobCardProps> = ({ job, onUpdateStatus, onClick, columnKey, onAddInterviewStep }) => {
   const [confirmState, setConfirmState] = useState<{
     isOpen: boolean;
     nextStatus: string;
     variant: 'default' | 'danger' | 'success';
   }>({ isOpen: false, nextStatus: '', variant: 'default' });
+  const [stepTypes, setStepTypes] = useState<string[]>([]);
 
   const allStatuses = ['Wishlist', 'Applied', 'Interviewing', 'Offered', 'Rejected'];
   const isTerminal = ['Offered', 'Rejected', 'Closed', 'Discontinued'].includes(job.status);
@@ -52,6 +54,9 @@ export const JobCard: React.FC<JobCardProps> = ({ job, onUpdateStatus, onClick, 
 
   const openConfirm = (nextStatus: string, e: React.MouseEvent) => {
     e.stopPropagation();
+    if (nextStatus === 'Interviewing') {
+      getStepTypes().then(types => setStepTypes(types.map((t: StepType) => t.name))).catch(console.error);
+    }
     setConfirmState({
       isOpen: true,
       nextStatus,
@@ -59,14 +64,18 @@ export const JobCard: React.FC<JobCardProps> = ({ job, onUpdateStatus, onClick, 
     });
   };
 
-  const handleConfirm = (date?: string, file?: File | null) => {
-    onUpdateStatus(
-      job.id!, 
-      confirmState.nextStatus, 
-      date,
-      file, 
-      confirmState.nextStatus === 'Applied' ? 'resume' : undefined
-    );
+  const handleConfirm = (date?: string, file?: File | null, text?: string) => {
+    if (confirmState.nextStatus === 'Interviewing' && onAddInterviewStep) {
+      onAddInterviewStep(job.id!, text || 'Initial Interview', date);
+    } else {
+      onUpdateStatus(
+        job.id!, 
+        confirmState.nextStatus, 
+        date,
+        file, 
+        confirmState.nextStatus === 'Applied' ? 'resume' : undefined
+      );
+    }
     setConfirmState({ isOpen: false, nextStatus: '', variant: 'default' });
   };
 
@@ -75,6 +84,9 @@ export const JobCard: React.FC<JobCardProps> = ({ job, onUpdateStatus, onClick, 
     const currentIndex = allStatuses.indexOf(job.status);
     if (currentIndex >= 0 && currentIndex < allStatuses.length - 1) {
       const nextStatus = allStatuses[currentIndex + 1];
+      if (nextStatus === 'Interviewing') {
+        getStepTypes().then(types => setStepTypes(types.map((t: StepType) => t.name))).catch(console.error);
+      }
       setConfirmState({
         isOpen: true,
         nextStatus,
@@ -88,19 +100,34 @@ export const JobCard: React.FC<JobCardProps> = ({ job, onUpdateStatus, onClick, 
     ? decisionBorders[job.status] || 'hover:border-violet-500/30'
     : 'hover:border-violet-500/30';
 
+  const hasActions = isInterviewing || !isTerminal || job.status === 'Applied' || job.status === 'Wishlist';
+
   return (
     <>
       <div 
-        className={`glass p-3.5 rounded-xl flex flex-col gap-2.5 group cursor-pointer transition-all hover:-translate-y-0.5 ${borderClass}`}
+        className={`relative glass p-2.5 rounded-xl flex flex-col gap-2 group cursor-pointer transition-all hover:-translate-y-0.5 ${borderClass}`}
         onClick={onClick}
       >
         <div className="flex justify-between items-start gap-2">
-          <div className="flex flex-col min-w-0">
-            <h3 className="text-sm font-semibold text-white flex items-center gap-1.5 truncate">
-              <Building2 className="w-3.5 h-3.5 text-violet-400 shrink-0" />
-              <span className="truncate">{job.company}</span>
-            </h3>
-            <p className="text-xs text-gray-400 ml-5 truncate">{job.role}</p>
+          <div className="flex flex-col min-w-0 flex-1">
+            <div className="group/tooltip relative">
+              <h3 className="text-sm font-semibold text-[var(--fg)] flex items-center gap-1.5 truncate">
+                <Building2 className="w-3.5 h-3.5 text-violet-400 shrink-0" />
+                <span className="truncate">{job.company}</span>
+              </h3>
+              {/* Tooltip for company */}
+              <div className="absolute left-0 top-full mt-1.5 opacity-0 group-hover/tooltip:opacity-100 pointer-events-none transition-opacity bg-black border border-white/20 text-white text-xs px-2.5 py-1.5 rounded-md shadow-xl z-50 whitespace-nowrap">
+                {job.company}
+              </div>
+            </div>
+
+            <div className="group/tooltip relative mt-0.5">
+              <p className="text-[11px] text-[var(--fg-muted)] ml-5 truncate">{job.role}</p>
+              {/* Tooltip for role */}
+              <div className="absolute left-5 top-full opacity-0 group-hover/tooltip:opacity-100 pointer-events-none transition-opacity bg-black border border-white/20 text-white text-xs px-2.5 py-1.5 rounded-md shadow-xl z-50 whitespace-nowrap">
+                {job.role}
+              </div>
+            </div>
           </div>
           
           {job.url && (
@@ -109,7 +136,7 @@ export const JobCard: React.FC<JobCardProps> = ({ job, onUpdateStatus, onClick, 
               target="_blank"
               rel="noopener noreferrer"
               onClick={(e) => e.stopPropagation()}
-              className="p-1 rounded-full hover:bg-white/10 text-gray-500 hover:text-white transition-colors shrink-0"
+              className="p-1.5 rounded-full hover:bg-[var(--surface-hover)] text-[var(--fg-subtle)] hover:text-[var(--fg)] transition-colors shrink-0"
               title="View Job Posting"
             >
               <Globe className="w-3.5 h-3.5" />
@@ -117,76 +144,49 @@ export const JobCard: React.FC<JobCardProps> = ({ job, onUpdateStatus, onClick, 
           )}
         </div>
 
-        <div className="flex items-center justify-between gap-2 flex-wrap mt-1">
-          <span className={`px-2 py-0.5 rounded-full text-xs font-medium flex items-center gap-1 shrink-0 ${statusColors[job.status] || 'text-gray-400 bg-white/5'}`}>
+        <div className="flex items-center justify-between border-t border-white/5 pt-2 mt-1 relative">
+          <span className={`px-2 py-0.5 rounded-full text-[10px] uppercase tracking-wider font-semibold flex items-center gap-1.5 shrink-0 ${statusColors[job.status] || 'text-[var(--fg-subtle)] bg-[var(--surface-hover)]'}`}>
             {statusIcons[job.status]}
             {job.status}
           </span>
 
-          <div className="flex items-center gap-1.5 flex-wrap justify-end opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity ml-auto">
-            {isInterviewing ? (
-              <>
-                <button
-                  onClick={(e) => openConfirm('Offered', e)}
-                  className="text-xs text-emerald-400 hover:text-emerald-300 font-medium py-0.5 px-1.5 rounded hover:bg-emerald-500/10 transition-colors flex items-center gap-1"
-                  title="Mark as Offered"
-                >
-                  <ThumbsUp className="w-3 h-3" />
-                  <span>Offered</span>
-                </button>
-                <button
-                  onClick={(e) => openConfirm('Rejected', e)}
-                  className="text-xs text-red-400 hover:text-red-300 font-medium py-0.5 px-1.5 rounded hover:bg-red-500/10 transition-colors flex items-center gap-1"
-                  title="Mark as Rejected"
-                >
-                  <ThumbsDown className="w-3 h-3" />
-                  <span>Rejected</span>
-                </button>
-              </>
-            ) : !isTerminal ? (
-              <div className="flex items-center gap-1">
-                <button
-                  onClick={handleAdvance}
-                  className="text-xs text-violet-400 hover:text-violet-300 font-medium py-0.5 px-1.5 rounded hover:bg-violet-500/10 transition-colors"
-                  title="Advance to Next Stage"
-                >
-                  Advance →
-                </button>
-                {job.status === 'Applied' && (
-                  <button
-                    onClick={(e) => openConfirm('Rejected', e)}
-                    className="text-xs text-red-400 hover:text-red-300 font-medium py-0.5 px-1.5 rounded hover:bg-red-500/10 transition-colors flex items-center gap-1"
-                    title="Mark as Rejected"
-                  >
-                    <XCircle className="w-3 h-3" />
-                    <span>Rejected</span>
+          {hasActions && (
+            <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-all translate-x-2 group-hover:translate-x-0">
+              {isInterviewing ? (
+                <>
+                  <button onClick={(e) => openConfirm('Offered', e)} className="text-emerald-400 hover:text-emerald-300 hover:bg-emerald-500/10 p-1.5 rounded-md transition-colors" title="Mark as Offered">
+                    <ThumbsUp className="w-3.5 h-3.5" />
                   </button>
-                )}
-              </div>
-            ) : null}
+                  <button onClick={(e) => openConfirm('Rejected', e)} className="text-red-400 hover:text-red-300 hover:bg-red-500/10 p-1.5 rounded-md transition-colors" title="Mark as Rejected">
+                    <ThumbsDown className="w-3.5 h-3.5" />
+                  </button>
+                </>
+              ) : !isTerminal ? (
+                <>
+                  <button onClick={handleAdvance} className="text-violet-400 hover:text-violet-300 hover:bg-violet-500/10 p-1.5 rounded-md transition-colors" title="Advance to Next Stage">
+                    <ChevronRight className="w-3.5 h-3.5" />
+                  </button>
+                  {job.status === 'Applied' && (
+                    <button onClick={(e) => openConfirm('Rejected', e)} className="text-red-400 hover:text-red-300 hover:bg-red-500/10 p-1.5 rounded-md transition-colors" title="Mark as Rejected">
+                      <XCircle className="w-3.5 h-3.5" />
+                    </button>
+                  )}
+                </>
+              ) : null}
 
-            {(job.status === 'Applied' || job.status === 'Interviewing') && (
-              <button
-                onClick={(e) => openConfirm('Discontinued', e)}
-                className="text-xs text-slate-400/80 hover:text-slate-300 font-medium py-0.5 px-1.5 rounded hover:bg-slate-500/10 transition-colors flex items-center gap-1"
-                title="Mark as Discontinued"
-              >
-                <Ban className="w-3 h-3" />
-                <span>Discontinued</span>
-              </button>
-            )}
+              {(job.status === 'Applied' || job.status === 'Interviewing') && (
+                <button onClick={(e) => openConfirm('Discontinued', e)} className="text-slate-400/80 hover:text-slate-300 hover:bg-slate-500/10 p-1.5 rounded-md transition-colors" title="Mark as Discontinued">
+                  <Ban className="w-3.5 h-3.5" />
+                </button>
+              )}
 
-            {job.status === 'Wishlist' && (
-              <button
-                onClick={(e) => openConfirm('Closed', e)}
-                className="text-xs text-orange-400/80 hover:text-orange-300 font-medium py-0.5 px-1.5 rounded hover:bg-orange-500/10 transition-colors flex items-center gap-1"
-                title="Mark as Closed"
-              >
-                <Lock className="w-3 h-3" />
-                <span>Closed</span>
-              </button>
-            )}
-          </div>
+              {job.status === 'Wishlist' && (
+                <button onClick={(e) => openConfirm('Closed', e)} className="text-orange-400/80 hover:text-orange-300 hover:bg-orange-500/10 p-1.5 rounded-md transition-colors" title="Mark as Closed">
+                  <Lock className="w-3.5 h-3.5" />
+                </button>
+              )}
+            </div>
+          )}
         </div>
       </div>
 
@@ -196,10 +196,14 @@ export const JobCard: React.FC<JobCardProps> = ({ job, onUpdateStatus, onClick, 
         message={`Are you sure you want to advance "${job.company} — ${job.role}" to ${confirmState.nextStatus}?`}
         onConfirm={handleConfirm}
         onCancel={() => setConfirmState({ isOpen: false, nextStatus: '', variant: 'default' })}
-        confirmLabel={`Move to ${confirmState.nextStatus}`}
+        confirmLabel={confirmState.nextStatus === 'Interviewing' ? 'Add Interview & Move to Interviewing' : `Move to ${confirmState.nextStatus}`}
         variant={confirmState.variant}
-        showDateInput={['Applied', 'Offered', 'Rejected', 'Closed', 'Discontinued'].includes(confirmState.nextStatus)}
-        dateLabel={confirmState.nextStatus === 'Applied' ? 'Actually applied date' : confirmState.nextStatus === 'Offered' ? 'Offer received date' : 'Status change date'}
+        showTextInput={confirmState.nextStatus === 'Interviewing'}
+        textLabel="Interview Step Name (e.g. Phone Screen)"
+        initialText=""
+        textOptions={stepTypes}
+        showDateInput={['Applied', 'Interviewing', 'Offered', 'Rejected', 'Closed', 'Discontinued'].includes(confirmState.nextStatus)}
+        dateLabel={confirmState.nextStatus === 'Applied' ? 'Actually applied date' : confirmState.nextStatus === 'Offered' ? 'Offer received date' : confirmState.nextStatus === 'Interviewing' ? 'Interview Date (Optional)' : 'Status change date'}
         showFileUpload={confirmState.nextStatus === 'Applied'}
         fileUploadLabel="Attach Resume / CV (Optional)"
         accept=".pdf,.md"

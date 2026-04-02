@@ -7,7 +7,7 @@ interface ConfirmDialogProps {
   isOpen: boolean;
   title: string;
   message: React.ReactNode;
-  onConfirm: (date?: string, file?: File | null) => void;
+  onConfirm: (date?: string, file?: File | null, text?: string) => void;
   onCancel: () => void;
   confirmLabel?: string;
   cancelLabel?: string;
@@ -19,6 +19,10 @@ interface ConfirmDialogProps {
   accept?: string;
   initialDate?: string;
   hideCancel?: boolean;
+  showTextInput?: boolean;
+  textLabel?: string;
+  initialText?: string;
+  textOptions?: string[];
 }
 
 const variantStyles = {
@@ -58,9 +62,14 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
   accept = '*/*',
   initialDate = '',
   hideCancel = false,
+  showTextInput = false,
+  textLabel = 'Text Input',
+  initialText = '',
+  textOptions = [],
 }) => {
   const [date, setDate] = useState(initialDate);
   const [file, setFile] = useState<File | null>(null);
+  const [textValue, setTextValue] = useState(initialText);
   
   React.useEffect(() => {
     if (isOpen && initialDate) {
@@ -68,20 +77,25 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
     } else if (isOpen && showDateInput && !date) {
       setDate(new Date().toISOString().substring(0, 10)); // Default to today
     }
-  }, [isOpen, initialDate, showDateInput, date]);
+    if (isOpen && initialText) {
+      setTextValue(initialText);
+    }
+  }, [isOpen, initialDate, showDateInput, date, initialText]);
   const styles = variantStyles[variant];
 
   if (!isOpen) return null;
 
   const handleConfirm = () => {
-    onConfirm(showDateInput ? date : undefined, file);
+    onConfirm(showDateInput ? date : undefined, file, showTextInput ? textValue : undefined);
     setDate('');
     setFile(null);
+    setTextValue('');
   };
 
   const handleCancel = () => {
     setDate('');
     setFile(null);
+    setTextValue('');
     onCancel();
   };
 
@@ -107,9 +121,30 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
           </button>
         </div>
 
+        {showTextInput && (
+          <div className="mt-6 ml-10 relative">
+            <label className="block text-xs text-[#a7a7b8] mb-1.5">{textLabel}</label>
+            <input
+              type="text"
+              value={textValue}
+              onChange={(e) => setTextValue(e.target.value)}
+              list={textOptions && textOptions.length > 0 ? "confirm-text-options" : undefined}
+              className="w-full bg-black/40 border border-white/10 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-violet-500 text-input-dropdown"
+              placeholder="e.g. Phone Screen"
+            />
+            {textOptions && textOptions.length > 0 && (
+              <datalist id="confirm-text-options">
+                {textOptions.map((opt, idx) => (
+                  <option key={idx} value={opt} />
+                ))}
+              </datalist>
+            )}
+          </div>
+        )}
+
         {showDateInput && (
           <div className="mt-4 ml-10">
-            <label className="block text-xs text-gray-400 mb-1.5">{dateLabel}</label>
+            <label className="block text-xs text-[#a7a7b8] mb-1.5">{dateLabel}</label>
             <input
               type="date"
               value={date}
