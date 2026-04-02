@@ -28,14 +28,14 @@ This document provides a summary of the project's architecture, tech stack, and 
 - `.agents/rules/`: Operational rules and roles for AI completion.
 
 ### Backend (`/backend`)
-- `main.py`: Application entry point and router integration. Uses a `lifespan` handler for database initialization to ensure non-blocking startup.
+- `main.py`: Application entry point. Uses a `create_app()` factory and a `lifespan` handler for database initialization to ensure non-blocking, optimized startup.
 - `config.py`: Settings management (env vars + `app_settings.json`).
 - `routers/`:
   - `jobs.py`: 
     *   `Company`: Represents a company/organization. Ensures consistency.
     *   `JobApplication`: Tracks job details, status, and linked documents/steps. Linked to `Company`.
     *   `InterviewStep`: Individual process steps (e.g., "Phone Screen").
-  - `ai.py`: AI Assistant chat and data extraction endpoints.
+  - `ai.py`: AI Assistant chat and data extraction endpoints. Includes SSE streaming for progress updates.
   - `settings.py`: Application configuration endpoints.
 - `database/`:
   - `models.py`: SQLAlchemy relational models.
@@ -47,24 +47,29 @@ This document provides a summary of the project's architecture, tech stack, and 
   - `chains.py`: Specific LangChain sequences (e.g., for extraction).
   - `graph.py`: LangGraph state machine definitions. Uses a `get_agent_app()` lazy loader to defer graph compilation and heavy library imports.
 - `uploads/`: Local storage for uploaded job documents.
+- `run.sh`: Unified startup script. Development mode uses a targeted `uvicorn` reloader that excludes large directories (like `.venv`) to minimize file system scanning and CPU usage.
 
 ### Frontend (`/frontend`)
 - `src/app/`: Next.js routes (Layouts and Pages).
 - `src/components/`: Reusable UI components:
-  - `AppShell.tsx`: Main layout wrapper (Resizable Sidebar + Content area + AI Chat). Includes **Mobile Responsive Header** and **Hamburger Menu Drawer** for small screens.
-  - `KanbanBoard.tsx`: Drag-and-drop pipeline visualization featuring a compact grid layout.
-  - `TableView.tsx`: Density-rich list view of applications. Inherits global sort and search filters.
-  - `JobCard.tsx`: Individual job item in the Kanban board. Features a compact design with inline footer actions, tooltips for truncated text, and integrated interview step creation via the `ConfirmDialog`.
-  - `JobDetailView.tsx`: Core component for job application management. Features a resizable overlay height. Consists of multiple tabs including "Interview Pipeline", "Job Details", and "Application Notes". Integrates `MdEditor` for rich text editing and `ReactMarkdown` with `prose` for rendering.
-  - `AddJobModal.tsx`: Core form for new applications. Includes AI Auto-fill, file attachment, and **Duplication Detection** prompts.
-  - `ConfirmDialog.tsx`: Reusable modal for user confirmations (e.g., "Add Anyway", "Discard Changes", "Advance Stage"). Supports inputs for **Dates**, **File Uploads**, and **Combobox Text Inputs** (with custom `<datalist>` support).
-  - `MdEditor`: Markdown editor component.
-  - `ChatAssistant.tsx`: Semi-permanent drawer for the AI conversational agent.
-  - `SettingsPage.tsx`: Integrated configuration for LLMs, themes, and system toggles.
+  - `AppShell.tsx`: Main layout wrapper featuring a **Resizable Sidebar** (Draggable handle with width persistence). Includes **Mobile Responsive Header** and **Hamburger Menu Drawer**.
+  - `KanbanBoard.tsx`: Drag-and-drop pipeline visualization. Features a "Rejected" quick-action and inline footer actions.
+  - `TableView.tsx`: Density-rich list view of applications. Inherits global sort and search filters from `page.tsx`.
+  - `JobCard.tsx`: Individual job item in the Kanban board.
+  - `JobDetailView.tsx`: Core component for job application management. Features a **Resizable Overlay Height** (25% - 85% range). Consists of three tabs:
+      *   **Interview Pipeline** (Default): Timeline events with full CRUD and inline editing.
+      *   **Job Details**: Metadata management and document attachments.
+      *   **Application Notes**: Dedicated Markdown editor (`MdEditor`) for research and interview prep.
+  - `DocumentPreview.tsx`: Overlay for high-fidelity viewing of PDF and Markdown documents.
+  - `Ticker.tsx`: News-ticker style progress bar for real-time AI extraction status.
+  - `AddJobModal.tsx`: Core form for new applications. Includes AI Auto-fill and duplication detection.
+  - `ConfirmDialog.tsx`: Multi-functional modal replacing native prompts. Supports **Date Inputs**, **File Uploads**, and **Combobox Text Inputs** (with custom `<datalist>`). Includes variant-based styling (`danger`, `success`, `default`).
+  - `ChatAssistant.tsx`: Global drawer for the AI agent.
+  - `SettingsPage.tsx`: Integrated configuration for LLMs and themes.
 - `src/lib/`:
   - `api.ts`: Axios client with typed backend endpoints.
-  - `ViewContext.tsx`: Global UI state (Active view: Kanban/Table/Settings).
-  - `SettingsContext.tsx`: Reactive application settings (Theme, AI status).
+  - `ViewContext.tsx`: Global UI state including **Navigation Guards** for unsaved changes.
+  - `SettingsContext.tsx`: Reactive theme and AI status.
 
 ---
 
@@ -78,26 +83,22 @@ The `AppShell` provides the persistent UI (sidebar and chat), while `src/app/pag
 - Transitioning between Dashboard (Kanban) and Table view is handled via the `ViewContext`, but the dataset filtering and sorting remain unified and preserved across views.
 
 ### 2. Job Detail System
-Instead of separate routes, job details are shown in a reactive overlay (`JobDetailView.tsx`). The component organizes data into three primary### UI Patterns
-- **Premium Dialog & Modal System**:
-  - `ConfirmDialog`: Centrally managed, modern React modal for all alerts and confirmations, replacing native `alert()` and `window.confirm()`.
-  - Supports `hideCancel` mode for simple alerts with only "OK" action.
-  - Supports variant-based styling (`default`, `danger`, `success`) with glassmorphism and subtle animations.
-- **Job Detail Header**:
-  - Real-time display of application status and the `last_operation` audit log.
-  - Advanced Lifecycle Guards:
-    - Blocks "Applied" status if interview steps exist.
-    - Blocks "Wishlist" status if an application date is set.
-    - Blocks status moves without required dates.
- Supports manual addition, **deletion**, and system events (e.g., virtual "Applied" marker). "Add Step" is disabled for wishlist items.
-- **Job Details**: Editable metadata (Company, Role, Salary, Dates) and Markdown-driven description rendering. Includes document management for Job Posts and Resumes. Status can be manually overridden.
-- **Application Notes**: A dedicated Markdown editor for deep-dive research and interview preparation, synchronizing with the RAG system.
-- **Workflow Triggers**: Contextual logic for automated status advancing and deletion guards.
+Instead of separate routes, job details are shown in a reactive overlay (`JobDetailView.tsx`). The component organizes data into three primary tabs:
+- **Interview Pipeline**: Supports manual addition, **deletion**, and system events (e.g., virtual "Applied" marker). "Add Step" is disabled for items without an application date.
+- **Job Details**: Editable metadata (Company, Role, Salary, Dates) and Markdown-driven description. Includes document management for Job Posts and Resumes.
+- **Application Notes**: A dedicated Markdown editor for deep-dive research, synchronizing with the RAG system.
 
-### 3. Contextual AI Integration
+### 3. Advanced Lifecycle Guards
+The system enforces strict status integrity in `JobDetailView.tsx` and `page.tsx`:
+- **Wishlist Guard**: Blocks entering "Wishlist" status if an `applied_date` is set.
+- **Applied Guard**: Automatically advanced when `applied_date` is set and no steps exist. Blocks "Applied" if interview steps exist.
+- **Interviewing Guard**: Automatically advanced when an interview step is added. Blocks moving to "Interviewing" if zero steps exist.
+- **Wishlist Movement**: Wishlist items (no date) can only move to "Closed" or "Discontinued" without providing a date.
+
+### 4. Contextual AI Integration
 The `ChatAssistant` is a global component accessible from any page. It maintains its own state and can be toggled via a floating action button or keyboard shortcuts.
 
-### 4. Dynamic Theme Store
+### 5. Dynamic Theme Store
 The UI uses Tailwind CSS 4 with `globals.css`: Global CSS containing theme variables, glassmorphism utilities, and the `@plugin "@tailwindcss/typography"` registration for Markdown rendering. These variables are updated dynamically by the `SettingsContext`, supporting instant theme switching between Dark/Light and customizable accent colors. Key components like `JobDetailView` and `KanbanBoard` are fully theme-aware, ensuring readability in both Light and Dark modes.
 
 ---
@@ -264,22 +265,12 @@ The backend is optimized for instant startup (< 5s) even with heavy AI dependenc
 
 ### 6. AI Extraction & Preprocessing
 The system uses a multi-stage pipeline to extract job details from URLs, PDFs, and text:
-- **Contextual Metadata**: In addition to the description, the system extracts the company, role, location, salary, internal Job ID, posted date, and application deadline.
-- **Extraction Strategies**: Supports two modes of operation:
-  - **Single-Agent**: Fast, one-pass extraction for powerful cloud models.
-  - **Multi-Agent**: Parallelized, granular extraction using dedicated agents for each field. Uses `asyncio.gather` with a concurrency semaphore (default: 2) to optimize speed on local/small models without overwhelming hardware.
-- **Streaming & Progress UI**: Extraction tasks support real-time progress updates via Server-Sent Events (SSE). The frontend displays a news-ticker style status bar inside the extraction button, showing exactly what part of the URL or text is being processed and which fields are being extracted.
-- **Cancellation & Safety**: Extraction tasks can be aborted via `AbortController` in the UI. Cancellation is strictly enforced on the backend; if the connection is closed or the "Stop" button is clicked, the system explicitly cancels the background AI processing to stop LLM calls immediately.
-- **Reliability & Timeouts**: Field extractions have a per-agent timeout of 300 seconds (5 minutes) to ensure completion of complex tasks while preventing permanent hangs.
-- **Selective Context & Fallback**:
-    - **Fixed Context**: Standardized `num_ctx` to 8,190 tokens for all extraction tasks (optimized for local RAM footprint).
-    - **Raw Pass (Job Description)**: Specifically skips structured JSON extraction for the description field, using a direct verbatim retrieval prompt for maximum reliability and speed.
-    - **Structured Pass (Metadata)**: Continues to use JSON schema enforcement for small fields like Company, Role, and ID.
-    - **JSON-LD First Strategy**: Prioritizes `application/ld+json` script tags (Schema.org `JobPosting`) for metadata extraction. This provides high-fidelity, structured data which the AI then "finalizes" by normalizing fields (stripping codes from titles, etc.) and converting HTML descriptions to Markdown.
-    - **Date Constraints**: Extraction prompts explicitly require `YYYY-MM-DD` format or `null` for date fields to ensure Pydantic validation success.
-    - **Resilient Network Client**: Uses browser-standard headers (`User-Agent`, `Accept`) to bypass anti-bot measures on enterprise job portals.
-    - **Large Document Support**: Increased extraction character limit to 100,000 characters to capture full descriptions on bloated pages.
-    - **Robust Event Stream Parsing**: Backend event handling now strips whitespace and handles potential artifacts in the Server-Sent Events (SSE) stream for maximum reliability.
+- **Contextual Metadata**: Extracts Company, Role, Location, Salary, Job ID, and Dates.
+- **JSON-LD First Strategy**: Prioritizes `application/ld+json` script tags (Schema.org `JobPosting`) for metadata extraction to ensure maximum accuracy on enterprise portals.
+- **Streaming & Progress UI**: Extraction tasks use Server-Sent Events (SSE). The frontend `Ticker.tsx` displays real-time status updates (e.g., "Extracting Salary Range...", "Finalizing Description...").
+- **Cancellation & Safety**: Explicit support for `AbortController`. If a user cancels in the UI, the backend immediately terminates the background AI processing.
+- **Selective Pass Logic**: Skips structured JSON extraction for the description field, using a direct verbatim retrieval prompt for speed and reliability.
+- **Resilient Network Client**: Uses browser-standard headers to bypass anti-bot measures.
 
 ### 6. Document Ingestion
 Supports PDF and plain text. PDFs are parsed using `pypdf` and split into chunks before vectorization.
