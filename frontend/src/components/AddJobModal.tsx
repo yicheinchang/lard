@@ -96,6 +96,14 @@ const FilePicker = ({ label, hint, selectedFile, isExtracting, fileInputRef, onF
   </div>
 );
 
+const initialUploadTasks = [
+  { id: 'meta', label: 'Saving job metadata...', status: 'waiting' as any },
+  { id: 'upload', label: 'Uploading job post doc...', status: 'waiting' as any },
+  { id: 'vector-doc', label: 'Vectorizing document...', status: 'waiting' as any },
+  { id: 'vector-desc', label: 'Vectorizing description...', status: 'waiting' as any },
+  { id: 'finalize', label: 'Finalizing...', status: 'waiting' as any },
+];
+
 export const AddJobModal: React.FC<AddJobModalProps> = ({ isOpen, onClose, onAddJob }) => {
   const { aiEnabled: globalAiEnabled } = useSettings();
   const [formData, setFormData] = useState<Partial<Job>>(initialFormData);
@@ -120,13 +128,7 @@ export const AddJobModal: React.FC<AddJobModalProps> = ({ isOpen, onClose, onAdd
   // Document upload state (for manual attachments)
   const [isUploadingDoc, setIsUploadingDoc] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
-  const [uploadTasks, setUploadTasks] = useState([
-    { id: 'meta', label: 'Saving job metadata...', status: 'waiting' as any },
-    { id: 'upload', label: 'Uploading job post doc...', status: 'waiting' as any },
-    { id: 'vector-doc', label: 'Vectorizing document...', status: 'waiting' as any },
-    { id: 'vector-desc', label: 'Vectorizing description...', status: 'waiting' as any },
-    { id: 'finalize', label: 'Finalizing...', status: 'waiting' as any },
-  ]);
+  const [uploadTasks, setUploadTasks] = useState(initialUploadTasks);
 
   React.useEffect(() => {
     if (isOpen) {
@@ -324,6 +326,9 @@ export const AddJobModal: React.FC<AddJobModalProps> = ({ isOpen, onClose, onAdd
     setSelectedFile(null);
     setError('');
     setHallucinationWarning(null);
+    setIsUploadingDoc(false);
+    setUploadError(null);
+    setUploadTasks(initialUploadTasks);
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
@@ -407,6 +412,7 @@ export const AddJobModal: React.FC<AddJobModalProps> = ({ isOpen, onClose, onAdd
             });
           } else if (event === 'completed') {
             setUploadTasks(prev => prev.map(t => t.status === 'loading' || t.status === 'waiting' ? { ...t, status: 'completed' } : t));
+            setIsUploadingDoc(false);
             resetForm();
             onClose();
           } else if (event === 'error') {
