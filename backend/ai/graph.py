@@ -12,6 +12,8 @@ class AgentState(TypedDict):
     request: Any | None # fastapi.Request
     progress_callback: Callable | None # Async callback for streaming
     structured_data: dict | None
+    retries: int
+    validation_feedback: str | None
 
 async def _run_field_extraction(field, schema, prompt, text, url, request, semaphore, progress_cb=None):
     """Async helper to execute a single agent task within a concurrency limit."""
@@ -34,10 +36,29 @@ async def _run_field_extraction(field, schema, prompt, text, url, request, semap
             # SPECIAL CASE: Job Description (Raw Pass)
             # We skip structured output for the large description field to avoid JSON overhead and hangs.
             if field == "description":
+                # Inject custom guidance into the prompt if provided
+                custom_guidance = ""
+                settings = load_app_settings()
+                if settings.get("custom_prompts"):
+                    mode = settings.get("extraction_mode", "single")
+                    if mode == "multi":
+                        cg = settings["custom_prompts"]["multi_agent"].get(field, "")
+                        if cg: custom_guidance = f"ADDITIONAL USER INSTRUCTIONS:\n{cg}"
+                    else:
+                        cg = settings["custom_prompts"].get("single_agent", "")
+                        if cg: custom_guidance = f"ADDITIONAL USER INSTRUCTIONS:\n{cg}"
+
                 # Raw LLM call without structured output wrapping
                 raw_chain = prompt | llm
+                
+                # Check for validation feedback on retry
+                vars_needed = [p for p in raw_chain.input_schema.model_fields.keys()]
+                inputs = {"text": text, "url": url or "Not provided"}
+                if "custom_guidance" in vars_needed:
+                    inputs["custom_guidance"] = custom_guidance
+                    
                 raw_res = await asyncio.wait_for(
-                    raw_chain.ainvoke({"text": text}),
+                    raw_chain.ainvoke(inputs),
                     timeout=600
                 )
                 verbatim_text = raw_res.content
@@ -50,9 +71,25 @@ async def _run_field_extraction(field, schema, prompt, text, url, request, semap
 
             # STANDARD CASE: Metadata (Structured JSON)
             # Multi-agent metadata fields are small and benefit from JSON schema enforcement.
+            custom_guidance = ""
+            settings = load_app_settings()
+            if settings.get("custom_prompts"):
+                mode = settings.get("extraction_mode", "single")
+                if mode == "multi":
+                    cg = settings["custom_prompts"]["multi_agent"].get(field, "")
+                    if cg: custom_guidance = f"ADDITIONAL USER INSTRUCTIONS:\n{cg}"
+                else:
+                    cg = settings["custom_prompts"].get("single_agent", "")
+                    if cg: custom_guidance = f"ADDITIONAL USER INSTRUCTIONS:\n{cg}"
+
             chain = prompt | llm.with_structured_output(schema)
+            inputs = {"text": text, "url": url or "Not provided"}
+            vars_needed = [p for p in chain.input_schema.model_fields.keys()]
+            if "custom_guidance" in vars_needed:
+                inputs["custom_guidance"] = custom_guidance
+
             res = await asyncio.wait_for(
-                chain.ainvoke({"text": text, "url": url or "Not provided"}),
+                chain.ainvoke(inputs),
                 timeout=300
             )
             val = res.model_dump()
@@ -128,15 +165,47 @@ async def _run_field_json_extraction(field, schema, prompt, text, fragment, requ
 
         try:
             if field == "description":
+                custom_guidance = ""
+                settings = load_app_settings()
+                if settings.get("custom_prompts"):
+                    mode = settings.get("extraction_mode", "single")
+                    if mode == "multi":
+                        cg = settings["custom_prompts"]["multi_agent"].get(field, "")
+                        if cg: custom_guidance = f"ADDITIONAL USER INSTRUCTIONS:\n{cg}"
+                    else:
+                        cg = settings["custom_prompts"].get("single_agent", "")
+                        if cg: custom_guidance = f"ADDITIONAL USER INSTRUCTIONS:\n{cg}"
+
                 raw_chain = prompt | llm
-                raw_res = await asyncio.wait_for(raw_chain.ainvoke({"json_fragment": json.dumps(fragment, indent=2)}), timeout=600)
+                inputs = {"json_fragment": json.dumps(fragment, indent=2)}
+                if "custom_guidance" in raw_chain.input_schema.model_fields:
+                    inputs["custom_guidance"] = custom_guidance
+
+                raw_res = await asyncio.wait_for(raw_chain.ainvoke(inputs), timeout=600)
                 val = raw_res.content
                 if progress_cb:
                     await progress_cb({"event": "field_done", "field": field, "msg": f"Captured Description (JSON)"})
                 return field, {"description": val}
 
             chain = prompt | llm.with_structured_output(schema)
-            res = await asyncio.wait_for(chain.ainvoke({"json_fragment": json.dumps(fragment, indent=2)}), timeout=300)
+            
+            inputs = {"json_fragment": json.dumps(fragment, indent=2)}
+            custom_guidance = ""
+            settings = load_app_settings()
+            if settings.get("custom_prompts"):
+                mode = settings.get("extraction_mode", "single")
+                if mode == "multi":
+                    cg = settings["custom_prompts"]["multi_agent"].get(field, "")
+                    if cg: custom_guidance = f"ADDITIONAL USER INSTRUCTIONS:\n{cg}"
+                else:
+                    cg = settings["custom_prompts"].get("single_agent", "")
+                    if cg: custom_guidance = f"ADDITIONAL USER INSTRUCTIONS:\n{cg}"
+
+            vars_needed = [p for p in chain.input_schema.model_fields.keys()]
+            if "custom_guidance" in vars_needed:
+                inputs["custom_guidance"] = custom_guidance
+
+            res = await asyncio.wait_for(chain.ainvoke(inputs), timeout=300)
             val = res.model_dump()
 
             if progress_cb:
@@ -194,6 +263,40 @@ async def extract_node(state: AgentState):
             extraction_prompt, JobDetails,
             description_extraction_prompt, structured_data_validation_prompt
         )
+        if state.get("extracted_data"):
+            # Retry Mode: Only re-extract description using validation feedback
+            results = state["extracted_data"].copy()
+            if progress_cb:
+                await progress_cb({"event": "progress", "msg": f"AI: Regenerating Description (Retry {state.get('retries', 0)}/3)..."})
+            
+            error_details = state.get("validation_feedback", "")
+            if error_details:
+                text_with_feedback = f"{state['text']}\n\n[PREVIOUS ATTEMPT FAILED DUE TO REGEX/FORMATTING ERROR: {error_details}]"
+            else:
+                text_with_feedback = state['text']
+
+            # Redo description only
+            if mode == "multi":
+                from ai.chains import JobDescription, description_extraction_prompt, description_json_prompt
+                sema = asyncio.Semaphore(1)
+                if state.get("structured_data"):
+                    _, desc_val = await _run_field_json_extraction("description", JobDescription, description_json_prompt, text_with_feedback, state["structured_data"].get("description"), request, sema, progress_cb)
+                else:    
+                    _, desc_val = await _run_field_extraction("description", JobDescription, description_extraction_prompt, text_with_feedback, state.get("url"), request, sema, progress_cb)
+                results["description"] = desc_val.get("description") if desc_val else None
+            else:
+                llm = get_llm(num_ctx=8190)
+                extractor = extraction_prompt | llm.with_structured_output(JobDetails)
+                inputs = { "text": text_with_feedback, "url": state.get("url") or "Not provided" }
+                if "custom_guidance" in extractor.input_schema.model_fields:
+                    cg = settings.get("custom_prompts", {}).get("single_agent", "")
+                    inputs["custom_guidance"] = f"ADDITIONAL USER INSTRUCTIONS:\n{cg}" if cg else ""
+                result = await asyncio.wait_for(extractor.ainvoke(inputs), timeout=600)
+                results["description"] = result.model_dump().get("description")
+
+            return {"extracted_data": results, "error": None}
+
+
         if state.get("structured_data"):
             # --- PATH A: JSON-LD Structured Data found ---
             if mode == "multi":
@@ -208,10 +311,14 @@ async def extract_node(state: AgentState):
                 # Use Single-Agent logic with the validation prompt
                 llm = get_llm(num_ctx=8190)
                 chain = structured_data_validation_prompt | llm.with_structured_output(JobDetails)
-                import json
-                import asyncio
+                
+                inputs = {"json_ld_data": json.dumps(state["structured_data"], indent=2)}
+                if "custom_guidance" in chain.input_schema.model_fields:
+                    cg = settings.get("custom_prompts", {}).get("single_agent", "")
+                    inputs["custom_guidance"] = f"ADDITIONAL USER INSTRUCTIONS:\n{cg}" if cg else ""
+
                 result = await asyncio.wait_for(
-                    chain.ainvoke({"json_ld_data": json.dumps(state["structured_data"], indent=2)}),
+                    chain.ainvoke(inputs),
                     timeout=600
                 )
                 return {"extracted_data": result.model_dump(), "error": None}
@@ -220,7 +327,6 @@ async def extract_node(state: AgentState):
             results = await _run_multi_agent_extraction(state["text"], state.get("url"), request, progress_cb)
             return {"extracted_data": results, "error": None}
         else:
-            import asyncio
             # Single-Agent (Default) using fixed 8190 context
             llm = get_llm(num_ctx=8190)
             if request and await request.is_disconnected():
@@ -230,11 +336,14 @@ async def extract_node(state: AgentState):
                 await progress_cb({"event": "extracting", "field": "all", "msg": "AI: Extracting all job details (Fixed Context)..."})
 
             extractor = extraction_prompt | llm.with_structured_output(JobDetails)
+            
+            inputs = { "text": state["text"], "url": state.get("url") or "Not provided" }
+            if "custom_guidance" in extractor.input_schema.model_fields:
+                cg = settings.get("custom_prompts", {}).get("single_agent", "")
+                inputs["custom_guidance"] = f"ADDITIONAL USER INSTRUCTIONS:\n{cg}" if cg else ""
+
             result = await asyncio.wait_for(
-                extractor.ainvoke({
-                    "text": state["text"],
-                    "url": state.get("url") or "Not provided"
-                }),
+                extractor.ainvoke(inputs),
                 timeout=600
             )
             return {"extracted_data": result.model_dump(), "error": None}
@@ -242,6 +351,73 @@ async def extract_node(state: AgentState):
         return {"extracted_data": None, "error": "Extraction timed out after 5 minutes. Try smaller snippets or Multi-Agent mode."}
     except Exception as e:
         return {"extracted_data": None, "error": str(e)}
+
+async def description_validator_node(state: AgentState):
+    request = state.get("request")
+    if request and await request.is_disconnected():
+        return state
+        
+    extracted = state.get("extracted_data")
+    if not extracted or not extracted.get("description"):
+        return state
+        
+    description = extracted["description"]
+    
+    # Pre-parse common markdown wrapper hallucinations directly to save AI calls
+    if description.strip().startswith("```markdown"):
+        lines = description.strip().split("\n")
+        if len(lines) > 2 and lines[-1].strip() == "```":
+            description = "\n".join(lines[1:-1])
+            extracted["description"] = description
+
+    retries = state.get("retries", 0)
+    if retries >= 3:
+        # Circuit Breaker tripped
+        progress_cb = state.get("progress_callback")
+        if progress_cb:
+             await progress_cb({"event": "progress", "msg": "AI: Validation limit reached. Flagging potential hallucination."})
+             
+        # Instead of nulling, we keep the description but flag it for UI warning
+        extracted["hallucination_detected"] = True
+        extracted["hallucination_reasons"] = state.get("validation_feedback", "Maximum validation attempts reached without passing QA.")
+        return {"extracted_data": extracted}
+        
+    from ai.chains import description_validation_prompt, DescriptionValidation
+    
+    progress_cb = state.get("progress_callback")
+    if progress_cb:
+         await progress_cb({"event": "progress", "msg": "AI: Validating Description format (AI Hallucination check)..."})
+
+    llm = get_llm(num_ctx=8190)
+    validator = description_validation_prompt | llm.with_structured_output(DescriptionValidation)
+    
+    try:
+        raw_source = state.get("structured_data", {}).get("description", "") if state.get("structured_data") else state["text"]
+        result = await asyncio.wait_for(
+            validator.ainvoke({"source_text": str(raw_source)[:5000], "generated_description": str(description)}),
+            timeout=180
+        )
+        
+        if not result.is_valid:
+            print(f"\n[AI VALIDATOR] Validation Failed (Attempt {retries + 1}/3):")
+            print(f" > WHY: {result.failure_reason}")
+            print(f" > WHERE: Snippet near failure: {str(description)[:300]}...")
+            
+            if progress_cb:
+                 await progress_cb({"event": "progress", "msg": f"AI Validator issue: {result.failure_reason}"})
+            return {"retries": retries + 1, "validation_feedback": result.failure_reason}
+            
+        return {"extracted_data": extracted, "validation_feedback": None}
+    except Exception as e:
+        print(f"Validation failed temporarily: {e}")
+        return state
+
+def should_retry(state: AgentState):
+    if state.get("error") is not None:
+        return "end"
+    if state.get("validation_feedback") is not None and state.get("retries", 0) < 3:
+        return "retry"
+    return "end"
 
 _agent_app_instance = None
 
@@ -251,7 +427,12 @@ def get_agent_app():
         from langgraph.graph import StateGraph, END
         workflow = StateGraph(AgentState)
         workflow.add_node("extract", extract_node)
+        workflow.add_node("validate", description_validator_node)
         workflow.set_entry_point("extract")
-        workflow.add_edge("extract", END)
+        workflow.add_edge("extract", "validate")
+        workflow.add_conditional_edges("validate", should_retry, {
+            "retry": "extract",
+            "end": END
+        })
         _agent_app_instance = workflow.compile()
     return _agent_app_instance

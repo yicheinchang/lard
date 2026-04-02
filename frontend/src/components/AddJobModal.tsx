@@ -37,6 +37,7 @@ export const AddJobModal: React.FC<AddJobModalProps> = ({ isOpen, onClose, onAdd
   const [duplicateCheckResult, setDuplicateCheckResult] = useState<any>(null);
   const [showSimilarConfirm, setShowSimilarConfirm] = useState(false);
   const [showCancelExtractionConfirm, setShowCancelExtractionConfirm] = useState(false);
+  const [hallucinationWarning, setHallucinationWarning] = useState<string | null>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
 
   React.useEffect(() => {
@@ -211,6 +212,12 @@ export const AddJobModal: React.FC<AddJobModalProps> = ({ isOpen, onClose, onAdd
       if (hasAdvanced) {
         setShowAdvanced(true);
       }
+      
+      if (data.extracted.hallucination_detected) {
+        setHallucinationWarning(data.extracted.hallucination_reasons || "Potential AI Hallucination detected.");
+      } else {
+        setHallucinationWarning(null);
+      }
     }
   };
 
@@ -228,6 +235,7 @@ export const AddJobModal: React.FC<AddJobModalProps> = ({ isOpen, onClose, onAdd
     setShowAdvanced(false);
     setSelectedFile(null);
     setError('');
+    setHallucinationWarning(null);
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
@@ -606,12 +614,50 @@ export const AddJobModal: React.FC<AddJobModalProps> = ({ isOpen, onClose, onAdd
                 <InputField label="Hiring Manager Email" field="hiring_manager_email" type="email" />
                 <InputField label="Headhunter Name" field="headhunter_name" />
                 <InputField label="Headhunter Email" field="headhunter_email" type="email" />
-                <div className="md:col-span-2">
-                  <label className="text-xs text-gray-400 block mb-1">Job Description (Markdown)</label>
+                <div className="md:col-span-2 space-y-2">
+                  <div className="flex items-center justify-between gap-2 mb-1">
+                    <label className="text-xs text-gray-400 block px-0.5">Job Description (Markdown)</label>
+                    {formData.description && (
+                      <button 
+                         type="button" 
+                         onClick={() => handleChange('description', '')}
+                         className="text-[10px] text-gray-500 hover:text-red-400 transition-colors uppercase font-bold tracking-tight"
+                      >
+                         Clear
+                      </button>
+                    )}
+                  </div>
+
+                  {hallucinationWarning && (
+                    <div className="p-3 bg-amber-500/10 border border-amber-500/30 rounded-xl animate-fade-in mb-3">
+                      <div className="flex items-start gap-2.5">
+                        <AlertTriangle className="w-5 h-5 text-amber-500 shrink-0 mt-0.5" />
+                        <div className="flex-1 space-y-1">
+                          <p className="text-xs font-bold text-amber-500 uppercase tracking-wide">Potential Hallucination Detected</p>
+                          <p className="text-[11px] text-amber-200/70 leading-relaxed italic line-clamp-2 hover:line-clamp-none transition-all cursor-default overflow-hidden">
+                             {hallucinationWarning}
+                          </p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            handleChange('description', '');
+                            setHallucinationWarning(null);
+                          }}
+                          className="bg-amber-500/20 hover:bg-amber-500/40 text-amber-500 p-1.5 rounded-lg transition-colors shrink-0"
+                          title="Discard problematic output"
+                        >
+                          <span className="text-xs">✕</span>
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
                   <textarea
-                    className="w-full bg-black/40 border border-white/10 rounded-lg px-3 py-2 text-white placeholder-gray-500 focus:outline-none focus:border-violet-500 transition-colors text-sm min-h-[100px]"
+                    className="w-full bg-black/40 border border-white/10 rounded-lg px-3 py-2 text-white placeholder-gray-500 focus:outline-none focus:border-violet-500 transition-colors text-sm min-h-[150px] custom-scrollbar"
                     value={formData.description || ''}
                     onChange={(e) => handleChange('description', e.target.value)}
+                    placeholder="Provide full job description here..."
                   />
                 </div>
               </div>

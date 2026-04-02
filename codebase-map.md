@@ -62,10 +62,10 @@ This document provides a summary of the project's architecture, tech stack, and 
       *   **Application Notes**: Dedicated Markdown editor (`MdEditor`) for research and interview prep.
   - `DocumentPreview.tsx`: Overlay for high-fidelity viewing of PDF and Markdown documents.
   - `Ticker.tsx`: News-ticker style progress bar for real-time AI extraction status.
-  - `AddJobModal.tsx`: Core form for new applications. Includes AI Auto-fill and duplication detection.
+  - `AddJobModal.tsx`: Core form for new applications. Includes AI Auto-fill and **Potential Hallucination Warning System**.
   - `ConfirmDialog.tsx`: Multi-functional modal replacing native prompts. Supports **Date Inputs**, **File Uploads**, and **Combobox Text Inputs** (with custom `<datalist>`). Includes variant-based styling (`danger`, `success`, `default`).
   - `ChatAssistant.tsx`: Global drawer for the AI agent.
-  - `SettingsPage.tsx`: Integrated configuration for LLMs and themes.
+  - `SettingsPage.tsx`: Integrated configuration for LLMs and themes. Features **Advanced AI Prompts** panel for custom agent guidance.
 - `src/lib/`:
   - `api.ts`: Axios client with typed backend endpoints.
   - `ViewContext.tsx`: Global UI state including **Navigation Guards** for unsaved changes.
@@ -269,6 +269,8 @@ The system uses a multi-stage pipeline to extract job details from URLs, PDFs, a
 - **JSON-LD First Strategy**: Prioritizes `application/ld+json` script tags (Schema.org `JobPosting`) for metadata extraction to ensure maximum accuracy on enterprise portals.
 - **Optimized JSON-LD Multi-Agent Routing**: If JSON-LD is found and multi-agent mode is enabled, the system bypasses massive payload overhead by slicing the JSON and distributing specific fragments (e.g., `baseSalary`) only to the relevant agents. Missing fragments bypass the LLM completely, optimizing speed and reducing token limits.
 - **Streaming & Progress UI**: Extraction tasks use Server-Sent Events (SSE). The frontend `Ticker.tsx` displays real-time status updates (e.g., "Extracting Salary Range...", "Finalizing Description...").
+- **AI Validation & Hallucination Prevention**: Uses a LangGraph-based `description_validator_node` that runs a 3-retry loop to ensure extracted descriptions are clean Markdown and verbatim.
+- **Fail-Safe UI Warning**: If validation fails after 3 retries, the system flags the description with a `hallucination_detected` warning, allowing the user to review, manually clear, or keep the output.
 - **Cancellation & Safety**: Explicit support for `AbortController`. If a user cancels in the UI, the backend immediately terminates the background AI processing.
 - **Selective Pass Logic**: Skips structured JSON extraction for the description field, using a direct verbatim retrieval prompt for speed and reliability, and defaults to generous 600s timeouts on hardware-limited setups.
 - **Resilient Network Client**: Uses browser-standard headers to bypass anti-bot measures.
