@@ -15,7 +15,7 @@ class AgentState(TypedDict):
     retries: int
     validation_feedback: str | None
 
-async def _run_field_extraction(field, schema, prompt, text, url, request, semaphore, progress_cb=None):
+async def _run_field_extraction(field, schema, prompt, text, url, request, semaphore, progress_cb=None, state=None):
     """Async helper to execute a single agent task within a concurrency limit."""
     async with semaphore:
         # Check for disconnection before starting the call
@@ -54,6 +54,12 @@ async def _run_field_extraction(field, schema, prompt, text, url, request, semap
                 # Check for validation feedback on retry
                 vars_needed = [p for p in raw_chain.input_schema.model_fields.keys()]
                 inputs = {"text": text, "url": url or "Not provided"}
+                
+                vf = state.get("validation_feedback", "") if state else ""
+                feedback_str = f"PREVIOUS ATTEMPT FAILED QA VALIDATION:\n{vf}\nPLEASE FIX THESE ISSUES.\n" if vf else ""
+                
+                if "validation_feedback" in vars_needed:
+                    inputs["validation_feedback"] = feedback_str
                 if "custom_guidance" in vars_needed:
                     inputs["custom_guidance"] = custom_guidance
                     
@@ -105,7 +111,7 @@ async def _run_field_extraction(field, schema, prompt, text, url, request, semap
             print(f"Error extracting {field}: {e}")
             return field, None
 
-async def _run_multi_agent_extraction(text: str, url: str, request: Any = None, progress_cb: Callable = None):
+async def _run_multi_agent_extraction(text: str, url: str, request: Any = None, progress_cb: Callable = None, state: dict = None):
     """Parallelized extraction for small models (Multi-Agent mode) with streaming support."""
     # Concurrency limit (Keep at 1 for stability when processing large descriptions on local LLM)
     semaphore = asyncio.Semaphore(1)
@@ -130,7 +136,7 @@ async def _run_multi_agent_extraction(text: str, url: str, request: Any = None, 
     
     # Launch all tasks concurrently
     tasks = [
-        _run_field_extraction(field, schema, prompt, text, url, request, semaphore, progress_cb)
+        _run_field_extraction(field, schema, prompt, text, url, request, semaphore, progress_cb, state=state)
         for field, schema, prompt in metadata_tasks
     ]
     
@@ -146,7 +152,7 @@ async def _run_multi_agent_extraction(text: str, url: str, request: Any = None, 
             
     return results
 
-async def _run_field_json_extraction(field, schema, prompt, text, fragment, request, semaphore, progress_cb=None):
+async def _run_field_json_extraction(field, schema, prompt, text, fragment, request, semaphore, progress_cb=None, state=None):
     """Async helper to execute a single agent task using a JSON fragment."""
     if not fragment:
         if progress_cb:
@@ -178,6 +184,12 @@ async def _run_field_json_extraction(field, schema, prompt, text, fragment, requ
 
                 raw_chain = prompt | llm
                 inputs = {"json_fragment": json.dumps(fragment, indent=2)}
+                
+                vf = state.get("validation_feedback", "") if state else ""
+                feedback_str = f"PREVIOUS ATTEMPT FAILED QA VALIDATION:\n{vf}\nPLEASE FIX THESE ISSUES.\n" if vf else ""
+
+                if "validation_feedback" in raw_chain.input_schema.model_fields:
+                    inputs["validation_feedback"] = feedback_str
                 if "custom_guidance" in raw_chain.input_schema.model_fields:
                     inputs["custom_guidance"] = custom_guidance
 
@@ -215,7 +227,7 @@ async def _run_field_json_extraction(field, schema, prompt, text, fragment, requ
             print(f"Error extracting JSON {field}: {e}")
             return field, None
 
-async def _run_multi_agent_json_extraction(structured_data: dict, text: str, request: Any = None, progress_cb: Callable = None):
+async def _run_multi_agent_json_extraction(structured_data: dict, text: str, request: Any = None, progress_cb: Callable = None, state: dict = None):
     semaphore = asyncio.Semaphore(1)
     from ai.chains import (
         JobCompany, JobRole, JobLocation, JobSalary, JobId, 
@@ -229,15 +241,16 @@ async def _run_multi_agent_json_extraction(structured_data: dict, text: str, req
         ("company", JobCompany, company_json_prompt, structured_data.get("hiringOrganization")),
         ("role", JobRole, role_json_prompt, structured_data.get("title")),
         ("location", JobLocation, location_json_prompt, structured_data.get("jobLocation")),
-        ("salary_range", JobSalary, salary_json_prompt, structured_data.get("baseSalary")),
+                        ("salary_range", JobSalary, salary_json_prompt, structured_data.get("baseSalary")),
         ("company_job_id", JobId, job_id_json_prompt, structured_data.get("identifier") or structured_data.get("url")),
         ("job_posted_date", PostedDate, posted_date_json_prompt, structured_data.get("datePosted")),
         ("application_deadline", DeadlineDate, deadline_date_json_prompt, structured_data.get("validThrough")),
         ("description", JobDescription, description_json_prompt, structured_data.get("description")),
     ]
     
+    # Launch all tasks concurrently
     tasks = [
-        _run_field_json_extraction(field, schema, prompt, text, fragment, request, semaphore, progress_cb)
+        _run_field_json_extraction(field, schema, prompt, text, fragment, request, semaphore, progress_cb, state=state)
         for field, schema, prompt, fragment in metadata_tasks
     ]
     
@@ -257,6 +270,10 @@ async def extract_node(state: AgentState):
     mode = settings.get("extraction_mode", "single")
     request = state.get("request")
     progress_cb = state.get("progress_callback")
+    text = state.get("text")
+    url = state.get("url")
+    is_json_ld = state.get("structured_data") is not None
+    structured_data = state.get("structured_data")
     
     try:
         from ai.chains import (
@@ -269,25 +286,22 @@ async def extract_node(state: AgentState):
             if progress_cb:
                 await progress_cb({"event": "progress", "msg": f"AI: Regenerating Description (Retry {state.get('retries', 0)}/3)..."})
             
-            error_details = state.get("validation_feedback", "")
-            if error_details:
-                text_with_feedback = f"{state['text']}\n\n[PREVIOUS ATTEMPT FAILED DUE TO REGEX/FORMATTING ERROR: {error_details}]"
-            else:
-                text_with_feedback = state['text']
+            vf = state.get("validation_feedback", "")
+            text_with_feedback = f"PREVIOUS ATTEMPT FAILED QA VALIDATION:\n{vf}\n\nORIGINAL TEXT:\n{text}" if vf else text
 
             # Redo description only
             if mode == "multi":
                 from ai.chains import JobDescription, description_extraction_prompt, description_json_prompt
                 sema = asyncio.Semaphore(1)
-                if state.get("structured_data"):
-                    _, desc_val = await _run_field_json_extraction("description", JobDescription, description_json_prompt, text_with_feedback, state["structured_data"].get("description"), request, sema, progress_cb)
+                if is_json_ld:
+                    _, desc_val = await _run_field_json_extraction("description", JobDescription, description_json_prompt, text_with_feedback, structured_data.get("description"), request, sema, progress_cb, state=state)
                 else:    
-                    _, desc_val = await _run_field_extraction("description", JobDescription, description_extraction_prompt, text_with_feedback, state.get("url"), request, sema, progress_cb)
+                    _, desc_val = await _run_field_extraction("description", JobDescription, description_extraction_prompt, text_with_feedback, url, request, sema, progress_cb, state=state)
                 results["description"] = desc_val.get("description") if desc_val else None
             else:
                 llm = get_llm(num_ctx=8190)
                 extractor = extraction_prompt | llm.with_structured_output(JobDetails)
-                inputs = { "text": text_with_feedback, "url": state.get("url") or "Not provided" }
+                inputs = { "text": text_with_feedback, "url": url or "Not provided" }
                 if "custom_guidance" in extractor.input_schema.model_fields:
                     cg = settings.get("custom_prompts", {}).get("single_agent", "")
                     inputs["custom_guidance"] = f"ADDITIONAL USER INSTRUCTIONS:\n{cg}" if cg else ""
@@ -297,12 +311,12 @@ async def extract_node(state: AgentState):
             return {"extracted_data": results, "error": None}
 
 
-        if state.get("structured_data"):
+        if is_json_ld:
             # --- PATH A: JSON-LD Structured Data found ---
             if mode == "multi":
                 if progress_cb:
                     await progress_cb({"event": "progress", "msg": "AI: JSON-LD found! Using Multi-Agent JSON extraction..."})
-                results = await _run_multi_agent_json_extraction(state["structured_data"], state["text"], request, progress_cb)
+                results = await _run_multi_agent_json_extraction(structured_data, text, request, progress_cb, state=state)
                 return {"extracted_data": results, "error": None}
             else:
                 if progress_cb:
@@ -312,7 +326,7 @@ async def extract_node(state: AgentState):
                 llm = get_llm(num_ctx=8190)
                 chain = structured_data_validation_prompt | llm.with_structured_output(JobDetails)
                 
-                inputs = {"json_ld_data": json.dumps(state["structured_data"], indent=2)}
+                inputs = {"json_ld_data": json.dumps(structured_data, indent=2)}
                 if "custom_guidance" in chain.input_schema.model_fields:
                     cg = settings.get("custom_prompts", {}).get("single_agent", "")
                     inputs["custom_guidance"] = f"ADDITIONAL USER INSTRUCTIONS:\n{cg}" if cg else ""
@@ -324,7 +338,10 @@ async def extract_node(state: AgentState):
                 return {"extracted_data": result.model_dump(), "error": None}
 
         if mode == "multi":
-            results = await _run_multi_agent_extraction(state["text"], state.get("url"), request, progress_cb)
+            if is_json_ld:
+                results = await _run_multi_agent_json_extraction(structured_data, text, request, progress_cb, state=state)
+            else:
+                results = await _run_multi_agent_extraction(text, url, request, progress_cb, state=state)
             return {"extracted_data": results, "error": None}
         else:
             # Single-Agent (Default) using fixed 8190 context
@@ -411,6 +428,12 @@ async def description_validator_node(state: AgentState):
             print(f"\n[AI VALIDATOR] Validation Failed ({source_type} Mode) (Attempt {retries + 1}/3):")
             print(f" > WHY: {reason}")
             
+            if retries >= 2:
+                # Final attempt failed
+                extracted["hallucination_detected"] = True
+                extracted["hallucination_reasons"] = f"QA Fail (Final Attempt): {reason}"
+                return {"extracted_data": extracted, "retries": retries + 1, "validation_feedback": reason}
+
             if progress_cb:
                  await progress_cb({"event": "progress", "msg": f"AI Validator issue: {reason}"})
             return {"retries": retries + 1, "validation_feedback": reason}

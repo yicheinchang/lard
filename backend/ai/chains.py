@@ -85,7 +85,9 @@ description_extraction_prompt = ChatPromptTemplate.from_messages([
                "Verify that the LAST items in any 'Responsibilities' or 'Requirements' lists are captured verbatim. "
                "SKIP legal boilerplate, EEO statements, and cookie notices ONLY if they are clearly separate from the job-related content."
                "Do not make up information if it is not present in the text.\n"
-               "CRITICAL: Do NOT wrap the output in ```markdown blocks.\n\n{custom_guidance}"),
+               "CRITICAL: Do NOT wrap the output in ```markdown blocks.\n\n"
+               "{validation_feedback}"
+               "{custom_guidance}"),
     ("user", "CONTENT TO PROCESS:\n\"\"\"\n{text}\n\"\"\"")
 ])
 
@@ -133,7 +135,9 @@ description_json_prompt = ChatPromptTemplate.from_messages([
                "CRITICAL: Capture EVERYTHING within the source field. Do NOT skip items, lists, or boilerplate sections (like 'Working with Us' or EEO statements) as they are part of the original record. "
                "Pay special attention to transition points in HTML (e.g., between nested lists or <ul> tags) to ensure constant coverage. "
                "Do not make up information if it is not present in the text.\n"
-               "CRITICAL: Do NOT wrap the output in ```markdown blocks.\n\n{custom_guidance}"),
+               "CRITICAL: Do NOT wrap the output in ```markdown blocks.\n\n"
+               "{validation_feedback}"
+               "{custom_guidance}"),
     ("user", "JSON DESCRIPTION HTML:\n{json_fragment}")
 ])
 
@@ -148,10 +152,10 @@ description_validation_prompt = ChatPromptTemplate.from_messages([
                "RULES:\n"
                "1. AI HALLUCINATION: set is_valid=False if the LLM invented information not in the RAW SOURCE.\n"
                "2. COMPLETENESS: set is_complete=False if the LLM truncated items or missed content. "
-               "Check specifically if the LAST items in each section of the RAW SOURCE are present in the GENERATED DESCRIPTION.\n"
-               "3. CONTEXT: If the source is 'JSON-LD', the generated description MUST contain everything from the source. If 'TEXT', it must contain all relevant job info.\n"
-               "4. FORMATTING: Clean Markdown is expected. Minor punctuation/whitespace fixes are fine.\n"
+               "Check specifically if the LAST items in each section of the RAW SOURCE (even if in HTML) are present in the GENERATED DESCRIPTION.\n"
+               "3. CONTEXT: If the source is 'JSON-LD', it contains HTML. Ignore the tags and focus on the text content. Everything must be included.\n"
+               "4. VERBATIM: While formatting is flexible, the text content itself must remain verbatim. Minor punctuation/whitespace fixes are fine.\n"
                "5. FENCING: MUST NOT contain ```markdown blocks.\n"
-               "If both is_valid and is_complete are true, the output is accepted."),
+               "CRITICAL: If is_valid or is_complete is False, you MUST provide a detailed failure_reason explaining what is missing or wrong."),
     ("user", "SOURCE TYPE: {source_type}\n\nRAW SOURCE:\n\"\"\"\n{source_text}\n\"\"\"\n\nGENERATED DESCRIPTION:\n\"\"\"\n{generated_description}\n\"\"\"")
 ])
