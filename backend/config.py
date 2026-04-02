@@ -40,6 +40,18 @@ DEFAULT_APP_SETTINGS = {
         "openai_model": "text-embedding-3-small",
     },
     "extraction_mode": "single",
+    "custom_prompts": {
+        "single_agent": "",
+        "multi_agent": {
+            "company": "",
+            "role": "",
+            "location": "",
+            "salary_range": "",
+            "job_posted_date": "",
+            "application_deadline": "",
+            "description": ""
+        }
+    }
 }
 
 

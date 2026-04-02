@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Loader2, CheckCircle2, Circle, AlertCircle } from 'lucide-react';
 
 interface ProcessingOverlayProps {
@@ -16,18 +16,28 @@ interface ProcessingOverlayProps {
 export const ProcessingOverlay: React.FC<ProcessingOverlayProps> = ({ 
   isOpen, 
   tasks, 
-  title = "AI Processing", 
+  title = "Processing Document", 
   onClose,
   error 
 }) => {
-  if (!isOpen) return null;
-
   const hasError = tasks.some(t => t.status === 'error') || !!error;
   const isCompleted = tasks.every(t => t.status === 'completed') && !hasError;
 
+  // Auto-close on success
+  useEffect(() => {
+    if (isOpen && isCompleted && !hasError && onClose) {
+      const timer = setTimeout(() => {
+        onClose();
+      }, 1500);
+      return () => clearTimeout(timer);
+    }
+  }, [isOpen, isCompleted, hasError, onClose]);
+
+  if (!isOpen) return null;
+
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-md animate-fade-in">
-      <div className="bg-[#0a0a0f] border border-violet-500/20 w-full max-w-sm rounded-2xl p-6 shadow-2xl animate-scale-up">
+      <div className="bg-[var(--bg)] border border-[var(--border-color)] w-full max-w-sm rounded-2xl p-6 shadow-2xl animate-scale-up glass relative overflow-hidden">
         {/* Header */}
         <div className="text-center mb-6">
           <div className="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-violet-500/10 mb-4">
@@ -39,8 +49,8 @@ export const ProcessingOverlay: React.FC<ProcessingOverlayProps> = ({
               <Loader2 className="w-6 h-6 text-violet-400 animate-spin" />
             )}
           </div>
-          <h2 className="text-xl font-bold text-white mb-1">{title}</h2>
-          <p className="text-xs text-gray-400">Please wait while we process your document</p>
+          <h2 className="text-xl font-bold text-[var(--fg)] mb-1">{title}</h2>
+          <p className="text-xs text-[var(--fg-muted)]">Please wait while we process your document</p>
         </div>
 
         {/* Task List */}
@@ -55,14 +65,14 @@ export const ProcessingOverlay: React.FC<ProcessingOverlayProps> = ({
                 ) : task.status === 'error' ? (
                   <AlertCircle className="w-4 h-4 text-red-500" />
                 ) : (
-                  <Circle className="w-4 h-4 text-gray-700" />
+                  <Circle className="w-4 h-4 text-[var(--fg-subtle)]" />
                 )}
               </div>
               <span className={`text-sm transition-colors duration-300 ${
-                task.status === 'completed' ? 'text-gray-400 line-through decoration-violet-500/30' :
-                task.status === 'loading' ? 'text-violet-300 font-medium' :
+                task.status === 'completed' ? 'text-[var(--fg-muted)] line-through decoration-violet-500/30' :
+                task.status === 'loading' ? 'text-violet-400 font-medium' :
                 task.status === 'error' ? 'text-red-400' :
-                'text-gray-500'
+                'text-[var(--fg-subtle)]'
               }`}>
                 {task.label}
               </span>
@@ -77,17 +87,13 @@ export const ProcessingOverlay: React.FC<ProcessingOverlayProps> = ({
           </div>
         )}
 
-        {/* Footer Actions */}
-        {(hasError || isCompleted) && (
+        {/* Footer Actions (Only for Error - Success auto-closes) */}
+        {hasError && (
           <button
             onClick={onClose}
-            className={`w-full py-2.5 rounded-xl font-bold text-sm transition-all shadow-lg ${
-              hasError 
-                ? 'bg-red-500/10 text-red-400 border border-red-500/20 hover:bg-red-500/20' 
-                : 'bg-violet-600 text-white hover:bg-violet-500 shadow-violet-500/20'
-            }`}
+            className="w-full py-2.5 rounded-xl font-bold text-sm transition-all shadow-lg bg-red-400/10 text-red-400 border border-red-500/20 hover:bg-red-500/20"
           >
-            {hasError ? 'Dismiss' : 'Continue'}
+            Dismiss
           </button>
         )}
       </div>
