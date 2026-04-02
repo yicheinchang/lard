@@ -62,7 +62,8 @@ This document provides a summary of the project's architecture, tech stack, and 
       *   **Application Notes**: Dedicated Markdown editor (`MdEditor`) for research and interview prep.
   - `DocumentPreview.tsx`: Overlay for high-fidelity viewing of PDF and Markdown documents.
   - `Ticker.tsx`: News-ticker style progress bar for real-time AI extraction status.
-  - `FilterPopover.tsx`: Advanced filtering UI with sliders and manual inputs for date ranges, deadlines, and stale applications.
+  - `FilterPopover.tsx`: Advanced filtering UI for dashboard header.
+  - `ProcessingOverlay.tsx`: Global/Component-level overlay for tracking long-running AI tasks (e.g. document vectorization) with real-time SSE progress updates.
   - `AddJobModal.tsx`: Core form for new applications. Includes AI Auto-fill and **Potential Hallucination Warning System**.
   - `ConfirmDialog.tsx`: Multi-functional modal replacing native prompts. Supports **Date Inputs**, **File Uploads**, and **Combobox Text Inputs** (with custom `<datalist>`). Includes variant-based styling (`danger`, `success`, `default`).
   - `ChatAssistant.tsx`: Global drawer for the AI agent.

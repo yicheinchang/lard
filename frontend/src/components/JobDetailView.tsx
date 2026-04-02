@@ -5,10 +5,11 @@ import ReactMarkdown from 'react-markdown';
 import MdEditor from 'react-markdown-editor-lite';
 import MarkdownIt from 'markdown-it';
 import 'react-markdown-editor-lite/lib/index.css';
-import { Job, getStepTypes, StepType, addInterviewStep, updateInterviewStep, deleteInterviewStep, updateJob, uploadJobDocument, deleteJobDocument, getCompanies, InterviewStep } from '../lib/api';
+import { Job, getStepTypes, StepType, addInterviewStep, updateInterviewStep, deleteInterviewStep, updateJob, uploadJobDocumentStream, deleteJobDocument, getCompanies, InterviewStep } from '../lib/api';
 import { X, Calendar, User, Mail, Plus, Circle, FileText, Edit2, Save, Paperclip, Trash2, ExternalLink, Link as LinkIcon, StickyNote, Send, AlertTriangle } from 'lucide-react';
 import { ConfirmDialog } from './ConfirmDialog';
 import { DocumentPreview } from './DocumentPreview';
+import { ProcessingOverlay } from './ProcessingOverlay';
 
 import { useView } from '@/lib/ViewContext';
 
@@ -187,18 +188,57 @@ export const JobDetailView: React.FC<JobDetailViewProps> = ({ job, onClose, onJo
     fileUrl: null,
   });
 
-  // Attach job document
+  // Document upload state
   const [docUploadType, setDocUploadType] = useState('job_post');
+  const [isUploadingDoc, setIsUploadingDoc] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+  const [uploadTasks, setUploadTasks] = useState([
+    { id: 'upload', label: 'Uploading file...', status: 'waiting' as any },
+    { id: 'extract', label: 'Extracting content...', status: 'waiting' as any },
+    { id: 'vectorize', label: 'Generating embeddings...', status: 'waiting' as any },
+    { id: 'finalize', label: 'Finalizing...', status: 'waiting' as any },
+  ]);
   
   const handleAttachPdf = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file && job?.id) {
+      setIsUploadingDoc(true);
+      setUploadError(null);
+      setUploadTasks(prev => prev.map(t => ({ ...t, status: 'waiting' })));
+
       try {
-        await uploadJobDocument(job.id, file, docUploadType);
-        onJobUpdated();
-      } catch (err) {
+        await uploadJobDocumentStream(job.id, file, docUploadType, (event, msg) => {
+          if (event === 'progress') {
+            setUploadTasks(prev => {
+              const currentTasks = [...prev];
+              // Map specific backend messages to our UI tasks
+              if (msg.includes('Initializing') || msg.includes('Saving')) {
+                currentTasks[0].status = 'loading';
+              } else if (msg.includes('Registering')) {
+                currentTasks[0].status = 'completed';
+                currentTasks[1].status = 'loading';
+              } else if (msg.includes('Extracting')) {
+                currentTasks[1].status = 'loading';
+              } else if (msg.includes('vectorizing')) {
+                currentTasks[1].status = 'completed';
+                currentTasks[2].status = 'loading';
+              } else if (msg.includes('Finalizing')) {
+                currentTasks[2].status = 'completed';
+                currentTasks[3].status = 'loading';
+              }
+              return currentTasks;
+            });
+          } else if (event === 'completed') {
+            setUploadTasks(prev => prev.map(t => ({ ...t, status: 'completed' })));
+            onJobUpdated();
+          } else if (event === 'error') {
+            setUploadError(msg);
+            setUploadTasks(prev => prev.map(t => t.status === 'loading' ? { ...t, status: 'error' } : t));
+          }
+        });
+      } catch (err: any) {
         console.error('Failed to attach document', err);
-        setAlertDialog({ isOpen: true, title: 'Upload Failed', message: 'Failed to upload document.', variant: 'danger' });
+        setUploadError(err.message || 'Unknown upload error');
       }
     }
   };
@@ -1118,6 +1158,14 @@ export const JobDetailView: React.FC<JobDetailViewProps> = ({ job, onClose, onJo
         onCancel={() => setConfirmDialog(prev => ({ ...prev, isOpen: false }))}
         confirmLabel="Confirm"
         variant={confirmDialog.variant || 'default'}
+      />
+
+      <ProcessingOverlay
+        isOpen={isUploadingDoc}
+        tasks={uploadTasks}
+        title="Processing Document"
+        error={uploadError}
+        onClose={() => setIsUploadingDoc(false)}
       />
     </>
   );

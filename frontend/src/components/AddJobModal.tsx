@@ -1,8 +1,9 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Sparkles, Loader2, Link as LinkIcon, Building2, Briefcase, Plus, ChevronDown, ChevronUp, FileText, Upload, Zap, Paperclip, AlertTriangle } from 'lucide-react';
-import { extractJobFromUrl, extractJobFromPdf, uploadJobDocument, checkJobDuplicate, getCompanies, Job } from '../lib/api';
+import { extractJobFromUrl, extractJobFromPdf, uploadJobDocumentStream, checkJobDuplicate, getCompanies, Job } from '../lib/api';
 import { useSettings } from '@/lib/SettingsContext';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
+import { ProcessingOverlay } from './ProcessingOverlay';
 import { Ticker } from './Ticker';
 
 interface AddJobModalProps {
@@ -39,6 +40,16 @@ export const AddJobModal: React.FC<AddJobModalProps> = ({ isOpen, onClose, onAdd
   const [showCancelExtractionConfirm, setShowCancelExtractionConfirm] = useState(false);
   const [hallucinationWarning, setHallucinationWarning] = useState<string | null>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
+
+  // Document upload state (for manual attachments)
+  const [isUploadingDoc, setIsUploadingDoc] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+  const [uploadTasks, setUploadTasks] = useState([
+    { id: 'upload', label: 'Uploading file...', status: 'waiting' as any },
+    { id: 'extract', label: 'Extracting content...', status: 'waiting' as any },
+    { id: 'vectorize', label: 'Generating embeddings...', status: 'waiting' as any },
+    { id: 'finalize', label: 'Finalizing...', status: 'waiting' as any },
+  ]);
 
   React.useEffect(() => {
     if (isOpen) {
@@ -295,11 +306,48 @@ export const AddJobModal: React.FC<AddJobModalProps> = ({ isOpen, onClose, onAdd
 
       // If AI is OFF and a file was selected, attach it as a "job_post" document
       if (!effectiveAiEnabled && selectedFile && createdJob?.id) {
+        setIsUploadingDoc(true);
+        setUploadError(null);
+        setUploadTasks(prev => prev.map(t => ({ ...t, status: 'waiting' })));
+
         try {
-          await uploadJobDocument(createdJob.id, selectedFile, 'job_post');
-        } catch (uploadErr) {
+          await uploadJobDocumentStream(createdJob.id, selectedFile, 'job_post', (event, msg) => {
+            if (event === 'progress') {
+              setUploadTasks(prev => {
+                const currentTasks = [...prev];
+                if (msg.includes('Initializing') || msg.includes('Saving')) {
+                  currentTasks[0].status = 'loading';
+                } else if (msg.includes('Registering')) {
+                  currentTasks[0].status = 'completed';
+                  currentTasks[1].status = 'loading';
+                } else if (msg.includes('Extracting')) {
+                  currentTasks[1].status = 'loading';
+                } else if (msg.includes('vectorizing')) {
+                  currentTasks[1].status = 'completed';
+                  currentTasks[2].status = 'loading';
+                } else if (msg.includes('Finalizing')) {
+                  currentTasks[2].status = 'completed';
+                  currentTasks[3].status = 'loading';
+                }
+                return currentTasks;
+              });
+            } else if (event === 'completed') {
+              setUploadTasks(prev => prev.map(t => ({ ...t, status: 'completed' })));
+              // We successfully attached, we can now close
+              resetForm();
+              onClose();
+            } else if (event === 'error') {
+              setUploadError(msg);
+              setUploadTasks(prev => prev.map(t => t.status === 'loading' ? { ...t, status: 'error' } : t));
+            }
+          });
+          // Note: resetForm/onClose are called in 'completed' block
+          return; 
+        } catch (uploadErr: any) {
           console.error('Job created, but failed to attach document:', uploadErr);
-          // Non-fatal — job was created successfully
+          setUploadError(uploadErr.message || 'Failed to attach document');
+          // Don't close yet so user can see error
+          return;
         }
       }
 
@@ -731,6 +779,18 @@ export const AddJobModal: React.FC<AddJobModalProps> = ({ isOpen, onClose, onAdd
         }}
         onCancel={() => setShowCancelExtractionConfirm(false)}
         variant="danger"
+      />
+
+      <ProcessingOverlay
+        isOpen={isUploadingDoc}
+        tasks={uploadTasks}
+        title="Processing Document"
+        error={uploadError}
+        onClose={() => {
+          setIsUploadingDoc(false);
+          resetForm();
+          onClose();
+        }}
       />
     </div>
   );

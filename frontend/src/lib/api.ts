@@ -82,6 +82,18 @@ export interface AppSettings {
   embedding_provider: 'default' | 'ollama' | 'openai';
   embedding_config: EmbeddingConfig;
   extraction_mode: 'single' | 'multi';
+  custom_prompts: {
+    single_agent: string;
+    multi_agent: {
+      company: string;
+      role: string;
+      location: string;
+      salary_range: string;
+      job_posted_date: string;
+      application_deadline: string;
+      description: string;
+    };
+  };
 }
 
 export const getSettings = async (): Promise<AppSettings> => {
@@ -189,17 +201,45 @@ export const extractJobFromPdf = async (file: File, signal?: AbortSignal) => {
   return response.data;
 };
 
-export const uploadJobDocument = async (jobId: number, file: File, docType: string) => {
+export const uploadJobDocumentStream = async (jobId: number, file: File, docType: string, onProgress: (event: string, msg: string, data?: any) => void) => {
   const formData = new FormData();
   formData.append('file', file);
   formData.append('doc_type', docType);
-  
-  const response = await api.post(`/jobs/${jobId}/documents`, formData, {
-    headers: {
-      'Content-Type': 'multipart/form-data'
-    }
+
+  const response = await fetch(`http://localhost:8000/api/jobs/${jobId}/documents/stream`, {
+    method: 'POST',
+    body: formData,
   });
-  return response.data;
+
+  if (!response.ok) {
+    throw new Error(`Upload failed: ${response.statusText}`);
+  }
+
+  const reader = response.body?.getReader();
+  if (!reader) throw new Error('No reader available');
+
+  const decoder = new TextDecoder();
+  let buffer = '';
+
+  while (true) {
+    const { value, done } = await reader.read();
+    if (done) break;
+
+    buffer += decoder.decode(value, { stream: true });
+    const lines = buffer.split('\n\n');
+    buffer = lines.pop() || '';
+
+    for (const line of lines) {
+      if (line.startsWith('data: ')) {
+        try {
+          const data = JSON.parse(line.replace('data: ', ''));
+          onProgress(data.event, data.msg || '', data);
+        } catch (e) {
+          console.error('Error parsing SSE line:', e);
+        }
+      }
+    }
+  }
 };
 
 export const deleteJobDocument = async (docId: number) => {

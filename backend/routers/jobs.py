@@ -1,7 +1,9 @@
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form
+from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session, joinedload
 import os
 import shutil
+import json
 from pydantic import BaseModel, ConfigDict
 from typing import List, Optional
 from datetime import datetime, timezone
@@ -475,6 +477,71 @@ def upload_job_document(job_id: int, file: UploadFile = File(...), doc_type: str
     update_job_status(db_job, db, operation=f"Attached Document: {doc.title}")
     
     return doc
+
+@router.post("/jobs/{job_id}/documents/stream")
+async def upload_job_document_stream(job_id: int, file: UploadFile = File(...), doc_type: str = Form(...), db: Session = Depends(get_db)):
+    """
+    Same as upload_job_document but returns a StreamingResponse with SSE progress updates.
+    """
+    async def generate_progress():
+        try:
+            yield f"data: {json.dumps({'event': 'progress', 'msg': 'Initializing upload...'})}\n\n"
+            
+            db_job = db.query(JobApplication).filter(JobApplication.id == job_id).first()
+            if not db_job:
+                yield f"data: {json.dumps({'event': 'error', 'msg': 'Job not found'})}\n\n"
+                return
+
+            os.makedirs("uploads", exist_ok=True)
+            safe_filename = file.filename.replace(" ", "_").replace("/", "")
+            timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
+            file_path = f"uploads/{job_id}_{timestamp}_{safe_filename}"
+            
+            yield f"data: {json.dumps({'event': 'progress', 'msg': 'Saving file to system...'})}\n\n"
+            with open(file_path, "wb") as buffer:
+                shutil.copyfileobj(file.file, buffer)
+            
+            yield f"data: {json.dumps({'event': 'progress', 'msg': 'Registering document...'})}\n\n"
+            doc = DocumentMeta(
+                job_id=job_id,
+                title=file.filename,
+                doc_type=doc_type,
+                file_path=f"/{file_path}"
+            )
+            db.add(doc)
+            db.commit()
+            db.refresh(doc)
+            
+            yield f"data: {json.dumps({'event': 'progress', 'msg': 'Extracting content...'})}\n\n"
+            # Ingest document into vector store
+            if file_path.endswith('.pdf'):
+                from langchain_community.document_loaders import PyPDFLoader
+                loader = PyPDFLoader(file_path)
+                pages = loader.load()
+                text = "\n".join([p.page_content for p in pages])
+            else:
+                with open(file_path, "r", encoding="utf-8") as f:
+                    text = f.read()
+            
+            yield f"data: {json.dumps({'event': 'progress', 'msg': 'Generating embeddings & vectorizing (this may take a minute)...'})}\n\n"
+            from database.vector_store import get_vector_store_manager
+            get_vector_store_manager().ingest_text(
+                document_id=f"doc_{doc.id}", 
+                text=text, 
+                metadata={"job_id": job_id, "source": doc.title, "type": "document"}
+            )
+                
+            # Update Job status and operation
+            yield f"data: {json.dumps({'event': 'progress', 'msg': 'Finalizing attachment...'})}\n\n"
+            update_job_status(db_job, db, operation=f"Attached Document: {doc.title}")
+            
+            yield f"data: {json.dumps({'event': 'completed', 'doc_id': doc.id, 'title': doc.title})}\n\n"
+            
+        except Exception as e:
+            print(f"Error during streaming upload: {e}")
+            yield f"data: {json.dumps({'event': 'error', 'msg': str(e)})}\n\n"
+
+    return StreamingResponse(generate_progress(), media_type="text/event-stream")
 
 @router.delete("/documents/{doc_id}")
 def delete_document(doc_id: int, db: Session = Depends(get_db)):
