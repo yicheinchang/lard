@@ -217,7 +217,7 @@ input[type="date"].style-date::-webkit-calendar-picker-indicator {
 /* ── Markdown Editor Theme Overrides ──────────────────────────────── */
 .rc-md-editor {
   border: 1px solid var(--border-color) !important;
-  background-color: var(--input-bg) !important;
+  background-color: var(--surface-alt) !important;
 }
 
 .rc-md-editor .editor-container > .section {
@@ -247,9 +247,24 @@ input[type="date"].style-date::-webkit-calendar-picker-indicator {
   color: var(--primary) !important;
 }
 
-/* Specific Dark Mode overrides to prevent white background bleed */
+/* Full screen override to break out of stacking context traps */
+.rc-md-editor.full-screen {
+  z-index: 9999 !important;
+  background-color: var(--bg) !important;
+  position: fixed !important;
+  top: 0 !important;
+  left: 0 !important;
+  width: 100vw !important;
+  height: 100vh !important;
+}
+
+/* Dark mode specific tweaks */
 [data-theme="dark"] .rc-md-editor {
-  background-color: rgba(0, 0, 0, 0.2) !important;
+  background-color: rgba(0, 0, 0, 0.3) !important;
+}
+
+[data-theme="dark"] .rc-md-editor.full-screen {
+  background-color: #0a0a0f !important;
 }
 
 [data-theme="dark"] .rc-md-editor .editor-container .sec-md .input {

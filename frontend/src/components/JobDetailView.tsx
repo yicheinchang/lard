@@ -23,6 +23,7 @@ interface JobDetailViewProps {
 export const JobDetailView: React.FC<JobDetailViewProps> = ({ job, onClose, onJobUpdated }) => {
   const { setDirty, jobDetailHeight, setJobDetailHeight } = useView();
   const [isResizingHeight, setIsResizingHeight] = useState(false);
+  const [isAnimationFinished, setIsAnimationFinished] = useState(false);
 
   const startResizingHeight = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -274,8 +275,10 @@ export const JobDetailView: React.FC<JobDetailViewProps> = ({ job, onClose, onJo
       getCompanies().then(setCompanies).catch(console.error);
       setEditFormData(job);
       setJobNotes(job.notes || '');
+      // Reset animation state when a specific job is loaded
+      setIsAnimationFinished(false);
     }
-  }, [job]);
+  }, [job?.id]); // Only reset when the job ID changes
 
   // Debounced notes auto-save
   useEffect(() => {
@@ -581,8 +584,9 @@ export const JobDetailView: React.FC<JobDetailViewProps> = ({ job, onClose, onJo
   return (
     <>
       <div
-        className="absolute inset-x-0 bottom-0 bg-[var(--bg)] border-t border-[var(--border-color)] shadow-[0_-10px_40px_rgba(0,0,0,0.5)] flex flex-col z-20 animate-slide-up"
+        className={`absolute inset-x-0 bottom-0 bg-[var(--bg)] border-t border-[var(--border-color)] shadow-[0_-10px_40px_rgba(0,0,0,0.5)] flex flex-col z-20 ${!isAnimationFinished ? 'animate-slide-up' : ''}`}
         style={{ top: `${100 - jobDetailHeight}%` }}
+        onAnimationEnd={() => setIsAnimationFinished(true)}
       >
         {/* Resize Handle */}
         <div
