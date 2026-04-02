@@ -177,11 +177,6 @@ def get_or_create_step_type(db: Session, name: str) -> StepType:
 def read_jobs(db: Session = Depends(get_db)):
     return db.query(JobApplication).options(joinedload(JobApplication.steps).joinedload(InterviewStep.step_type), joinedload(JobApplication.documents)).order_by(JobApplication.applied_date.desc()).all()
 
-    # Initial status calculation
-    update_job_status(db_job, db, operation="Job Created")
-    db.refresh(db_job)
-    return db_job
-
 @router.post("/jobs/stream")
 async def create_job_stream(
     job_data_str: str = Form(...), # JSON string of JobCreate
@@ -193,7 +188,8 @@ async def create_job_stream(
         try:
             yield f"data: {json.dumps({'event': 'progress', 'msg': 'Saving job metadata...'})}\n\n"
             
-            job_dict = json.loads(job_data_str)
+            job_create = JobCreate.model_validate_json(job_data_str)
+            job_dict = job_create.model_dump(exclude_unset=True)
             if "company" in job_dict and job_dict["company"]:
                 company = get_or_create_company(db, job_dict["company"])
                 job_dict["company_id"] = company.id
