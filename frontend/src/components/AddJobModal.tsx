@@ -20,6 +20,82 @@ const initialFormData: Partial<Job> = {
   applied_date: '', closed_date: ''
 };
 
+// ── Helper Components (Defined outside to prevent focus loss) ──
+
+const InputField = ({ label, field, value, onChange, type = "text", placeholder }: {
+  label: string; field: keyof Job; value: string; onChange: (value: string) => void; type?: string; placeholder?: string;
+}) => (
+  <div className="flex flex-col gap-1">
+    <label className="text-xs text-gray-400">{label}</label>
+    <input
+      type={type}
+      placeholder={placeholder}
+      className="w-full bg-black/40 border border-white/10 rounded-lg px-3 py-2 text-white placeholder-gray-500 focus:outline-none focus:border-violet-500 transition-colors text-sm"
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+    />
+  </div>
+);
+
+const StatusSelect = ({ value, appliedDate, onChange }: { 
+  value: string; appliedDate?: string; onChange: (value: string) => void; 
+}) => (
+  <div className="flex flex-col gap-1">
+    <label className="text-xs text-gray-400">Initial Status</label>
+    <select
+      className="w-full bg-black/40 border border-white/10 rounded-lg px-3 py-2 text-white outline-none focus:border-violet-500 transition-colors text-sm appearance-none cursor-pointer"
+      value={value || 'Wishlist'}
+      onChange={(e) => onChange(e.target.value)}
+    >
+      <option value="Wishlist" className="bg-[#1a1a24] text-white">Wishlist</option>
+      <option value="Applied" className="bg-[#1a1a24] text-white">Applied</option>
+      <option value="Interviewing" className="bg-[#1a1a24] text-white" disabled={!appliedDate}>Interviewing (Requires Applied Date)</option>
+      <option value="Offered" className="bg-[#1a1a24] text-white" disabled={!appliedDate}>Offered (Requires Applied Date)</option>
+      <option value="Rejected" className="bg-[#1a1a24] text-white" disabled={!appliedDate}>Rejected (Requires Applied Date)</option>
+      <option value="Closed" className="bg-[#1a1a24] text-white">Closed</option>
+      <option value="Discontinued" className="bg-[#1a1a24] text-white">Discontinued</option>
+    </select>
+  </div>
+);
+
+const FilePicker = ({ label, hint, selectedFile, isExtracting, fileInputRef, onFileSelect, onRemoveFile }: { 
+  label: string; hint: string; selectedFile: File | null; isExtracting: boolean; fileInputRef: React.RefObject<HTMLInputElement | null>; onFileSelect: (e: React.ChangeEvent<HTMLInputElement>) => void; onRemoveFile: () => void; 
+}) => (
+  <div>
+    <input
+      type="file"
+      accept=".pdf,.md,.txt"
+      className="hidden"
+      ref={fileInputRef}
+      onChange={onFileSelect}
+    />
+    {selectedFile ? (
+      <div className="flex items-center gap-3 p-3 rounded-lg border border-violet-500/40 bg-violet-500/10">
+        <FileText className="w-4 h-4 text-violet-400 shrink-0" />
+        <span className="text-sm text-violet-300 flex-1 truncate">{selectedFile.name}</span>
+        <button
+          type="button"
+          onClick={onRemoveFile}
+          className="text-xs text-gray-500 hover:text-red-400 transition-colors shrink-0"
+        >
+          Remove
+        </button>
+      </div>
+    ) : (
+      <button
+        type="button"
+        onClick={() => fileInputRef.current?.click()}
+        disabled={isExtracting}
+        className="w-full border border-dashed border-white/15 hover:border-violet-400/50 hover:bg-violet-500/5 text-gray-500 hover:text-gray-300 px-4 py-3 rounded-lg transition-all disabled:opacity-50 flex justify-center items-center gap-2 text-sm"
+      >
+        <Upload className="w-4 h-4" />
+        {label}
+      </button>
+    )}
+    {!selectedFile && <p className="text-xs text-gray-600 mt-1.5">{hint}</p>}
+  </div>
+);
+
 export const AddJobModal: React.FC<AddJobModalProps> = ({ isOpen, onClose, onAddJob }) => {
   const { aiEnabled: globalAiEnabled } = useSettings();
   const [formData, setFormData] = useState<Partial<Job>>(initialFormData);
@@ -354,76 +430,6 @@ export const AddJobModal: React.FC<AddJobModalProps> = ({ isOpen, onClose, onAdd
     }
   };
 
-  const InputField = ({ label, field, type = "text", placeholder }: {
-    label: string; field: keyof Job; type?: string; placeholder?: string;
-  }) => (
-    <div className="flex flex-col gap-1">
-      <label className="text-xs text-gray-400">{label}</label>
-      <input
-        type={type}
-        placeholder={placeholder}
-        className="w-full bg-black/40 border border-white/10 rounded-lg px-3 py-2 text-white placeholder-gray-500 focus:outline-none focus:border-violet-500 transition-colors text-sm"
-        value={formData[field] as string || ''}
-        onChange={(e) => handleChange(field, e.target.value)}
-      />
-    </div>
-  );
-
-  const StatusSelect = () => (
-    <div className="flex flex-col gap-1">
-      <label className="text-xs text-gray-400">Initial Status</label>
-      <select
-        className="w-full bg-black/40 border border-white/10 rounded-lg px-3 py-2 text-white outline-none focus:border-violet-500 transition-colors text-sm appearance-none cursor-pointer"
-        value={formData.status || 'Wishlist'}
-        onChange={(e) => handleChange('status', e.target.value)}
-      >
-        <option value="Wishlist" className="bg-[#1a1a24] text-white">Wishlist</option>
-        <option value="Applied" className="bg-[#1a1a24] text-white">Applied</option>
-        <option value="Interviewing" className="bg-[#1a1a24] text-white" disabled={!formData.applied_date}>Interviewing (Requires Applied Date)</option>
-        <option value="Offered" className="bg-[#1a1a24] text-white" disabled={!formData.applied_date}>Offered (Requires Applied Date)</option>
-        <option value="Rejected" className="bg-[#1a1a24] text-white" disabled={!formData.applied_date}>Rejected (Requires Applied Date)</option>
-        <option value="Closed" className="bg-[#1a1a24] text-white">Closed</option>
-        <option value="Discontinued" className="bg-[#1a1a24] text-white">Discontinued</option>
-      </select>
-    </div>
-  );
-
-  // File picker — shared between AI mode (extraction) and manual mode (attachment)
-  const FilePicker = ({ label, hint }: { label: string; hint: string }) => (
-    <div>
-      <input
-        type="file"
-        accept=".pdf,.md,.txt"
-        className="hidden"
-        ref={fileInputRef}
-        onChange={handleFileSelect}
-      />
-      {selectedFile ? (
-        <div className="flex items-center gap-3 p-3 rounded-lg border border-violet-500/40 bg-violet-500/10">
-          <FileText className="w-4 h-4 text-violet-400 shrink-0" />
-          <span className="text-sm text-violet-300 flex-1 truncate">{selectedFile.name}</span>
-          <button
-            type="button"
-            onClick={handleRemoveFile}
-            className="text-xs text-gray-500 hover:text-red-400 transition-colors shrink-0"
-          >
-            Remove
-          </button>
-        </div>
-      ) : (
-        <button
-          type="button"
-          onClick={() => fileInputRef.current?.click()}
-          disabled={isExtracting}
-          className="w-full border border-dashed border-white/15 hover:border-violet-400/50 hover:bg-violet-500/5 text-gray-500 hover:text-gray-300 px-4 py-3 rounded-lg transition-all disabled:opacity-50 flex justify-center items-center gap-2 text-sm"
-        >
-          <Upload className="w-4 h-4" />
-          {label}
-        </button>
-      )}
-      {!selectedFile && <p className="text-xs text-gray-600 mt-1.5">{hint}</p>}
-    </div>
-  );
 
   const canExtract = !!(selectedFile || formData.url);
   // Effective AI state: local toggle AND global setting
@@ -500,6 +506,11 @@ export const AddJobModal: React.FC<AddJobModalProps> = ({ isOpen, onClose, onAdd
                 <FilePicker
                   label="Upload Job Post (PDF / Markdown / Text)"
                   hint="Supports .pdf, .md, .txt — takes priority over URL for extraction"
+                  selectedFile={selectedFile}
+                  isExtracting={isExtracting}
+                  fileInputRef={fileInputRef}
+                  onFileSelect={handleFileSelect}
+                  onRemoveFile={handleRemoveFile}
                 />
 
                 <button
@@ -544,6 +555,11 @@ export const AddJobModal: React.FC<AddJobModalProps> = ({ isOpen, onClose, onAdd
                 <FilePicker
                   label="Upload Job Post (PDF / Markdown / Text)"
                   hint="Will be attached as a 'Job Post' document after saving"
+                  selectedFile={selectedFile}
+                  isExtracting={isExtracting}
+                  fileInputRef={fileInputRef}
+                  onFileSelect={handleFileSelect}
+                  onRemoveFile={handleRemoveFile}
                 />
               </div>
             )}
@@ -603,7 +619,11 @@ export const AddJobModal: React.FC<AddJobModalProps> = ({ isOpen, onClose, onAdd
                 </div>
               </div>
 
-              <StatusSelect />
+              <StatusSelect 
+                value={formData.status || 'Wishlist'} 
+                appliedDate={formData.applied_date} 
+                onChange={(val) => handleChange('status', val)} 
+              />
 
               {formData.status !== 'Wishlist' && formData.applied_date && (
                 <div className="animate-fade-in">
@@ -611,6 +631,8 @@ export const AddJobModal: React.FC<AddJobModalProps> = ({ isOpen, onClose, onAdd
                     label="Actually Applied Date" 
                     field="applied_date" 
                     type="date" 
+                    value={formData.applied_date || ''}
+                    onChange={(val) => handleChange('applied_date', val)}
                   />
                   <p className="text-[10px] text-violet-400/60 mt-1 pl-1">Adjust if you applied on a different date.</p>
                 </div>
@@ -618,10 +640,12 @@ export const AddJobModal: React.FC<AddJobModalProps> = ({ isOpen, onClose, onAdd
 
               {formData.status === 'Closed' && (
                 <div className="animate-fade-in">
-                  <InputField 
+                   <InputField 
                     label="Job Closed Date" 
                     field="closed_date" 
                     type="date" 
+                    value={formData.closed_date || ''}
+                    onChange={(val) => handleChange('closed_date', val)}
                   />
                   <p className="text-[10px] text-violet-400/60 mt-1 pl-1 italic">Leave blank if the exact date is unknown.</p>
                 </div>
@@ -641,16 +665,16 @@ export const AddJobModal: React.FC<AddJobModalProps> = ({ isOpen, onClose, onAdd
 
             {showAdvanced && (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2 animate-fade-in">
-                <InputField label="Location" field="location" />
-                <InputField label="Salary Range" field="salary_range" />
-                <InputField label="Company Job ID" field="company_job_id" />
-                <InputField label="Posted Date" field="job_posted_date" type="date" />
-                <InputField label="Application Deadline" field="application_deadline" type="date" />
-                <InputField label="HR / Recruiter Email" field="hr_email" type="email" />
-                <InputField label="Hiring Manager Name" field="hiring_manager_name" />
-                <InputField label="Hiring Manager Email" field="hiring_manager_email" type="email" />
-                <InputField label="Headhunter Name" field="headhunter_name" />
-                <InputField label="Headhunter Email" field="headhunter_email" type="email" />
+                <InputField label="Location" field="location" value={formData.location || ''} onChange={(val) => handleChange('location', val)} />
+                <InputField label="Salary Range" field="salary_range" value={formData.salary_range || ''} onChange={(val) => handleChange('salary_range', val)} />
+                <InputField label="Company Job ID" field="company_job_id" value={formData.company_job_id || ''} onChange={(val) => handleChange('company_job_id', val)} />
+                <InputField label="Posted Date" field="job_posted_date" type="date" value={formData.job_posted_date || ''} onChange={(val) => handleChange('job_posted_date', val)} />
+                <InputField label="Application Deadline" field="application_deadline" type="date" value={formData.application_deadline || ''} onChange={(val) => handleChange('application_deadline', val)} />
+                <InputField label="HR / Recruiter Email" field="hr_email" type="email" value={formData.hr_email || ''} onChange={(val) => handleChange('hr_email', val)} />
+                <InputField label="Hiring Manager Name" field="hiring_manager_name" value={formData.hiring_manager_name || ''} onChange={(val) => handleChange('hiring_manager_name', val)} />
+                <InputField label="Hiring Manager Email" field="hiring_manager_email" type="email" value={formData.hiring_manager_email || ''} onChange={(val) => handleChange('hiring_manager_email', val)} />
+                <InputField label="Headhunter Name" field="headhunter_name" value={formData.headhunter_name || ''} onChange={(val) => handleChange('headhunter_name', val)} />
+                <InputField label="Headhunter Email" field="headhunter_email" type="email" value={formData.headhunter_email || ''} onChange={(val) => handleChange('headhunter_email', val)} />
                 <div className="md:col-span-2 space-y-2">
                   <div className="flex items-center justify-between gap-2 mb-1">
                     <label className="text-xs text-gray-400 block px-0.5">Job Description (Markdown)</label>
