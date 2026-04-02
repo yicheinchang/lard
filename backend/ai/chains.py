@@ -102,3 +102,29 @@ structured_data_validation_prompt = ChatPromptTemplate.from_messages([
                "Return ONLY the valid JSON matching the schema."),
     ("user", "RAW JSON-LD DATA:\n{json_ld_data}")
 ])
+
+def _create_json_metadata_prompt(field_name: str, guidance: str = ""):
+    return ChatPromptTemplate.from_messages([
+        ("system", f"You are an expert at extracting job details from Schema.org JSON-LD data. "
+                   f"Extract ONLY the '{field_name}' from the provided JSON snippet. "
+                   f"{guidance} "
+                   "If the specific detail is not found or empty, return null."),
+        ("user", "JSON FRAGMENT:\n{json_fragment}")
+    ])
+
+company_json_prompt = _create_json_metadata_prompt("company", "Use the embedded name or text. Return just the company name.")
+role_json_prompt = _create_json_metadata_prompt("role", "Extract the professional job title. Clean it by removing obvious job codes if they are redundant.")
+location_json_prompt = _create_json_metadata_prompt("location", "Extract the city, state/region, and country. Format it simply (e.g., 'Cambridge, MA').")
+salary_json_prompt = _create_json_metadata_prompt("salary_range", "Extract the currency, min, and max values and format them cleanly.")
+job_id_json_prompt = _create_json_metadata_prompt("company_job_id", "Extract the value of the identifier or reference number.")
+posted_date_json_prompt = _create_json_metadata_prompt("job_posted_date", "Convert the date to YYYY-MM-DD format.")
+deadline_date_json_prompt = _create_json_metadata_prompt("application_deadline", "Convert the date to YYYY-MM-DD format.")
+
+description_json_prompt = ChatPromptTemplate.from_messages([
+    ("system", "You are an expert at processing Schema.org JobPosting data."
+               "Convert the provided HTML from the JSON 'description' field to clean Markdown structure. "
+               "PRESERVE VERBATIM text. Do NOT rephrase. "
+               "Include sections like 'About the Role', 'Responsibilities', 'Qualifications' EXACTLY as they appear. "
+               "Do not make up information if it is not present in the text."),
+    ("user", "JSON DESCRIPTION HTML:\n{json_fragment}")
+])

@@ -59,12 +59,12 @@ def _clean_html(html: str) -> tuple[str, dict | None]:
         
     return text, structured_data
 
-def _preprocess_text(text: str, max_chars: int = 100000) -> str:
+def _preprocess_text(text: str, max_chars: int | None = None) -> str:
     """Common text preprocessing for all input types."""
     # Remove excessive blank lines
     lines = [l.strip() for l in text.splitlines() if l.strip()]
     text = "\n".join(lines)
-    return text[:max_chars]
+    return text[:max_chars] if max_chars else text
 
 class ExtractRequest(BaseModel):
     url: str

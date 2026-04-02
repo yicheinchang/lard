@@ -38,7 +38,7 @@ async def _run_field_extraction(field, schema, prompt, text, url, request, semap
                 raw_chain = prompt | llm
                 raw_res = await asyncio.wait_for(
                     raw_chain.ainvoke({"text": text}),
-                    timeout=300
+                    timeout=600
                 )
                 verbatim_text = raw_res.content
                 
@@ -109,6 +109,80 @@ async def _run_multi_agent_extraction(text: str, url: str, request: Any = None, 
             
     return results
 
+async def _run_field_json_extraction(field, schema, prompt, text, fragment, request, semaphore, progress_cb=None):
+    """Async helper to execute a single agent task using a JSON fragment."""
+    if not fragment:
+        if progress_cb:
+            await progress_cb({"event": "field_done", "field": field, "msg": f"AI: Bypassed {field} (Not in JSON)"})
+        return field, None
+
+    async with semaphore:
+        if request and await request.is_disconnected():
+            return field, None
+
+        if progress_cb:
+            await progress_cb({"event": "extracting", "field": field, "msg": f"AI: Parsing {field} from JSON..."})
+
+        num_ctx = 8190
+        llm = get_llm(num_ctx=num_ctx)
+
+        try:
+            if field == "description":
+                raw_chain = prompt | llm
+                raw_res = await asyncio.wait_for(raw_chain.ainvoke({"json_fragment": json.dumps(fragment, indent=2)}), timeout=600)
+                val = raw_res.content
+                if progress_cb:
+                    await progress_cb({"event": "field_done", "field": field, "msg": f"Captured Description (JSON)"})
+                return field, {"description": val}
+
+            chain = prompt | llm.with_structured_output(schema)
+            res = await asyncio.wait_for(chain.ainvoke({"json_fragment": json.dumps(fragment, indent=2)}), timeout=300)
+            val = res.model_dump()
+
+            if progress_cb:
+                await progress_cb({"event": "field_done", "field": field, "msg": f"Parsed {field} from JSON"})
+            return field, val
+        except Exception as e:
+            print(f"Error extracting JSON {field}: {e}")
+            return field, None
+
+async def _run_multi_agent_json_extraction(structured_data: dict, text: str, request: Any = None, progress_cb: Callable = None):
+    semaphore = asyncio.Semaphore(1)
+    from ai.chains import (
+        JobCompany, JobRole, JobLocation, JobSalary, JobId, 
+        PostedDate, DeadlineDate, JobDescription,
+        company_json_prompt, role_json_prompt, location_json_prompt, salary_json_prompt,
+        job_id_json_prompt, posted_date_json_prompt, deadline_date_json_prompt,
+        description_json_prompt
+    )
+    
+    metadata_tasks = [
+        ("company", JobCompany, company_json_prompt, structured_data.get("hiringOrganization")),
+        ("role", JobRole, role_json_prompt, structured_data.get("title")),
+        ("location", JobLocation, location_json_prompt, structured_data.get("jobLocation")),
+        ("salary_range", JobSalary, salary_json_prompt, structured_data.get("baseSalary")),
+        ("company_job_id", JobId, job_id_json_prompt, structured_data.get("identifier") or structured_data.get("url")),
+        ("job_posted_date", PostedDate, posted_date_json_prompt, structured_data.get("datePosted")),
+        ("application_deadline", DeadlineDate, deadline_date_json_prompt, structured_data.get("validThrough")),
+        ("description", JobDescription, description_json_prompt, structured_data.get("description")),
+    ]
+    
+    tasks = [
+        _run_field_json_extraction(field, schema, prompt, text, fragment, request, semaphore, progress_cb)
+        for field, schema, prompt, fragment in metadata_tasks
+    ]
+    
+    results_list = await asyncio.gather(*tasks)
+    
+    results = {}
+    for field, res in results_list:
+        if res:
+            results.update(res)
+        else:
+            results[field] = None
+            
+    return results
+
 async def extract_node(state: AgentState):
     settings = load_app_settings()
     mode = settings.get("extraction_mode", "single")
@@ -122,19 +196,25 @@ async def extract_node(state: AgentState):
         )
         if state.get("structured_data"):
             # --- PATH A: JSON-LD Structured Data found ---
-            if progress_cb:
-                await progress_cb({"event": "progress", "msg": "AI: JSON-LD found! Validating and converting description..."})
-            
-            # Use Single-Agent logic with the validation prompt
-            llm = get_llm(num_ctx=8190)
-            chain = structured_data_validation_prompt | llm.with_structured_output(JobDetails)
-            import json
-            import asyncio
-            result = await asyncio.wait_for(
-                chain.ainvoke({"json_ld_data": json.dumps(state["structured_data"], indent=2)}),
-                timeout=300
-            )
-            return {"extracted_data": result.model_dump(), "error": None}
+            if mode == "multi":
+                if progress_cb:
+                    await progress_cb({"event": "progress", "msg": "AI: JSON-LD found! Using Multi-Agent JSON extraction..."})
+                results = await _run_multi_agent_json_extraction(state["structured_data"], state["text"], request, progress_cb)
+                return {"extracted_data": results, "error": None}
+            else:
+                if progress_cb:
+                    await progress_cb({"event": "progress", "msg": "AI: JSON-LD found! Validating and converting description..."})
+                
+                # Use Single-Agent logic with the validation prompt
+                llm = get_llm(num_ctx=8190)
+                chain = structured_data_validation_prompt | llm.with_structured_output(JobDetails)
+                import json
+                import asyncio
+                result = await asyncio.wait_for(
+                    chain.ainvoke({"json_ld_data": json.dumps(state["structured_data"], indent=2)}),
+                    timeout=600
+                )
+                return {"extracted_data": result.model_dump(), "error": None}
 
         if mode == "multi":
             results = await _run_multi_agent_extraction(state["text"], state.get("url"), request, progress_cb)
@@ -155,7 +235,7 @@ async def extract_node(state: AgentState):
                     "text": state["text"],
                     "url": state.get("url") or "Not provided"
                 }),
-                timeout=300
+                timeout=600
             )
             return {"extracted_data": result.model_dump(), "error": None}
     except asyncio.TimeoutError:
