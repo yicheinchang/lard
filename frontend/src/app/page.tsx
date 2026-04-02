@@ -9,8 +9,9 @@ import { JobDetailView } from '@/components/JobDetailView';
 import { SettingsPage } from '@/components/SettingsPage';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
 import { FilterPopover, FilterCriteria } from '@/components/FilterPopover';
-import { Job, getJobs, createJob, updateJob, uploadJobDocument, addInterviewStep } from '@/lib/api';
+import { Job, getJobs, createJob, updateJob, uploadJobDocumentStream, addInterviewStep } from '@/lib/api';
 import { useView } from '@/lib/ViewContext';
+import { ProcessingOverlay } from '@/components/ProcessingOverlay';
 
 export default function Home() {
   const [jobs, setJobs] = useState<Job[]>([]);
@@ -40,6 +41,16 @@ export default function Home() {
   // Status transition state
   const [showAdvanceToApplied, setShowAdvanceToApplied] = useState(false);
   const [pendingStatusUpdate, setPendingStatusUpdate] = useState<{id: number, status: string} | null>(null);
+
+  // Document upload state (for status transitions)
+  const [isUploadingDoc, setIsUploadingDoc] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+  const [uploadTasks, setUploadTasks] = useState([
+    { id: 'upload', label: 'Uploading file...', status: 'waiting' as any },
+    { id: 'extract', label: 'Extracting content...', status: 'waiting' as any },
+    { id: 'vectorize', label: 'Generating embeddings...', status: 'waiting' as any },
+    { id: 'finalize', label: 'Finalizing...', status: 'waiting' as any },
+  ]);
 
   const filteredAndSortedJobs = useMemo(() => {
     let result = jobs.filter(job => {
@@ -174,11 +185,39 @@ export default function Home() {
       
       await updateJob(id, updateData);
       if (file && docType) {
-        await uploadJobDocument(id, file, docType);
+        setIsUploadingDoc(true);
+        setUploadError(null);
+        setUploadTasks(prev => prev.map(t => ({ ...t, status: 'waiting' })));
+
+        try {
+          await uploadJobDocumentStream(id, file, docType, (event, msg) => {
+            if (event === 'progress') {
+              setUploadTasks(prev => {
+                const currentTasks = [...prev];
+                if (msg.includes('Initializing') || msg.includes('Saving')) currentTasks[0].status = 'loading';
+                else if (msg.includes('Registering')) { currentTasks[0].status = 'completed'; currentTasks[1].status = 'loading'; }
+                else if (msg.includes('Extracting')) currentTasks[1].status = 'loading';
+                else if (msg.includes('vectorizing')) { currentTasks[1].status = 'completed'; currentTasks[2].status = 'loading'; }
+                else if (msg.includes('Finalizing')) { currentTasks[2].status = 'completed'; currentTasks[3].status = 'loading'; }
+                return currentTasks;
+              });
+            } else if (event === 'completed') {
+              setUploadTasks(prev => prev.map(t => ({ ...t, status: 'completed' })));
+              fetchJobs();
+            } else if (event === 'error') {
+              setUploadError(msg);
+              setUploadTasks(prev => prev.map(t => t.status === 'loading' ? { ...t, status: 'error' } : t));
+            }
+          });
+        } catch (err: any) {
+          console.error("Failed to upload during status update", err);
+          setUploadError(err.message || 'Upload failed');
+        }
+      } else {
+        await fetchJobs();
       }
-      await fetchJobs();
     } catch (error) {
-      console.error('Failed to update status or upload file', error);
+      console.error('Failed to update status', error);
     }
   };
 
@@ -204,11 +243,41 @@ export default function Home() {
         applied_date: date ? new Date(date).toISOString() : new Date().toISOString()
       });
       if (file) {
-        await uploadJobDocument(pendingStatusUpdate.id, file, 'resume');
+        setIsUploadingDoc(true);
+        setUploadError(null);
+        setUploadTasks(prev => prev.map(t => ({ ...t, status: 'waiting' })));
+
+        try {
+          await uploadJobDocumentStream(pendingStatusUpdate.id, file, 'resume', (event, msg) => {
+            if (event === 'progress') {
+              setUploadTasks(prev => {
+                const currentTasks = [...prev];
+                if (msg.includes('Initializing') || msg.includes('Saving')) currentTasks[0].status = 'loading';
+                else if (msg.includes('Registering')) { currentTasks[0].status = 'completed'; currentTasks[1].status = 'loading'; }
+                else if (msg.includes('Extracting')) currentTasks[1].status = 'loading';
+                else if (msg.includes('vectorizing')) { currentTasks[1].status = 'completed'; currentTasks[2].status = 'loading'; }
+                else if (msg.includes('Finalizing')) { currentTasks[2].status = 'completed'; currentTasks[3].status = 'loading'; }
+                return currentTasks;
+              });
+            } else if (event === 'completed') {
+              setUploadTasks(prev => prev.map(t => ({ ...t, status: 'completed' })));
+              setShowAdvanceToApplied(false);
+              setPendingStatusUpdate(null);
+              fetchJobs();
+            } else if (event === 'error') {
+              setUploadError(msg);
+              setUploadTasks(prev => prev.map(t => t.status === 'loading' ? { ...t, status: 'error' } : t));
+            }
+          });
+        } catch (err: any) {
+          console.error("Failed to upload during advance to applied", err);
+          setUploadError(err.message || 'Upload failed');
+        }
+      } else {
+        setShowAdvanceToApplied(false);
+        setPendingStatusUpdate(null);
+        await fetchJobs();
       }
-      setShowAdvanceToApplied(false);
-      setPendingStatusUpdate(null);
-      await fetchJobs();
     } catch (error) {
       console.error('Failed to advance to applied', error);
     }
@@ -401,6 +470,14 @@ export default function Home() {
         accept=".pdf,.md"
         variant="default"
       />
+
+      <ProcessingOverlay
+        isOpen={isUploadingDoc}
+        tasks={uploadTasks}
+        title="Processing Document"
+        error={uploadError}
+        onClose={() => setIsUploadingDoc(false)}
+      />
     </div>
   );
-}
+};
