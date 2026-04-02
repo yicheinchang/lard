@@ -1,13 +1,14 @@
 "use client";
 
 import { useEffect, useState, useMemo } from 'react';
-import { Plus, Briefcase, Search, X, ArrowDownAZ, ArrowUpAZ, ChevronDown } from 'lucide-react';
+import { Plus, Briefcase, Search, X, ArrowDownAZ, ArrowUpAZ, ChevronDown, SlidersHorizontal } from 'lucide-react';
 import { KanbanBoard } from '@/components/KanbanBoard';
 import { TableView } from '@/components/TableView';
 import { AddJobModal } from '@/components/AddJobModal';
 import { JobDetailView } from '@/components/JobDetailView';
 import { SettingsPage } from '@/components/SettingsPage';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
+import { FilterPopover, FilterCriteria } from '@/components/FilterPopover';
 import { Job, getJobs, createJob, updateJob, uploadJobDocument, addInterviewStep } from '@/lib/api';
 import { useView } from '@/lib/ViewContext';
 
@@ -23,6 +24,18 @@ export default function Home() {
   const [sortKey, setSortKey] = useState<string>('last_updated');
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
   const [showSortMenu, setShowSortMenu] = useState(false);
+  const [isFilterOpen, setIsFilterOpen] = useState(false);
+  
+  const initialFilterCriteria: FilterCriteria = {
+    appliedDateStart: '',
+    appliedDateEnd: '',
+    closingSoonDays: 7,
+    showOnlyClosingSoon: false,
+    staleDays: 14,
+    showOnlyStale: false,
+    statuses: [],
+  };
+  const [filterCriteria, setFilterCriteria] = useState<FilterCriteria>(initialFilterCriteria);
   
   // Status transition state
   const [showAdvanceToApplied, setShowAdvanceToApplied] = useState(false);
@@ -30,14 +43,52 @@ export default function Home() {
 
   const filteredAndSortedJobs = useMemo(() => {
     let result = jobs.filter(job => {
+      // 1. Text Search
       if (searchQuery) {
         const q = searchQuery.toLowerCase();
-        return (
+        const matchesSearch = (
           job.company?.toLowerCase().includes(q) ||
           job.role?.toLowerCase().includes(q) ||
           (job.location || '').toLowerCase().includes(q)
         );
+        if (!matchesSearch) return false;
       }
+
+      // 2. Status Filter
+      if (filterCriteria.statuses.length > 0) {
+        if (!filterCriteria.statuses.includes(job.status)) return false;
+      }
+
+      // 3. Date Range Filter
+      if (filterCriteria.appliedDateStart) {
+        if (!job.applied_date || new Date(job.applied_date) < new Date(filterCriteria.appliedDateStart)) return false;
+      }
+      if (filterCriteria.appliedDateEnd) {
+        // Add 1 day to end date to include the entire day
+        const end = new Date(filterCriteria.appliedDateEnd);
+        end.setDate(end.getDate() + 1);
+        if (!job.applied_date || new Date(job.applied_date) >= end) return false;
+      }
+
+      // 4. Closing Soon Filter
+      if (filterCriteria.showOnlyClosingSoon) {
+        if (!job.application_deadline) return false;
+        const deadline = new Date(job.application_deadline);
+        const today = new Date();
+        const threshold = new Date();
+        threshold.setDate(today.getDate() + filterCriteria.closingSoonDays);
+        if (deadline < today || deadline > threshold) return false;
+      }
+
+      // 5. Stale Filter
+      if (filterCriteria.showOnlyStale) {
+        const lastUpdated = new Date(job.last_updated);
+        const today = new Date();
+        const threshold = new Date();
+        threshold.setDate(today.getDate() - filterCriteria.staleDays);
+        if (lastUpdated > threshold) return false;
+      }
+
       return true;
     });
 
@@ -71,7 +122,13 @@ export default function Home() {
     });
 
     return result;
-  }, [jobs, searchQuery, sortKey, sortDir]);
+  }, [jobs, searchQuery, sortKey, sortDir, filterCriteria]);
+
+  const availableStatuses = useMemo(() => {
+    const defaultStatuses = ["Wishlist", "Applied", "Interviewing", "Offered", "Rejected", "Closed", "Discontinued"];
+    const foundStatuses = Array.from(new Set(jobs.map(j => j.status)));
+    return Array.from(new Set([...defaultStatuses, ...foundStatuses])).sort();
+  }, [jobs]);
 
   const fetchJobs = async () => {
     setIsLoading(true);
@@ -214,6 +271,32 @@ export default function Home() {
                 <X className="w-3.5 h-3.5" />
               </button>
             )}
+          </div>
+
+          <div className="relative">
+            <button
+              onClick={() => setIsFilterOpen(!isFilterOpen)}
+              className={`flex items-center gap-2 bg-[var(--surface)] hover:bg-[var(--surface-hover)] border px-3 py-2 rounded-xl text-sm font-medium transition-all shadow-sm ${
+                isFilterOpen || Object.values(filterCriteria).some(v => Array.isArray(v) ? v.length > 0 : (typeof v === 'boolean' ? v : (v === 7 ? false : (v === 14 ? false : !!v)))) 
+                ? 'border-violet-500 text-violet-400' 
+                : 'border-[var(--border-color)] text-[var(--fg)]'
+              }`}
+            >
+              <SlidersHorizontal className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">Filters</span>
+              {(filterCriteria.statuses.length > 0 || filterCriteria.showOnlyClosingSoon || filterCriteria.showOnlyStale || filterCriteria.appliedDateStart) && (
+                <span className="w-1.5 h-1.5 bg-violet-500 rounded-full" />
+              )}
+            </button>
+
+            <FilterPopover
+              isOpen={isFilterOpen}
+              onClose={() => setIsFilterOpen(false)}
+              criteria={filterCriteria}
+              onChange={setFilterCriteria}
+              onClear={() => setFilterCriteria(initialFilterCriteria)}
+              availableStatuses={availableStatuses}
+            />
           </div>
 
           <div className="relative">
