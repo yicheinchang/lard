@@ -392,20 +392,28 @@ async def description_validator_node(state: AgentState):
     validator = description_validation_prompt | llm.with_structured_output(DescriptionValidation)
     
     try:
-        raw_source = state.get("structured_data", {}).get("description", "") if state.get("structured_data") else state["text"]
+        is_json_ld = state.get("structured_data") is not None
+        source_type = "JSON-LD" if is_json_ld else "TEXT"
+        raw_source = state.get("structured_data", {}).get("description", "") if is_json_ld else state["text"]
+        
         result = await asyncio.wait_for(
-            validator.ainvoke({"source_text": str(raw_source)[:5000], "generated_description": str(description)}),
+            validator.ainvoke({
+                "source_type": source_type,
+                "source_text": str(raw_source)[:5000], 
+                "generated_description": str(description)
+            }),
             timeout=180
         )
         
-        if not result.is_valid:
-            print(f"\n[AI VALIDATOR] Validation Failed (Attempt {retries + 1}/3):")
-            print(f" > WHY: {result.failure_reason}")
-            print(f" > WHERE: Snippet near failure: {str(description)[:300]}...")
+        failed = not result.is_valid or not result.is_complete
+        if failed:
+            reason = result.failure_reason or "Unknown validation error"
+            print(f"\n[AI VALIDATOR] Validation Failed ({source_type} Mode) (Attempt {retries + 1}/3):")
+            print(f" > WHY: {reason}")
             
             if progress_cb:
-                 await progress_cb({"event": "progress", "msg": f"AI Validator issue: {result.failure_reason}"})
-            return {"retries": retries + 1, "validation_feedback": result.failure_reason}
+                 await progress_cb({"event": "progress", "msg": f"AI Validator issue: {reason}"})
+            return {"retries": retries + 1, "validation_feedback": reason}
             
         return {"extracted_data": extracted, "validation_feedback": None}
     except Exception as e:

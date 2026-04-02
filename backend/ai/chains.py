@@ -79,10 +79,11 @@ deadline_date_prompt = _create_metadata_prompt("application_deadline", "Extract 
 description_extraction_prompt = ChatPromptTemplate.from_messages([
     ("system", "You are an expert at extracting job details from a job posting."
                "Reformat the COMPLETE job/position description, use clean Markdown structure but PRESERVE VERBATIM text. "
-                "Do NOT rephrase, do NOT add your own labels or categories. "
-               "Include existing sections (e.g., 'About the Role', 'Responsibilities', 'Qualifications' etc.) ONLY if they are explicitly present in the source. The section may be named differently, but it will be obvious. "
-               "Do NOT invent new headers or restructure the document. "
-               "SKIP legal boilerplate, EEO statements, and cookie notices. "
+               "Include existing sections (e.g., 'About the Role', 'Responsibilities', 'Qualifications' etc.) ONLY if they are explicitly present in the source. "
+               "Do NOT rephrase, do NOT add your own labels or categories, and do NOT invent new headers. "
+               "CRITICAL: Ensure the summary is COMPLETE. Do NOT truncate lists or skip items at the end of sections. "
+               "Verify that the LAST items in any 'Responsibilities' or 'Requirements' lists are captured verbatim. "
+               "SKIP legal boilerplate, EEO statements, and cookie notices ONLY if they are clearly separate from the job-related content."
                "Do not make up information if it is not present in the text.\n"
                "CRITICAL: Do NOT wrap the output in ```markdown blocks.\n\n{custom_guidance}"),
     ("user", "CONTENT TO PROCESS:\n\"\"\"\n{text}\n\"\"\"")
@@ -129,24 +130,28 @@ description_json_prompt = ChatPromptTemplate.from_messages([
                "Convert the provided HTML from the JSON 'description' field to clean Markdown structure. "
                "PRESERVE VERBATIM text. Do NOT rephrase. "
                "Do NOT add new headers, titles, or categories if they are not in the source HTML. "
+               "CRITICAL: Capture EVERYTHING within the source field. Do NOT skip items, lists, or boilerplate sections (like 'Working with Us' or EEO statements) as they are part of the original record. "
+               "Pay special attention to transition points in HTML (e.g., between nested lists or <ul> tags) to ensure constant coverage. "
                "Do not make up information if it is not present in the text.\n"
                "CRITICAL: Do NOT wrap the output in ```markdown blocks.\n\n{custom_guidance}"),
     ("user", "JSON DESCRIPTION HTML:\n{json_fragment}")
 ])
 
 class DescriptionValidation(BaseModel):
-    is_valid: bool = Field(description="True if the description is formatted correctly as clean Markdown, does NOT contain AI filler/conversational wrappers (like 'Here is the output:'), and matches the source text verbatim. False otherwise.")
-    failure_reason: str | None = Field(default=None, description="If is_valid is False, provide a concise explanation of what the AI hallucinated or broke (e.g. 'Contains ```markdown wrapper', 'Includes AI conversational filler').")
+    is_valid: bool = Field(description="True if the description is formatted correctly as clean Markdown and does NOT contain AI filler/conversational wrappers.")
+    is_complete: bool = Field(description="True if the generated description contains ALL relevant information from the source, specifically ensuring the LAST items in lists and sections are present. True for JSON-LD if everything is present.")
+    failure_reason: str | None = Field(default=None, description="If is_valid or is_complete is False, provide a concise explanation (e.g. 'Missing the final responsibility item', 'Includes AI conversational filler').")
 
 description_validation_prompt = ChatPromptTemplate.from_messages([
     ("system", "You are an expert QA agent. Your job is to validate a generated Job Description against its original source. "
-               "The CORE GOAL is to detect AI Hallucinations (content not present in the source). "
+               "You must check for both HALLUCINATIONS (added info) and COMPLETENESS (missing info). "
                "RULES:\n"
-               "1. AI HALLUCINATION: set is_valid=False if the LLM has invented information, facts, or sections that do not exist in the RAW SOURCE.\n"
-               "2. FORMATTING: Clean Markdown formatting (bold, bullet points, headers) is EXPECTED and CORRECT, even if the source was raw HTML/text.\n"
-               "3. VERBATIM: While formatting is flexible, the text content itself must remain verbatim. Minor punctuation or whitespace fixes are fine.\n"
-               "4. BOILERPLATE: If the RAW SOURCE contains promotional/company boilerplate (like 'Working with Us'), it IS valid to include it. Do not reject content just because it isn't 'strictly' a job duty.\n"
-               "5. FENCING: MUST NOT contain literal ````markdown` block wrappers.\n"
-               "When evaluating, focus primarily on ensuring the AI didn't 'make things up'."),
-    ("user", "RAW SOURCE:\n\"\"\"\n{source_text}\n\"\"\"\n\nGENERATED DESCRIPTION:\n\"\"\"\n{generated_description}\n\"\"\"")
+               "1. AI HALLUCINATION: set is_valid=False if the LLM invented information not in the RAW SOURCE.\n"
+               "2. COMPLETENESS: set is_complete=False if the LLM truncated items or missed content. "
+               "Check specifically if the LAST items in each section of the RAW SOURCE are present in the GENERATED DESCRIPTION.\n"
+               "3. CONTEXT: If the source is 'JSON-LD', the generated description MUST contain everything from the source. If 'TEXT', it must contain all relevant job info.\n"
+               "4. FORMATTING: Clean Markdown is expected. Minor punctuation/whitespace fixes are fine.\n"
+               "5. FENCING: MUST NOT contain ```markdown blocks.\n"
+               "If both is_valid and is_complete are true, the output is accepted."),
+    ("user", "SOURCE TYPE: {source_type}\n\nRAW SOURCE:\n\"\"\"\n{source_text}\n\"\"\"\n\nGENERATED DESCRIPTION:\n\"\"\"\n{generated_description}\n\"\"\"")
 ])
