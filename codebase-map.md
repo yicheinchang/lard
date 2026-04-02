@@ -63,7 +63,8 @@ This document provides a summary of the project's architecture, tech stack, and 
   - `DocumentPreview.tsx`: Overlay for high-fidelity viewing of PDF and Markdown documents.
   - `Ticker.tsx`: News-ticker style progress bar for real-time AI extraction status.
   - `FilterPopover.tsx`: Advanced filtering UI for dashboard header.
-  - `ProcessingOverlay.tsx`: Global/Component-level overlay for tracking long-running AI tasks (e.g. document vectorization) with real-time SSE progress updates.
+  - `ProcessingOverlay.tsx`: Full-screen overlay for tracking long-running AI tasks (creation, manual attachments) with SSE updates.
+  - `AutoSaveIndicator.tsx`: Small, non-blocking status indicator for background AI vectorization during note taking.
   - `AddJobModal.tsx`: Core form for new applications. Includes AI Auto-fill and **Potential Hallucination Warning System**.
   - `ConfirmDialog.tsx`: Multi-functional modal replacing native prompts. Supports **Date Inputs**, **File Uploads**, and **Combobox Text Inputs** (with custom `<datalist>`). Includes variant-based styling (`danger`, `success`, `default`).
   - `ChatAssistant.tsx`: Global drawer for the AI agent.
@@ -248,7 +249,7 @@ The workspace uses a formalized rule system in `.agents/rules/workspace-role.md`
 - **Micro Git Commits**: Atomic, granular commits for every stable change.
 - **Synchronized Versioning**: Automated SemVer updates across backend and frontend.
 - **Codebase Map Sync**: Mandatory updates to this document to maintain architectural context.
-- **Git Tagging**: Automated tagging for every version bump.
+- **Git Tagging**: Automated tagging for every version = "0.33.0"
 
 ### 3. State Management (LangGraph)
 The AI assistant uses **LangGraph** to manage conversational state, enabling multi-turn workflows and tool-calling (e.g., querying the database vs. searching documents).

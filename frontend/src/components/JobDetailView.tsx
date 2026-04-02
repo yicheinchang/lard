@@ -5,11 +5,12 @@ import ReactMarkdown from 'react-markdown';
 import MdEditor from 'react-markdown-editor-lite';
 import MarkdownIt from 'markdown-it';
 import 'react-markdown-editor-lite/lib/index.css';
-import { Job, getStepTypes, StepType, addInterviewStep, updateInterviewStep, deleteInterviewStep, updateJob, uploadJobDocumentStream, deleteJobDocument, getCompanies, InterviewStep } from '../lib/api';
+import { Job, getStepTypes, StepType, addInterviewStep, updateInterviewStep, deleteInterviewStep, updateJobStream, deleteJobDocument, getCompanies, InterviewStep } from '../lib/api';
 import { X, Calendar, User, Mail, Plus, Circle, FileText, Edit2, Save, Paperclip, Trash2, ExternalLink, Link as LinkIcon, StickyNote, Send, AlertTriangle } from 'lucide-react';
 import { ConfirmDialog } from './ConfirmDialog';
 import { DocumentPreview } from './DocumentPreview';
 import { ProcessingOverlay } from './ProcessingOverlay';
+import { AutoSaveIndicator } from './AutoSaveIndicator';
 
 import { useView } from '@/lib/ViewContext';
 
@@ -140,6 +141,10 @@ export const JobDetailView: React.FC<JobDetailViewProps> = ({ job, onClose, onJo
     return () => setDirty(false); // Clear on close
   }, [isDirty, setDirty, editingStepId, isAdding]);
 
+  // Auto-save state
+  const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'vectorizing' | 'saved' | 'error'>('idle');
+  const [saveError, setSaveError] = useState<string | null>(null);
+
   // Deletion state
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
@@ -207,7 +212,7 @@ export const JobDetailView: React.FC<JobDetailViewProps> = ({ job, onClose, onJo
       setUploadTasks(prev => prev.map(t => ({ ...t, status: 'waiting' })));
 
       try {
-        await uploadJobDocumentStream(job.id, file, docUploadType, (event, msg) => {
+        await updateJobStream(job.id, { file }, (event, msg) => {
           if (event === 'progress') {
             setUploadTasks(prev => {
               const currentTasks = [...prev];
@@ -272,26 +277,32 @@ export const JobDetailView: React.FC<JobDetailViewProps> = ({ job, onClose, onJo
     }
   }, [job]);
 
-  // Debounced auto-save for job notes
+  // Debounced notes auto-save
   useEffect(() => {
-    if (!job || job.notes === jobNotes) return;
-
-    const timeoutId = setTimeout(async () => {
-      setIsSavingNotes(true);
-      try {
-        await updateJob(job.id!, { 
-          notes: jobNotes,
-          last_operation: "Updated Notes"
-        } as any);
-      } catch (err) {
-        console.error("Failed to auto-save notes", err);
-      } finally {
-        setIsSavingNotes(false);
-      }
-    }, 1000);
-
-    return () => clearTimeout(timeoutId);
-  }, [jobNotes, job?.id]);
+    if (job?.id && jobNotes !== undefined && jobNotes !== job.notes) {
+      setSaveStatus('saving');
+      const timer = setTimeout(async () => {
+        try {
+          await updateJobStream(job.id!, { notes: jobNotes }, (event, msg) => {
+            if (event === 'progress' && msg.includes('Vectorizing')) {
+              setSaveStatus('vectorizing');
+            } else if (event === 'completed') {
+              setSaveStatus('saved');
+              onJobUpdated();
+              setTimeout(() => setSaveStatus('idle'), 2000);
+            } else if (event === 'error') {
+              setSaveStatus('error');
+              setSaveError(msg);
+            }
+          });
+        } catch (err: any) {
+          setSaveStatus('error');
+          setSaveError(err.message || 'Auto-save failed');
+        }
+      }, 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [jobNotes, job?.id, job?.notes]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const sortedSteps = useMemo(() => {
     let steps = job?.steps ? [...job.steps] : [];
@@ -501,9 +512,37 @@ export const JobDetailView: React.FC<JobDetailViewProps> = ({ job, onClose, onJo
         return;
       }
 
-      await updateJob(job.id!, cleanData);
-      setIsEditingInfo(false);
-      onJobUpdated();
+      if (job?.id) {
+        setIsUploadingDoc(true);
+        setUploadError(null);
+        setUploadTasks(prev => prev.map(t => ({ ...t, status: 'waiting' })));
+
+        try {
+          await updateJobStream(job.id, { ...cleanData }, (event, msg) => {
+            if (event === 'progress') {
+              setUploadTasks(prev => {
+                const currentTasks = [...prev];
+                if (msg.includes('Applying')) currentTasks[0].status = 'loading';
+                else if (msg.includes('Vectorizing job description')) {
+                  currentTasks[0].status = 'completed';
+                  currentTasks[1].status = 'completed';
+                  currentTasks[2].status = 'waiting';
+                  currentTasks[3].status = 'loading';
+                }
+                return currentTasks;
+              });
+            } else if (event === 'completed') {
+              setUploadTasks(prev => prev.map(t => t.status === 'loading' || t.status === 'waiting' ? { ...t, status: 'completed' } : t));
+              setIsEditingInfo(false);
+              onJobUpdated();
+            } else if (event === 'error') {
+              setUploadError(msg);
+            }
+          });
+        } catch (err: any) {
+          setUploadError(err.message || 'Failed to save job details');
+        }
+      }
     } catch (error: any) {
       console.error("Failed to update job info", error);
       const detail = error?.response?.data?.detail;
@@ -885,8 +924,10 @@ export const JobDetailView: React.FC<JobDetailViewProps> = ({ job, onClose, onJo
               </div>
 
               <div className="w-full lg:w-80 space-y-6 flex-shrink-0">
-                <div className="flex items-center justify-between border-b border-[var(--border-color)] pb-2">
-                  <h3 className="text-lg font-semibold text-[var(--fg)] opacity-90">Contacts & Details</h3>
+                <div className="flex items-center gap-2">
+                  <StickyNote className="w-5 h-5 text-violet-400" />
+                  <h3 className="text-lg font-bold text-white tracking-tight">Application Notes</h3>
+                  <AutoSaveIndicator status={saveStatus} error={saveError} />
                 </div>
                 
                 {isEditingInfo ? (

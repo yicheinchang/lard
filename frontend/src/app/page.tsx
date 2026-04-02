@@ -9,7 +9,7 @@ import { JobDetailView } from '@/components/JobDetailView';
 import { SettingsPage } from '@/components/SettingsPage';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
 import { FilterPopover, FilterCriteria } from '@/components/FilterPopover';
-import { Job, getJobs, createJob, updateJob, uploadJobDocumentStream, addInterviewStep } from '@/lib/api';
+import { Job, getJobs, createJobStream, updateJobStream, uploadJobDocumentStream, addInterviewStep } from '@/lib/api';
 import { useView } from '@/lib/ViewContext';
 import { ProcessingOverlay } from '@/components/ProcessingOverlay';
 
@@ -183,13 +183,36 @@ export default function Home() {
         updateData.applied_date = new Date(date).toISOString();
       }
       
-      await updateJob(id, updateData);
-      if (file && docType) {
-        setIsUploadingDoc(true);
-        setUploadError(null);
-        setUploadTasks(prev => prev.map(t => ({ ...t, status: 'waiting' })));
+      setIsUploadingDoc(true);
+      setUploadError(null);
+      setUploadTasks(prev => prev.map(t => ({ ...t, status: 'waiting' })));
 
-        try {
+      try {
+        await updateJobStream(id, updateData, (event, msg) => {
+          if (event === 'progress') {
+            setUploadTasks(prev => {
+              const currentTasks = [...prev];
+              if (msg.includes('Applying')) currentTasks[0].status = 'loading';
+              else if (msg.includes('Vectorizing')) {
+                 currentTasks[0].status = 'completed';
+                 currentTasks[3].status = 'loading';
+              }
+              return currentTasks;
+            });
+          } else if (event === 'completed') {
+            if (!file) {
+              setUploadTasks(prev => prev.map(t => ({ ...t, status: 'completed' })));
+              fetchJobs();
+            }
+          } else if (event === 'error') {
+            setUploadError(msg);
+          }
+        });
+        
+        if (file && docType) {
+          // If we also had a file, we continue with the document stream
+          // Note: The backend update_job_stream doesn't handle files, only create_job_stream does.
+          // For updates with files, we still use the separate upload stream.
           await uploadJobDocumentStream(id, file, docType, (event, msg) => {
             if (event === 'progress') {
               setUploadTasks(prev => {
@@ -206,15 +229,12 @@ export default function Home() {
               fetchJobs();
             } else if (event === 'error') {
               setUploadError(msg);
-              setUploadTasks(prev => prev.map(t => t.status === 'loading' ? { ...t, status: 'error' } : t));
             }
           });
-        } catch (err: any) {
-          console.error("Failed to upload during status update", err);
-          setUploadError(err.message || 'Upload failed');
         }
-      } else {
-        await fetchJobs();
+      } catch (err: any) {
+        console.error("Failed to update status", err);
+        setUploadError(err.message || 'Update failed');
       }
     } catch (error) {
       console.error('Failed to update status', error);
@@ -237,16 +257,34 @@ export default function Home() {
 
   const confirmAdvanceToApplied = async (date?: string, file?: File | null) => {
     if (!pendingStatusUpdate) return;
+    setIsUploadingDoc(true);
+    setUploadError(null);
+    setUploadTasks(prev => prev.map(t => ({ ...t, status: 'waiting' })));
+
     try {
-      await updateJob(pendingStatusUpdate.id, { 
+      await updateJobStream(pendingStatusUpdate.id, { 
         status: pendingStatusUpdate.status,
         applied_date: date ? new Date(date).toISOString() : new Date().toISOString()
+      }, (event, msg) => {
+          if (event === 'progress') {
+            setUploadTasks(prev => {
+              const currentTasks = [...prev];
+              if (msg.includes('Applying')) currentTasks[0].status = 'loading';
+              return currentTasks;
+            });
+          } else if (event === 'completed') {
+            if (!file) {
+              setShowAdvanceToApplied(false);
+              setPendingStatusUpdate(null);
+              setUploadTasks(prev => prev.map(t => ({ ...t, status: 'completed' })));
+              fetchJobs();
+            }
+          } else if (event === 'error') {
+            setUploadError(msg);
+          }
       });
-      if (file) {
-        setIsUploadingDoc(true);
-        setUploadError(null);
-        setUploadTasks(prev => prev.map(t => ({ ...t, status: 'waiting' })));
 
+      if (file) {
         try {
           await uploadJobDocumentStream(pendingStatusUpdate.id, file, 'resume', (event, msg) => {
             if (event === 'progress') {
@@ -266,27 +304,27 @@ export default function Home() {
               fetchJobs();
             } else if (event === 'error') {
               setUploadError(msg);
-              setUploadTasks(prev => prev.map(t => t.status === 'loading' ? { ...t, status: 'error' } : t));
             }
           });
         } catch (err: any) {
-          console.error("Failed to upload during advance to applied", err);
+          console.error("Failed to upload resume during advance", err);
           setUploadError(err.message || 'Upload failed');
         }
-      } else {
-        setShowAdvanceToApplied(false);
-        setPendingStatusUpdate(null);
-        await fetchJobs();
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Failed to advance to applied', error);
+      setUploadError(error.message || 'Update failed');
     }
   };
 
-  const handleAddJob = async (job: Partial<Job>) => {
-    const created = await createJob(job);
-    await fetchJobs();
-    return created; // return so modal can attach documents to the new job
+  const handleAddJob = async (job: Partial<Job>, file: File | null, onProgress: (event: string, msg: string, data?: any) => void) => {
+    try {
+      await createJobStream(job, file, onProgress);
+      await fetchJobs();
+    } catch (error) {
+      console.error('Failed to add job via stream', error);
+      throw error;
+    }
   };
 
   const handleJobClick = (job: Job | null) => {

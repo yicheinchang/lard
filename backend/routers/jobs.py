@@ -177,106 +177,158 @@ def get_or_create_step_type(db: Session, name: str) -> StepType:
 def read_jobs(db: Session = Depends(get_db)):
     return db.query(JobApplication).options(joinedload(JobApplication.steps).joinedload(InterviewStep.step_type), joinedload(JobApplication.documents)).order_by(JobApplication.applied_date.desc()).all()
 
-@router.post("/jobs/", response_model=JobResponse)
-def create_job(job: JobCreate, db: Session = Depends(get_db)):
-    job_data = job.model_dump()
-    
-    # Handle company linkage
-    if job.company:
-        company = get_or_create_company(db, job.company)
-        job_data["company_id"] = company.id
-        job_data["company"] = company.name # Keep name for legacy / convenience
-        
-    db_job = JobApplication(**job_data)
-    db.add(db_job)
-    db.commit()
-    db.refresh(db_job)
-    
-    if db_job.description:
-        try:
-            from database.vector_store import get_vector_store_manager
-            get_vector_store_manager().ingest_text(
-                document_id=f"job_{db_job.id}",
-                text=db_job.description,
-                metadata={"job_id": db_job.id, "source": f"{db_job.company} - {db_job.role}", "type": "job_description"}
-            )
-        except Exception as e:
-            print(f"Warning: Failed to vectorize job description {db_job.id}: {e}")
-            
     # Initial status calculation
     update_job_status(db_job, db, operation="Job Created")
     db.refresh(db_job)
     return db_job
 
-@router.put("/jobs/{job_id}", response_model=JobResponse)
-def update_job(job_id: int, job_update: JobUpdate, db: Session = Depends(get_db)):
-    db_job = db.query(JobApplication).filter(JobApplication.id == job_id).first()
-    if not db_job:
-        raise HTTPException(status_code=404, detail="Job not found")
-    
-    # Very permissive dict update to allow dynamic patch from the UI form
-    
-    # 0. Check for actual changes to avoid "Ghost" updates (Item 5)
-    update_data = job_update.model_dump(exclude_unset=True)
-    
-    # Special check: is the updated data actually different from current?
-    is_actually_different = False
-    for key, value in update_data.items():
-        if hasattr(db_job, key):
-            current_val = getattr(db_job, key)
-            # Normalize ISO strings for date comparison if needed, or rely on loose equality
-            if current_val != value:
-                is_actually_different = True
-                break
-    
-    if not is_actually_different:
-        return db_job
+@router.post("/jobs/stream")
+async def create_job_stream(
+    job_data_str: str = Form(...), # JSON string of JobCreate
+    file: Optional[UploadFile] = File(None),
+    db: Session = Depends(get_db)
+):
+    """Streaming version of job creation to show progress during vectorization."""
+    async def generate():
+        try:
+            yield f"data: {json.dumps({'event': 'progress', 'msg': 'Saving job metadata...'})}\n\n"
+            
+            job_dict = json.loads(job_data_str)
+            if "company" in job_dict and job_dict["company"]:
+                company = get_or_create_company(db, job_dict["company"])
+                job_dict["company_id"] = company.id
+                job_dict["company"] = company.name
 
-    status_changed = "status" in update_data and update_data["status"] != db_job.status
-    description_changed = "description" in update_data and update_data["description"] != db_job.description
-    notes_changed = "notes" in update_data and update_data["notes"] != db_job.notes
-    
-    # Maintain company sync if name is updated or ID is provided
-    if "company" in update_data and update_data["company"]:
-        company = get_or_create_company(db, update_data["company"])
-        update_data["company_id"] = company.id
-        update_data["company"] = company.name
-        
-    for key, value in update_data.items():
-        if hasattr(db_job, key):
-            setattr(db_job, key, value)
-    
-    db.commit()
-    
-    # Determine operation. If caller provided last_operation (e.g. "Updated Notes" from UI), use it
-    operation = update_data.get("last_operation") or "Modified Job Details"
-    
-    update_job_status(db_job, db, operation=operation)
-    db.refresh(db_job)
-    
-    if description_changed and db_job.description:
-        try:
-            from database.vector_store import get_vector_store_manager
-            get_vector_store_manager().ingest_text(
-                document_id=f"job_{db_job.id}",
-                text=db_job.description,
-                metadata={"job_id": db_job.id, "source": f"{db_job.company} - {db_job.role}", "type": "job_description"}
-            )
-        except Exception as e:
-            print(f"Warning: Failed to vectorize job description {db_job.id}: {e}")
+            db_job = JobApplication(**job_dict)
+            db.add(db_job)
+            db.commit()
+            db.refresh(db_job)
+
+            # 1. Handle File Attachment (Job Post)
+            if file:
+                yield f"data: {json.dumps({'event': 'progress', 'msg': 'Uploading job post document...'})}\n\n"
+                os.makedirs("uploads", exist_ok=True)
+                safe_filename = file.filename.replace(" ", "_").replace("/", "")
+                timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
+                file_path = f"uploads/{db_job.id}_{timestamp}_{safe_filename}"
+                
+                with open(file_path, "wb") as buffer:
+                    shutil.copyfileobj(file.file, buffer)
+                
+                doc = DocumentMeta(
+                    job_id=db_job.id,
+                    title=file.filename,
+                    doc_type="job_post",
+                    file_path=f"/{file_path}"
+                )
+                db.add(doc)
+                db.commit()
+                db.refresh(doc)
+
+                yield f"data: {json.dumps({'event': 'progress', 'msg': 'Vectorizing document content...'})}\n\n"
+                if file_path.endswith('.pdf'):
+                    from langchain_community.document_loaders import PyPDFLoader
+                    loader = PyPDFLoader(file_path)
+                    pages = loader.load()
+                    text = "\n".join([p.page_content for p in pages])
+                else:
+                    with open(file_path, "r", encoding="utf-8") as f:
+                        text = f.read()
+                
+                from database.vector_store import get_vector_store_manager
+                get_vector_store_manager().ingest_text(
+                    document_id=f"doc_{doc.id}", 
+                    text=text, 
+                    metadata={"job_id": db_job.id, "source": doc.title, "type": "document"}
+                )
+
+            # 2. Handle Description Vectorization (if not already covered by file extraction)
+            if db_job.description:
+                yield f"data: {json.dumps({'event': 'progress', 'msg': 'Vectorizing job description...'})}\n\n"
+                from database.vector_store import get_vector_store_manager
+                get_vector_store_manager().ingest_text(
+                    document_id=f"job_{db_job.id}",
+                    text=db_job.description,
+                    metadata={"job_id": db_job.id, "source": f"{db_job.company} - {db_job.role}", "type": "job_description"}
+                )
+
+            update_job_status(db_job, db, operation="Job Created")
+            yield f"data: {json.dumps({'event': 'completed', 'job_id': db_job.id})}\n\n"
             
-    if notes_changed and db_job.notes:
-        try:
-            from database.vector_store import get_vector_store_manager
-            get_vector_store_manager().ingest_text(
-                document_id=f"job_notes_{db_job.id}",
-                text=db_job.notes,
-                metadata={"job_id": db_job.id, "source": f"{db_job.company} - {db_job.role} (Notes)", "type": "job_notes"}
-            )
         except Exception as e:
-            print(f"Warning: Failed to vectorize job notes {db_job.id}: {e}")
-            
+            yield f"data: {json.dumps({'event': 'error', 'msg': str(e)})}\n\n"
+
+    return StreamingResponse(generate(), media_type="text/event-stream")
+
     return db_job
+
+@router.put("/jobs/{job_id}/stream")
+async def update_job_stream(job_id: int, job_update: JobUpdate, db: Session = Depends(get_db)):
+    """Streaming version of job update to show progress during vectorization."""
+    async def generate():
+        try:
+            yield f"data: {json.dumps({'event': 'progress', 'msg': 'Applying updates...'})}\n\n"
+            
+            db_job = db.query(JobApplication).filter(JobApplication.id == job_id).first()
+            if not db_job:
+                yield f"data: {json.dumps({'event': 'error', 'msg': 'Job not found'})}\n\n"
+                return
+
+            update_data = job_update.model_dump(exclude_unset=True)
+            
+            # Check for changes
+            is_actually_different = False
+            for key, value in update_data.items():
+                if hasattr(db_job, key):
+                    if getattr(db_job, key) != value:
+                        is_actually_different = True
+                        break
+            
+            if not is_actually_different:
+                yield f"data: {json.dumps({'event': 'completed', 'job_id': job_id})}\n\n"
+                return
+
+            description_changed = "description" in update_data and update_data["description"] != db_job.description
+            notes_changed = "notes" in update_data and update_data["notes"] != db_job.notes
+            
+            if "company" in update_data and update_data["company"]:
+                company = get_or_create_company(db, update_data["company"])
+                update_data["company_id"] = company.id
+                update_data["company"] = company.name
+                
+            for key, value in update_data.items():
+                if hasattr(db_job, key):
+                    setattr(db_job, key, value)
+            
+            db.commit()
+            
+            operation = update_data.get("last_operation") or "Modified Job Details"
+            update_job_status(db_job, db, operation=operation)
+
+            if description_changed and db_job.description:
+                yield f"data: {json.dumps({'event': 'progress', 'msg': 'Vectorizing job description...'})}\n\n"
+                from database.vector_store import get_vector_store_manager
+                get_vector_store_manager().ingest_text(
+                    document_id=f"job_{db_job.id}",
+                    text=db_job.description,
+                    metadata={"job_id": db_job.id, "source": f"{db_job.company} - {db_job.role}", "type": "job_description"}
+                )
+                
+            if notes_changed and db_job.notes:
+                yield f"data: {json.dumps({'event': 'progress', 'msg': 'Vectorizing job notes...'})}\n\n"
+                from database.vector_store import get_vector_store_manager
+                get_vector_store_manager().ingest_text(
+                    document_id=f"job_notes_{db_job.id}",
+                    text=db_job.notes,
+                    metadata={"job_id": db_job.id, "source": f"{db_job.company} - {db_job.role} (Notes)", "type": "job_notes"}
+                )
+            
+            yield f"data: {json.dumps({'event': 'completed', 'job_id': job_id})}\n\n"
+            
+        except Exception as e:
+            yield f"data: {json.dumps({'event': 'error', 'msg': str(e)})}\n\n"
+
+    return StreamingResponse(generate(), media_type="text/event-stream")
 
 @router.delete("/jobs/{job_id}")
 def delete_job(job_id: int, db: Session = Depends(get_db)):

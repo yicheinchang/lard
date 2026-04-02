@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Sparkles, Loader2, Link as LinkIcon, Building2, Briefcase, Plus, ChevronDown, ChevronUp, FileText, Upload, Zap, Paperclip, AlertTriangle } from 'lucide-react';
-import { extractJobFromUrl, extractJobFromPdf, uploadJobDocumentStream, checkJobDuplicate, getCompanies, Job } from '../lib/api';
+import { extractJobFromUrl, extractJobFromPdf, createJobStream, checkJobDuplicate, getCompanies, Job } from '../lib/api';
 import { useSettings } from '@/lib/SettingsContext';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
 import { ProcessingOverlay } from './ProcessingOverlay';
@@ -9,7 +9,7 @@ import { Ticker } from './Ticker';
 interface AddJobModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onAddJob: (job: Partial<Job>) => Promise<Job>;
+  onAddJob: (job: Partial<Job>, file: File | null, onProgress: (event: string, msg: string, data?: any) => void) => Promise<any>;
 }
 
 const initialFormData: Partial<Job> = {
@@ -45,9 +45,10 @@ export const AddJobModal: React.FC<AddJobModalProps> = ({ isOpen, onClose, onAdd
   const [isUploadingDoc, setIsUploadingDoc] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [uploadTasks, setUploadTasks] = useState([
-    { id: 'upload', label: 'Uploading file...', status: 'waiting' as any },
-    { id: 'extract', label: 'Extracting content...', status: 'waiting' as any },
-    { id: 'vectorize', label: 'Generating embeddings...', status: 'waiting' as any },
+    { id: 'meta', label: 'Saving job metadata...', status: 'waiting' as any },
+    { id: 'upload', label: 'Uploading job post doc...', status: 'waiting' as any },
+    { id: 'vector-doc', label: 'Vectorizing document...', status: 'waiting' as any },
+    { id: 'vector-desc', label: 'Vectorizing description...', status: 'waiting' as any },
     { id: 'finalize', label: 'Finalizing...', status: 'waiting' as any },
   ]);
 
@@ -299,60 +300,48 @@ export const AddJobModal: React.FC<AddJobModalProps> = ({ isOpen, onClose, onAdd
       }
 
       // 2. Proceed with creation
-      const cleanData = Object.fromEntries(
+      const jobData = Object.fromEntries(
         Object.entries(formData).map(([k, v]) => [k, v === '' ? null : v])
       );
-      const createdJob = await onAddJob(cleanData);
+      
+      setIsUploadingDoc(true);
+      setUploadError(null);
+      setUploadTasks(prev => prev.map(t => ({ ...t, status: 'waiting' })));
 
-      // If AI is OFF and a file was selected, attach it as a "job_post" document
-      if (!effectiveAiEnabled && selectedFile && createdJob?.id) {
-        setIsUploadingDoc(true);
-        setUploadError(null);
-        setUploadTasks(prev => prev.map(t => ({ ...t, status: 'waiting' })));
-
-        try {
-          await uploadJobDocumentStream(createdJob.id, selectedFile, 'job_post', (event, msg) => {
-            if (event === 'progress') {
-              setUploadTasks(prev => {
-                const currentTasks = [...prev];
-                if (msg.includes('Initializing') || msg.includes('Saving')) {
-                  currentTasks[0].status = 'loading';
-                } else if (msg.includes('Registering')) {
-                  currentTasks[0].status = 'completed';
-                  currentTasks[1].status = 'loading';
-                } else if (msg.includes('Extracting')) {
-                  currentTasks[1].status = 'loading';
-                } else if (msg.includes('vectorizing')) {
-                  currentTasks[1].status = 'completed';
-                  currentTasks[2].status = 'loading';
-                } else if (msg.includes('Finalizing')) {
-                  currentTasks[2].status = 'completed';
-                  currentTasks[3].status = 'loading';
-                }
-                return currentTasks;
-              });
-            } else if (event === 'completed') {
-              setUploadTasks(prev => prev.map(t => ({ ...t, status: 'completed' })));
-              // We successfully attached, we can now close
-              resetForm();
-              onClose();
-            } else if (event === 'error') {
-              setUploadError(msg);
-              setUploadTasks(prev => prev.map(t => t.status === 'loading' ? { ...t, status: 'error' } : t));
-            }
-          });
-          // Note: resetForm/onClose are called in 'completed' block
-          return; 
-        } catch (uploadErr: any) {
-          console.error('Job created, but failed to attach document:', uploadErr);
-          setUploadError(uploadErr.message || 'Failed to attach document');
-          // Don't close yet so user can see error
-          return;
-        }
+      try {
+        await onAddJob(jobData, selectedFile, (event, msg) => {
+          if (event === 'progress') {
+            setUploadTasks(prev => {
+              const currentTasks = [...prev];
+              if (msg.includes('metadata')) {
+                currentTasks[0].status = 'loading';
+              } else if (msg.includes('Uploading job post')) {
+                currentTasks[0].status = 'completed';
+                currentTasks[1].status = 'loading';
+              } else if (msg.includes('Vectorizing document')) {
+                currentTasks[1].status = 'completed';
+                currentTasks[2].status = 'loading';
+              } else if (msg.includes('Vectorizing job description')) {
+                currentTasks[0].status = 'completed';
+                currentTasks[1].status = currentTasks[1].status === 'waiting' ? 'waiting' : 'completed';
+                currentTasks[2].status = currentTasks[2].status === 'waiting' ? 'waiting' : 'completed';
+                currentTasks[3].status = 'loading';
+              }
+              return currentTasks;
+            });
+          } else if (event === 'completed') {
+            setUploadTasks(prev => prev.map(t => t.status === 'loading' || t.status === 'waiting' ? { ...t, status: 'completed' } : t));
+            resetForm();
+            onClose();
+          } else if (event === 'error') {
+            setUploadError(msg);
+            setUploadTasks(prev => prev.map(t => t.status === 'loading' ? { ...t, status: 'error' } : t));
+          }
+        });
+      } catch (error: any) {
+        setUploadError(error.message || 'Failed to add job application');
       }
-
-      resetForm();
-      onClose();
+      return; 
     } catch (err: any) {
       const detail = err?.response?.data?.detail;
       if (Array.isArray(detail)) {

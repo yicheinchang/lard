@@ -134,14 +134,87 @@ export const getJobs = async () => {
   return response.data;
 };
 
-export const createJob = async (job: Partial<Job>) => {
-  const response = await api.post('/jobs/', job);
-  return response.data;
+export const createJobStream = async (job: Partial<Job>, file: File | null, onProgress: (event: string, msg: string, data?: any) => void) => {
+  const formData = new FormData();
+  formData.append('job_data_str', JSON.stringify(job));
+  if (file) {
+    formData.append('file', file);
+  }
+
+  const response = await fetch(`http://localhost:8000/api/jobs/stream`, {
+    method: 'POST',
+    body: formData,
+  });
+
+  if (!response.ok) {
+    throw new Error(`Creation failed: ${response.statusText}`);
+  }
+
+  const reader = response.body?.getReader();
+  if (!reader) throw new Error('No reader available');
+
+  const decoder = new TextDecoder();
+  let buffer = '';
+
+  while (true) {
+    const { value, done } = await reader.read();
+    if (done) break;
+
+    buffer += decoder.decode(value, { stream: true });
+    const lines = buffer.split('\n\n');
+    buffer = lines.pop() || '';
+
+    for (const line of lines) {
+      if (line.startsWith('data: ')) {
+        try {
+          const data = JSON.parse(line.replace('data: ', ''));
+          onProgress(data.event, data.msg || '', data);
+        } catch (e) {
+          console.error('Error parsing SSE line:', e);
+        }
+      }
+    }
+  }
 };
 
-export const updateJob = async (id: number, jobUpdate: Partial<Job>) => {
-  const response = await api.put(`/jobs/${id}`, jobUpdate);
-  return response.data;
+export const updateJobStream = async (id: number, jobUpdate: Partial<Job>, onProgress: (event: string, msg: string, data?: any) => void) => {
+  const response = await fetch(`http://localhost:8000/api/jobs/${id}/stream`, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(jobUpdate),
+  });
+
+  if (!response.ok) {
+    throw new Error(`Update failed: ${response.statusText}`);
+  }
+
+  const reader = response.body?.getReader();
+  if (!reader) throw new Error('No reader available');
+
+  const decoder = new TextDecoder();
+  let buffer = '';
+
+  while (true) {
+    const { value, done } = await reader.read();
+    if (done) break;
+
+    buffer += decoder.decode(value, { stream: true });
+    const lines = buffer.split('\n\n');
+    buffer = lines.pop() || '';
+
+    for (const line of lines) {
+      if (line.startsWith('data: ')) {
+        try {
+          const data = JSON.parse(line.replace('data: ', ''));
+          onProgress(data.event, data.msg || '', data);
+        } catch (e) {
+          console.error('Error parsing SSE line:', e);
+        }
+      }
+    }
+  }
 };
 
 export const deleteJob = async (id: number) => {
