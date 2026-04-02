@@ -44,6 +44,21 @@ export function SettingsPage() {
     ollama_base_url: '', ollama_model: '',
     openai_api_key: '', openai_model: '',
   });
+  const [customPrompts, setCustomPrompts] = useState<{
+    single_agent: string;
+    multi_agent: {
+      company: string;
+      role: string;
+      location: string;
+      salary_range: string;
+      job_posted_date: string;
+      application_deadline: string;
+      description: string;
+    };
+  }>({
+    single_agent: '',
+    multi_agent: { company: '', role: '', location: '', salary_range: '', job_posted_date: '', application_deadline: '', description: '' }
+  });
 
   // UI states
   const [saving, setSaving] = useState(false);
@@ -55,6 +70,8 @@ export function SettingsPage() {
   const [rebuilding, setRebuilding] = useState(false);
   const [rebuildDone, setRebuildDone] = useState(false);
   const [showRebuildConfirm, setShowRebuildConfirm] = useState(false);
+  const [showAdvancedPrompts, setShowAdvancedPrompts] = useState(false);
+  const [activePromptField, setActivePromptField] = useState<keyof typeof customPrompts.multi_agent>('company');
 
   // Track whether embedding provider was changed (needs rebuild warning)
   const [originalEmbeddingProvider, setOriginalEmbeddingProvider] = useState<EmbeddingProvider>('default');
@@ -75,9 +92,10 @@ export function SettingsPage() {
       JSON.stringify(llmConfig) !== JSON.stringify(settings.llm_config) ||
       extractionMode !== settings.extraction_mode ||
       embeddingProvider !== settings.embedding_provider ||
-      JSON.stringify(embeddingConfig) !== JSON.stringify(settings.embedding_config)
+      JSON.stringify(embeddingConfig) !== JSON.stringify(settings.embedding_config) ||
+      JSON.stringify(customPrompts) !== JSON.stringify(settings.custom_prompts)
     );
-  }, [theme, aiEnabled, llmProvider, llmConfig, extractionMode, embeddingProvider, embeddingConfig, settings]);
+  }, [theme, aiEnabled, llmProvider, llmConfig, extractionMode, embeddingProvider, embeddingConfig, customPrompts, settings]);
 
   // Update global navigation guard
   useEffect(() => {
@@ -126,6 +144,10 @@ export function SettingsPage() {
     setEmbeddingConfig(settings.embedding_config);
     setOriginalEmbeddingProvider(settings.embedding_provider);
     setOriginalEmbeddingConfig(settings.embedding_config);
+    setCustomPrompts(settings.custom_prompts || {
+      single_agent: '',
+      multi_agent: { company: '', role: '', location: '', salary_range: '', job_posted_date: '', application_deadline: '', description: '' }
+    });
   }, [settings]);
 
   // ── Save handler ───────────────────────────────────────────────────
@@ -150,6 +172,7 @@ export function SettingsPage() {
         extraction_mode: extractionMode,
         embedding_provider: embeddingProvider,
         embedding_config: embeddingConfig,
+        custom_prompts: customPrompts,
       });
 
       setSaveStatus('saved');
@@ -260,6 +283,23 @@ export function SettingsPage() {
       onChange={e => onChange(e.target.value)}
       placeholder={placeholder}
       className="w-full rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500/40 transition-all"
+      style={{
+        backgroundColor: 'var(--input-bg)',
+        color: 'var(--fg)',
+        border: '1px solid var(--border-color)',
+      }}
+    />
+  );
+
+  const TextAreaInput = ({ value, onChange, placeholder }: {
+    value: string; onChange: (v: string) => void; placeholder?: string;
+  }) => (
+    <textarea
+      value={value}
+      onChange={e => onChange(e.target.value)}
+      placeholder={placeholder}
+      rows={3}
+      className="w-full rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500/40 transition-all resize-y custom-scrollbar"
       style={{
         backgroundColor: 'var(--input-bg)',
         color: 'var(--fg)',
@@ -526,6 +566,96 @@ export function SettingsPage() {
                 <TestButton onClick={handleTestLlm} loading={testingLlm} label="Test LLM Connection" />
               </div>
               <TestResult result={llmTestResult} />
+
+              {/* Collapsible Advanced Prompts */}
+              <div className="mt-8 pt-6 border-t border-[var(--border-color)]">
+                <button
+                  type="button"
+                  onClick={() => setShowAdvancedPrompts(!showAdvancedPrompts)}
+                  className="flex items-center justify-between w-full group"
+                >
+                  <div className="flex items-center gap-2">
+                    <Sparkles className={`w-4 h-4 ${showAdvancedPrompts ? 'text-violet-400' : 'text-[var(--fg-subtle)]'}`} />
+                    <span className="text-sm font-semibold text-[var(--fg)] group-hover:text-violet-400 transition-colors">
+                      Advanced AI Prompt Settings
+                    </span>
+                  </div>
+                  <ChevronDown className={`w-4 h-4 transition-transform duration-300 ${showAdvancedPrompts ? 'rotate-180 text-violet-400' : 'text-[var(--fg-subtle)]'}`} />
+                </button>
+
+                {showAdvancedPrompts && (
+                  <div className="mt-5 space-y-5 animate-slide-up border-l-2 border-violet-500/10 pl-5 ml-2">
+                    <div className="flex items-start gap-3 p-4 rounded-xl bg-violet-500/5 border border-violet-500/10 text-[var(--fg-muted)] text-xs">
+                      <Sparkles className="w-4 h-4 shrink-0 mt-0.5 text-violet-400" />
+                      <div>
+                        <p className="font-semibold text-violet-300">Additive Guidance</p>
+                        <p className="mt-1 opacity-80 leading-relaxed">
+                          These instructions are appended to the system prompts. Use them to fine-tune extraction behavior or enforcement.
+                        </p>
+                        <button
+                          onClick={() => setCustomPrompts({
+                            single_agent: '',
+                            multi_agent: { company: '', role: '', location: '', salary_range: '', job_posted_date: '', application_deadline: '', description: '' }
+                          })}
+                          className="mt-3 px-3 py-1.5 rounded-lg text-[10px] font-bold bg-[var(--surface)] border border-violet-500/20 hover:bg-violet-500/10 transition-all text-violet-300 uppercase tracking-tight"
+                        >
+                          Reset all prompts
+                        </button>
+                      </div>
+                    </div>
+
+                    {extractionMode === 'single' ? (
+                      <div className="space-y-2">
+                        <Label>Single-Agent System Instructions</Label>
+                        <TextAreaInput
+                          value={customPrompts.single_agent}
+                          onChange={v => setCustomPrompts(p => ({ ...p, single_agent: v }))}
+                          placeholder="Example: Always prefer the remote office. Ensure base compensation is formatted strictly numerically..."
+                        />
+                      </div>
+                    ) : (
+                      <div className="space-y-4">
+                        <div className="flex flex-wrap gap-1.5 p-1 bg-[var(--surface)] rounded-xl border border-[var(--border-color)]">
+                          {[
+                            { id: 'company', label: 'Company' },
+                            { id: 'role', label: 'Role' },
+                            { id: 'location', label: 'Location' },
+                            { id: 'salary_range', label: 'Salary' },
+                            { id: 'job_posted_date', label: 'Posted' },
+                            { id: 'application_deadline', label: 'Deadline' },
+                            { id: 'description', label: 'Description' },
+                          ].map(tab => (
+                            <button
+                              key={tab.id}
+                              type="button"
+                              onClick={() => setActivePromptField(tab.id as any)}
+                              className={`px-3 py-1.5 rounded-lg text-[10px] font-bold transition-all uppercase tracking-tight ${
+                                activePromptField === tab.id
+                                  ? 'bg-violet-600 text-white shadow-md'
+                                  : 'text-[var(--fg-subtle)] hover:text-[var(--fg)] hover:bg-violet-500/5'
+                              }`}
+                            >
+                              {tab.label}
+                            </button>
+                          ))}
+                        </div>
+
+                        <div className="animate-fade-in">
+                          <Label>{activePromptField.replace(/_/g, ' ')} guidance</Label>
+                          <TextAreaInput
+                            value={customPrompts.multi_agent[activePromptField]}
+                            onChange={v => setCustomPrompts(p => ({
+                              ...p,
+                              multi_agent: { ...p.multi_agent, [activePromptField]: v }
+                            }))}
+                            placeholder={`Provide custom instructions for parsing the ${activePromptField.replace(/_/g, ' ')}...`}
+                          />
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
             </div>
           )}
         </SectionCard>
@@ -636,6 +766,7 @@ export function SettingsPage() {
             )}
           </div>
         </SectionCard>
+
 
       </div>
 

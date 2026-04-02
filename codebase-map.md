@@ -66,7 +66,7 @@ This document provides a summary of the project's architecture, tech stack, and 
   - `AddJobModal.tsx`: Core form for new applications. Includes AI Auto-fill and **Potential Hallucination Warning System**.
   - `ConfirmDialog.tsx`: Multi-functional modal replacing native prompts. Supports **Date Inputs**, **File Uploads**, and **Combobox Text Inputs** (with custom `<datalist>`). Includes variant-based styling (`danger`, `success`, `default`).
   - `ChatAssistant.tsx`: Global drawer for the AI agent.
-  - `SettingsPage.tsx`: Integrated configuration for LLMs and themes. Features **Advanced AI Prompts** panel for custom agent guidance.
+  - `SettingsPage.tsx`: Integrated configuration for LLMs and themes. Features a collapsible **Advanced AI Prompt Settings** subsection with tabbed guidance for multi-agent mode.
 - `src/lib/`:
   - `api.ts`: Axios client with typed backend endpoints.
   - `ViewContext.tsx`: Global UI state including **Navigation Guards** for unsaved changes.
