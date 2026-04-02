@@ -248,7 +248,10 @@ input[type="date"].style-date::-webkit-calendar-picker-indicator {
 }
 
 /* Full screen override to break out of stacking context traps */
-.rc-md-editor.full-screen {
+/* We target theme selectors too to ensure specificity over other overrides */
+.rc-md-editor.full-screen,
+[data-theme="dark"] .rc-md-editor.full-screen,
+[data-theme="light"] .rc-md-editor.full-screen {
   z-index: 9999 !important;
   background-color: var(--bg) !important;
   position: fixed !important;
@@ -258,13 +261,17 @@ input[type="date"].style-date::-webkit-calendar-picker-indicator {
   height: 100vh !important;
 }
 
-/* Dark mode specific tweaks */
+/* Specific theme tweaks for editor blocks (to avoid any semi-transparency) */
 [data-theme="dark"] .rc-md-editor {
-  background-color: rgba(0, 0, 0, 0.3) !important;
+  background-color: #111118 !important;
 }
 
 [data-theme="dark"] .rc-md-editor.full-screen {
   background-color: #0a0a0f !important;
+}
+
+[data-theme="light"] .rc-md-editor {
+  background-color: #ffffff !important;
 }
 
 [data-theme="dark"] .rc-md-editor .editor-container .sec-md .input {
