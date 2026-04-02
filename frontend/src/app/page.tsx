@@ -127,11 +127,12 @@ export default function Home() {
 
   const handleAddInterviewStep = async (id: number, stepName: string, date?: string) => {
     try {
-      await addInterviewStep(id, {
-        step_type_name: stepName,
-        step_date: date ? new Date(date).toISOString() : undefined,
-        status: 'Scheduled',
-      });
+      await addInterviewStep(
+        id, 
+        stepName, 
+        date ? new Date(date).toISOString() : undefined, 
+        'Scheduled'
+      );
       await fetchJobs();
     } catch (error) {
       console.error('Failed to add interview step', error);
