@@ -60,7 +60,7 @@ This document provides a summary of the project's architecture, tech stack, and 
       *   **Interview Pipeline** (Default): Timeline events with full CRUD and inline editing.
       *   **Job Details**: Metadata management and document attachments.
       *   **Application Notes**: Dedicated Markdown editor (`MdEditor`) for research and interview prep.
-  - `DocumentPreview.tsx`: Overlay for high-fidelity viewing of PDF and Markdown documents.
+  - `DocumentPreview.tsx`: Overlay for high-fidelity viewing of PDF, Markdown, and plain text documents.
   - `Ticker.tsx`: News-ticker style progress bar for real-time AI extraction status.
   - `FilterPopover.tsx`: Advanced filtering UI for dashboard header.
   - `ProcessingOverlay.tsx`: Full-screen overlay for tracking long-running AI tasks (creation, manual attachments) with SSE updates.

@@ -21,7 +21,7 @@ export const DocumentPreview: React.FC<DocumentPreviewProps> = ({
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    if (isOpen && fileUrl?.endsWith('.md')) {
+    if (isOpen && (fileUrl?.endsWith('.md') || fileUrl?.endsWith('.txt'))) {
       setLoading(true);
       fetch(`http://localhost:8000${fileUrl}`)
         .then(res => res.text())
@@ -31,7 +31,7 @@ export const DocumentPreview: React.FC<DocumentPreviewProps> = ({
         })
         .catch(err => {
           console.error(err);
-          setMarkdownContent('Failed to load markdown content.');
+          setMarkdownContent('Failed to load content.');
           setLoading(false);
         });
     } else {
@@ -41,22 +41,22 @@ export const DocumentPreview: React.FC<DocumentPreviewProps> = ({
 
   if (!isOpen || !fileUrl) return null;
 
-  const isPdf = fileUrl.endsWith('.pdf');
+  const isPdf = fileUrl.toLowerCase().endsWith('.pdf');
   const fullUrl = `http://localhost:8000${fileUrl}`;
 
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 md:p-8 bg-black/80 backdrop-blur-md animate-fade-in" onClick={onClose}>
-      <div 
+      <div
         className="glass bg-[#0a0a0f] w-full max-w-5xl h-full max-h-[90vh] rounded-2xl shadow-2xl relative animate-slide-up flex flex-col overflow-hidden border-violet-500/20"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex justify-between items-center p-4 border-b border-white/10 shrink-0">
           <h2 className="text-lg font-semibold text-white/90 truncate mr-4">{title}</h2>
           <div className="flex items-center gap-2">
-            <a 
-              href={fullUrl} 
-              target="_blank" 
-              rel="noopener noreferrer" 
+            <a
+              href={fullUrl}
+              target="_blank"
+              rel="noopener noreferrer"
               download
               className="p-2 hover:bg-white/10 rounded-lg text-gray-400 hover:text-white transition flex items-center gap-1 text-sm bg-white/5"
             >
@@ -74,9 +74,9 @@ export const DocumentPreview: React.FC<DocumentPreviewProps> = ({
               <Loader2 className="w-8 h-8 text-violet-500 animate-spin" />
             </div>
           ) : isPdf ? (
-            <object 
-              data={fullUrl} 
-              type="application/pdf" 
+            <object
+              data={fullUrl}
+              type="application/pdf"
               className="w-full h-full border-none"
             >
               <div className="p-8 text-center text-gray-400">
@@ -91,9 +91,9 @@ export const DocumentPreview: React.FC<DocumentPreviewProps> = ({
               </div>
             </div>
           ) : (
-             <div className="flex items-center justify-center h-full text-gray-500">
-               Unsupported file type preview.
-             </div>
+            <div className="flex items-center justify-center h-full text-gray-500">
+              Unsupported file type preview.
+            </div>
           )}
         </div>
       </div>

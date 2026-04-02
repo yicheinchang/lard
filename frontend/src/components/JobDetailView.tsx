@@ -1187,14 +1187,11 @@ export const JobDetailView: React.FC<JobDetailViewProps> = ({ job, onClose, onJo
         variant="danger"
       />
 
-      <ConfirmDialog
+      <DocumentPreview
         isOpen={previewDoc.isOpen}
         title={previewDoc.title}
-        message="Document Preview"
-        onConfirm={() => setPreviewDoc({ ...previewDoc, isOpen: false })}
-        onCancel={() => setPreviewDoc({ ...previewDoc, isOpen: false })}
-        confirmLabel="Close"
-        hideCancel={true}
+        fileUrl={previewDoc.fileUrl}
+        onClose={() => setPreviewDoc({ ...previewDoc, isOpen: false })}
       />
 
       <ConfirmDialog
