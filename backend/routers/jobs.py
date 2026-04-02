@@ -304,7 +304,7 @@ def check_duplicate(check: DuplicateCheck, db: Session = Depends(get_db)):
                     "company": existing_url.company, 
                     "role": existing_url.role, 
                     "status": existing_url.status,
-                    "applied_date": existing_url.applied_date.isoformat(),
+                    "applied_date": existing_url.applied_date.isoformat() if existing_url.applied_date else None,
                     "job_posted_date": existing_url.job_posted_date.isoformat() if existing_url.job_posted_date else None
                 }
             }
@@ -327,7 +327,7 @@ def check_duplicate(check: DuplicateCheck, db: Session = Depends(get_db)):
                         "company": existing_exact.company, 
                         "role": existing_exact.role, 
                         "status": existing_exact.status,
-                        "applied_date": existing_exact.applied_date.isoformat(),
+                        "applied_date": existing_exact.applied_date.isoformat() if existing_exact.applied_date else None,
                         "job_posted_date": existing_exact.job_posted_date.isoformat() if existing_exact.job_posted_date else None
                     }
                 }
@@ -345,7 +345,7 @@ def check_duplicate(check: DuplicateCheck, db: Session = Depends(get_db)):
                     "company": existing_similar.company, 
                     "role": existing_similar.role,
                     "status": existing_similar.status,
-                    "applied_date": existing_similar.applied_date.isoformat(),
+                    "applied_date": existing_similar.applied_date.isoformat() if existing_similar.applied_date else None,
                     "job_posted_date": existing_similar.job_posted_date.isoformat() if existing_similar.job_posted_date else None
                 }
             }
