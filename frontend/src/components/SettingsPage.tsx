@@ -823,27 +823,7 @@ export function SettingsPage() {
                           These are the core instructions defined in the backend. Modifying them can drastically alter extraction accuracy.
                         </p>
                         <button
-                          onClick={() => setSystemPrompts({
-                            extraction_base: '',
-                            extraction_description: '',
-                            json_ld: '',
-                            qa_validator: '',
-                            field_company: '',
-                            field_role: '',
-                            field_location: '',
-                            field_salary: '',
-                            field_id: '',
-                            field_posted: '',
-                            field_deadline: '',
-                            json_company: '',
-                            json_role: '',
-                            json_location: '',
-                            json_salary: '',
-                            json_id: '',
-                            json_posted: '',
-                            json_deadline: '',
-                            job_post_check: '',
-                          })}
+                          onClick={() => setSystemPrompts({ ...DEFAULT_SYSTEM_PROMPTS })}
                           className="mt-3 px-3 py-1.5 rounded-lg text-[10px] font-bold bg-[var(--surface)] border border-amber-500/20 hover:bg-amber-500/10 transition-all text-amber-300 uppercase tracking-tight"
                         >
                           Reset system prompts
