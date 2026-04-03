@@ -241,8 +241,6 @@ async def extract_file_stream(request: Request, file: UploadFile = File(...)):
                 except UnicodeDecodeError:
                     raise Exception(f"Unsupported binary file type: {ext}")
 
-            print(f"DEBUG: Extracted text length: {len(text)}")
-            print(f"DEBUG: Text preview: {text[:200]}...")
             text = _preprocess_text(text)
             async for event in _extract_stream_generator(request, text=text):
                 yield event

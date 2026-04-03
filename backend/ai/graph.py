@@ -309,13 +309,13 @@ async def check_job_post_node(state: AgentState):
         if not res.is_job_post or res.likelihood < 0.8:
             category = res.detected_category or "Unknown"
             reason = res.reason or "The content does not appear to be a job posting."
-            return {"error": f"NOT_A_JOB_POST: Detected as '{category}'. {reason}"}
+            return {"error": f"NOT_A_JOB_POST: This document looks like a {category}. {reason}"}
             
         return {"error": None}
     except Exception as e:
         print(f"Error in job post check node: {e}")
-        # Silently proceed on tech errors to avoid blocking the user
-        return {"error": None}
+        # Fail-fast on tech errors to ensure extraction only runs on verified content
+        return {"error": f"IDENTIFICATION_ERROR: AI failed to verify the document content. {str(e)}"}
 
 async def extract_node(state: AgentState):
     settings = load_app_settings()
@@ -438,7 +438,7 @@ async def extract_node(state: AgentState):
             # Single-Agent Embedding Check
             if not data.get("is_job_post") or data.get("likelihood", 1.0) < 0.8:
                  category = data.get("detected_category") or "Unknown"
-                 return {"extracted_data": None, "error": f"NOT_A_JOB_POST: Detected as '{category}'. This content does not appear to be a job posting."}
+                 return {"extracted_data": None, "error": f"NOT_A_JOB_POST: This document looks like a {category}. This content does not appear to be a job posting."}
 
             return {"extracted_data": data, "error": None}
     except asyncio.TimeoutError:
@@ -524,7 +524,7 @@ async def description_validator_node(state: AgentState):
         return state
 
 def should_continue_after_check(state: AgentState):
-    if state.get("error") and state["error"].startswith("NOT_A_JOB_POST"):
+    if state.get("error"):
         return "end"
     return "extract"
 

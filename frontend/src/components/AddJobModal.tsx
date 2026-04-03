@@ -246,6 +246,9 @@ export const AddJobModal: React.FC<AddJobModalProps> = ({ isOpen, onClose, onAdd
                 if (data.msg?.startsWith('NOT_A_JOB_POST:')) {
                   const reason = data.msg.replace('NOT_A_JOB_POST:', '').trim();
                   setError(`Verification Failed: ${reason}`);
+                } else if (data.msg?.startsWith('IDENTIFICATION_ERROR:')) {
+                  const details = data.msg.replace('IDENTIFICATION_ERROR:', '').trim();
+                  setError(`Verification Failed: ${details}`);
                 } else {
                   setError(data.msg);
                 }
