@@ -24,6 +24,7 @@ class SettingsUpdate(BaseModel):
     embedding_config: Optional[dict] = None
     extraction_mode: Optional[str] = None
     custom_prompts: Optional[dict] = None
+    system_prompts: Optional[dict] = None
 
 
 class TestConfigPayload(BaseModel):
