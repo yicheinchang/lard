@@ -59,6 +59,12 @@ export function SettingsPage() {
     single_agent: '',
     multi_agent: { company: '', role: '', location: '', salary_range: '', job_posted_date: '', application_deadline: '', description: '' }
   });
+  const [systemPrompts, setSystemPrompts] = useState<AppSettings['system_prompts']>({
+    extraction_base: '',
+    extraction_description: '',
+    json_ld: '',
+    qa_validator: '',
+  });
 
   // UI states
   const [saving, setSaving] = useState(false);
@@ -71,7 +77,9 @@ export function SettingsPage() {
   const [rebuildDone, setRebuildDone] = useState(false);
   const [showRebuildConfirm, setShowRebuildConfirm] = useState(false);
   const [showAdvancedPrompts, setShowAdvancedPrompts] = useState(false);
+  const [showSystemPrompts, setShowSystemPrompts] = useState(false);
   const [activePromptField, setActivePromptField] = useState<keyof typeof customPrompts.multi_agent>('company');
+  const [activeSystemPrompt, setActiveSystemPrompt] = useState<keyof AppSettings['system_prompts']>('extraction_base');
 
   // Track whether embedding provider was changed (needs rebuild warning)
   const [originalEmbeddingProvider, setOriginalEmbeddingProvider] = useState<EmbeddingProvider>('default');
@@ -93,9 +101,10 @@ export function SettingsPage() {
       extractionMode !== settings.extraction_mode ||
       embeddingProvider !== settings.embedding_provider ||
       JSON.stringify(embeddingConfig) !== JSON.stringify(settings.embedding_config) ||
-      JSON.stringify(customPrompts) !== JSON.stringify(settings.custom_prompts)
+      JSON.stringify(customPrompts) !== JSON.stringify(settings.custom_prompts) ||
+      JSON.stringify(systemPrompts) !== JSON.stringify(settings.system_prompts)
     );
-  }, [theme, aiEnabled, llmProvider, llmConfig, extractionMode, embeddingProvider, embeddingConfig, customPrompts, settings]);
+  }, [theme, aiEnabled, llmProvider, llmConfig, extractionMode, embeddingProvider, embeddingConfig, customPrompts, systemPrompts, settings]);
 
   // Update global navigation guard
   useEffect(() => {
@@ -148,6 +157,9 @@ export function SettingsPage() {
       single_agent: '',
       multi_agent: { company: '', role: '', location: '', salary_range: '', job_posted_date: '', application_deadline: '', description: '' }
     });
+    if (settings.system_prompts) {
+      setSystemPrompts(settings.system_prompts);
+    }
   }, [settings]);
 
   // ── Save handler ───────────────────────────────────────────────────
@@ -173,6 +185,7 @@ export function SettingsPage() {
         embedding_provider: embeddingProvider,
         embedding_config: embeddingConfig,
         custom_prompts: customPrompts,
+        system_prompts: systemPrompts,
       });
 
       setSaveStatus('saved');
@@ -653,6 +666,88 @@ export function SettingsPage() {
                         </div>
                       </div>
                     )}
+                  </div>
+                )}
+              </div>
+
+              {/* Collapsible System Prompts Section (Sub-section) */}
+              <div className="mt-5 pt-5 border-t border-[var(--border-color)]">
+                <button
+                  type="button"
+                  onClick={() => setShowSystemPrompts(!showSystemPrompts)}
+                  className="flex items-center justify-between w-full group"
+                >
+                  <div className="flex items-center gap-2">
+                    <Database className={`w-4 h-4 ${showSystemPrompts ? 'text-amber-400' : 'text-[var(--fg-subtle)]'}`} />
+                    <span className="text-sm font-semibold text-[var(--fg)] group-hover:text-amber-400 transition-colors">
+                      Base System Prompts
+                    </span>
+                  </div>
+                  <ChevronDown className={`w-4 h-4 transition-transform duration-300 ${showSystemPrompts ? 'rotate-180 text-amber-400' : 'text-[var(--fg-subtle)]'}`} />
+                </button>
+
+                {showSystemPrompts && (
+                  <div className="mt-5 space-y-5 animate-slide-up border-l-2 border-amber-500/10 pl-5 ml-2">
+                    <div className="flex items-start gap-3 p-4 rounded-xl bg-amber-500/5 border border-amber-500/10 text-[var(--fg-muted)] text-xs">
+                      <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5 text-amber-400" />
+                      <div>
+                        <p className="font-semibold text-amber-300">Advanced Prompt Engineering</p>
+                        <p className="mt-1 opacity-80 leading-relaxed">
+                          These are the core instructions defined in the backend. Modifying them can drastically alter extraction accuracy.
+                        </p>
+                        <button
+                          onClick={() => setSystemPrompts({
+                            extraction_base: '',
+                            extraction_description: '',
+                            json_ld: '',
+                            qa_validator: '',
+                          })}
+                          className="mt-3 px-3 py-1.5 rounded-lg text-[10px] font-bold bg-[var(--surface)] border border-amber-500/20 hover:bg-amber-500/10 transition-all text-amber-300 uppercase tracking-tight"
+                        >
+                          Reset system prompts
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="space-y-4">
+                      {/* Sub-tabs for System Prompts */}
+                      <div className="flex flex-wrap gap-1.5 p-1 bg-[var(--surface)] rounded-xl border border-[var(--border-color)]">
+                        {[
+                          { id: 'extraction_base', label: 'Main (Single)' },
+                          { id: 'extraction_description', label: 'Desc (Multi)' },
+                          { id: 'json_ld', label: 'JSON-LD' },
+                          { id: 'qa_validator', label: 'QA Validator' },
+                        ].map(tab => (
+                          <button
+                            key={tab.id}
+                            type="button"
+                            onClick={() => setActiveSystemPrompt(tab.id as any)}
+                            className={`px-3 py-1.5 rounded-lg text-[10px] font-bold transition-all uppercase tracking-tight ${
+                              activeSystemPrompt === tab.id
+                                ? 'bg-amber-600 text-white shadow-md'
+                                : 'text-[var(--fg-subtle)] hover:text-[var(--fg)] hover:bg-amber-500/5'
+                            }`}
+                          >
+                            {tab.label}
+                          </button>
+                        ))}
+                      </div>
+
+                      <div className="animate-fade-in">
+                        <Label>{activeSystemPrompt.replace(/_/g, ' ')} base text</Label>
+                        <TextAreaInput
+                          value={systemPrompts[activeSystemPrompt] || ''}
+                          onChange={v => setSystemPrompts(p => ({
+                            ...p,
+                            [activeSystemPrompt]: v
+                          }))}
+                          placeholder="Loading default prompt..."
+                        />
+                        <p className="text-[10px] mt-2 opacity-60 italic" style={{ color: 'var(--fg-subtle)' }}>
+                          Leave empty and save to revert to hardcoded factory default.
+                        </p>
+                      </div>
+                    </div>
                   </div>
                 )}
               </div>

@@ -68,7 +68,9 @@ This document provides a summary of the project's architecture, tech stack, and 
   - `AddJobModal.tsx`: Core form for new applications. Includes AI Auto-fill and **Potential Hallucination Warning System**.
   - `ConfirmDialog.tsx`: Multi-functional modal replacing native prompts. Supports **Date Inputs**, **File Uploads**, and **Combobox Text Inputs** (with custom `<datalist>`). Includes variant-based styling (`danger`, `success`, `default`).
   - `ChatAssistant.tsx`: Global drawer for the AI agent.
-  - `SettingsPage.tsx`: Integrated configuration for LLMs and themes. Features a collapsible **Advanced AI Prompt Settings** subsection with tabbed guidance for multi-agent mode.
+  - `SettingsPage.tsx`: Integrated configuration for LLMs and themes. Features a collapsible **Advanced AI Prompt Settings** subsection with:
+      *   **Additive Guidance**: Field-specific instruction tabs for fine-tuning extraction.
+      *   **Base System Prompts**: Independent sub-section for modifying core backend prompts (Extraction, JSON-LD, QA Validator) with a dedicated reset handler.
 - `src/lib/`:
   - `api.ts`: Axios client with typed backend endpoints.
   - `ViewContext.tsx`: Global UI state including **Navigation Guards** for unsaved changes.
@@ -135,6 +137,8 @@ Global configuration persisted on the server (`app_settings.json`).
 - `ai_enabled`: Global boolean toggle.
 - `extraction_mode`: `single` | `multi` (Decomposes extraction for small models).
 - `providers`: Configurable LLM and Embedding sources (Ollama, OpenAI, Anthropic).
+- `custom_prompts`: Additive instructions for field extraction.
+- `system_prompts`: Base core AI prompts (Extraction, Validation, JSON-LD) fully editable from the UI.
 
 ---
 
@@ -250,7 +254,7 @@ The workspace uses a formalized rule system in `.agents/rules/workspace-role.md`
 - **Micro Git Commits**: Atomic, granular commits for every stable change.
 - **Synchronized Versioning**: Automated SemVer updates across backend and frontend.
 - **Codebase Map Sync**: Mandatory updates to this document to maintain architectural context.
-- Git Tagging: Automated tagging for every version = "0.33.6"
+- Git Tagging: Automated tagging for every version = "0.37.0"
 
 ### 3. State Management (LangGraph)
 The AI assistant uses **LangGraph** to manage conversational state, enabling multi-turn workflows and tool-calling (e.g., querying the database vs. searching documents).

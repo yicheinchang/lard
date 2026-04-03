@@ -121,8 +121,11 @@ async def _run_multi_agent_extraction(text: str, url: str, request: Any = None, 
         PostedDate, DeadlineDate, JobDescription,
         company_prompt, role_prompt, location_prompt, salary_prompt,
         job_id_prompt, posted_date_prompt, deadline_date_prompt,
-        description_extraction_prompt
+        _create_description_prompt
     )
+    settings = load_app_settings()
+    description_extraction_prompt = _create_description_prompt(settings)
+
     metadata_tasks = [
         ("company", JobCompany, company_prompt),
         ("role", JobRole, role_prompt),
@@ -277,9 +280,13 @@ async def extract_node(state: AgentState):
     
     try:
         from ai.chains import (
-            extraction_prompt, JobDetails,
-            description_extraction_prompt, structured_data_validation_prompt
+            get_extraction_prompt, JobDetails,
+            _create_description_prompt, get_json_ld_prompt
         )
+        settings = load_app_settings()
+        extraction_prompt = get_extraction_prompt(settings)
+        description_extraction_prompt = _create_description_prompt(settings)
+        structured_data_validation_prompt = get_json_ld_prompt(settings)
         if state.get("extracted_data"):
             # Retry Mode: Only re-extract description using validation feedback
             results = state["extracted_data"].copy()
@@ -300,7 +307,7 @@ async def extract_node(state: AgentState):
                 results["description"] = desc_val.get("description") if desc_val else None
             else:
                 llm = get_llm(num_ctx=8190)
-                extractor = extraction_prompt | llm.with_structured_output(JobDetails)
+                extractor = get_extraction_prompt(settings) | llm.with_structured_output(JobDetails)
                 inputs = { "text": text_with_feedback, "url": url or "Not provided" }
                 if "custom_guidance" in extractor.input_schema.model_fields:
                     cg = settings.get("custom_prompts", {}).get("single_agent", "")
@@ -352,7 +359,7 @@ async def extract_node(state: AgentState):
             if progress_cb:
                 await progress_cb({"event": "extracting", "field": "all", "msg": "AI: Extracting all job details (Fixed Context)..."})
 
-            extractor = extraction_prompt | llm.with_structured_output(JobDetails)
+            extractor = get_extraction_prompt(settings) | llm.with_structured_output(JobDetails)
             
             inputs = { "text": state["text"], "url": state.get("url") or "Not provided" }
             if "custom_guidance" in extractor.input_schema.model_fields:
@@ -399,14 +406,15 @@ async def description_validator_node(state: AgentState):
         extracted["hallucination_reasons"] = state.get("validation_feedback", "Maximum validation attempts reached without passing QA.")
         return {"extracted_data": extracted}
         
-    from ai.chains import description_validation_prompt, DescriptionValidation
+    from ai.chains import get_validation_prompt, DescriptionValidation
     
     progress_cb = state.get("progress_callback")
     if progress_cb:
          await progress_cb({"event": "progress", "msg": "AI: Validating Description format (AI Hallucination check)..."})
 
     llm = get_llm(num_ctx=8190)
-    validator = description_validation_prompt | llm.with_structured_output(DescriptionValidation)
+    settings = load_app_settings()
+    validator = get_validation_prompt(settings) | llm.with_structured_output(DescriptionValidation)
     
     try:
         is_json_ld = state.get("structured_data") is not None

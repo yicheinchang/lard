@@ -1,6 +1,7 @@
 import json
 import os
 from pydantic_settings import BaseSettings
+from ai.chains import DEFAULT_SYSTEM_PROMPTS
 
 class Settings(BaseSettings):
     """Env-var based settings — used as fallback defaults for app_settings.json."""
@@ -51,6 +52,12 @@ DEFAULT_APP_SETTINGS = {
             "application_deadline": "",
             "description": ""
         }
+    },
+    "system_prompts": {
+        "extraction_base": DEFAULT_SYSTEM_PROMPTS["extraction_base"],
+        "extraction_description": DEFAULT_SYSTEM_PROMPTS["extraction_description"],
+        "json_ld": DEFAULT_SYSTEM_PROMPTS["json_ld"],
+        "qa_validator": DEFAULT_SYSTEM_PROMPTS["qa_validator"]
     }
 }
 

@@ -94,6 +94,12 @@ export interface AppSettings {
       description: string;
     };
   };
+  system_prompts: {
+    extraction_base: string;
+    extraction_description: string;
+    json_ld: string;
+    qa_validator: string;
+  };
 }
 
 export const getSettings = async (): Promise<AppSettings> => {
