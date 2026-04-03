@@ -281,7 +281,7 @@ The backend is optimized for instant startup (< 5s) even with heavy AI dependenc
 
 ### 6. AI Extraction & Preprocessing
 The system uses a multi-stage pipeline to extract job details from URLs, PDFs, and text:
-- **Job Post Verification**: LangGraph-based `check_job_post_node` that confirms content is a job posting before extraction. Bypassed if JSON-LD is found. Supports Single-Agent embedding (verification result in main output) and Multi-Agent specialized nodes. Customizable via the Settings UI.
+- **Job Post Verification**: LangGraph-based `check_job_post_node` that confirms content is a job posting before extraction. Bypassed if JSON-LD is found. Supports Single-Agent embedding (verification result in main output) and Multi-Agent specialized nodes. Features a **fail-fast** strategy that halts the workflow immediately on negative results or technical verification errors. Customizable via the Settings UI.
 - **Contextual Metadata**: Extracts Company, Role, Location, Salary, Job ID, and Dates.
 - **JSON-LD First Strategy**: Prioritizes `application/ld+json` script tags (Schema.org `JobPosting`) for metadata extraction to ensure maximum accuracy on enterprise portals.
 - **Optimized JSON-LD Multi-Agent Routing**: If JSON-LD is found and multi-agent mode is enabled, the system bypasses massive payload overhead by slicing the JSON and distributing specific fragments (e.g., `baseSalary`) only to the relevant agents. Missing fragments bypass the LLM completely, optimizing speed and reducing token limits.
