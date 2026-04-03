@@ -139,6 +139,7 @@ Global configuration persisted on the server (`app_settings.json`).
 - `providers`: Configurable LLM and Embedding sources (Ollama, OpenAI, Anthropic).
 - `custom_prompts`: Additive instructions for field extraction.
 - `system_prompts`: Base core AI prompts (Extraction, Validation, JSON-LD) fully editable from the UI.
+- **Ollama Verification**: Automatic server verification and model discovery for the Ollama provider. Includes an animated status pulse and a datalist-based model selector.
 
 ---
 
@@ -227,6 +228,7 @@ Global configuration persisted on the server (`app_settings.json`).
 - `PUT /settings`: Update AI providers, models, and UI theme.
 - `POST /settings/rebuild-vectors`: Wipe and re-ingest all data into the vector store.
 - `POST /settings/test-llm`: Verify connectivity for a chosen LLM provider.
+- `GET /settings/ollama-models`: Fetch available models from an Ollama server (proxied).
 
 ---
 
