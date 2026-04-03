@@ -254,7 +254,7 @@ The workspace uses a formalized rule system in `.agents/rules/workspace-role.md`
 - **Micro Git Commits**: Atomic, granular commits for every stable change.
 - **Synchronized Versioning**: Automated SemVer updates across backend and frontend.
 - **Codebase Map Sync**: Mandatory updates to this document to maintain architectural context.
-- Git Tagging: Automated tagging for every version = "0.39.3"
+- Git Tagging: Automated tagging for every version = "0.39.5"
 
 ### 3. State Management (LangGraph)
 The AI assistant uses **LangGraph** to manage conversational state, enabling multi-turn workflows and tool-calling (e.g., querying the database vs. searching documents).
@@ -278,7 +278,7 @@ The system uses a multi-stage pipeline to extract job details from URLs, PDFs, a
 - **Optimized JSON-LD Multi-Agent Routing**: If JSON-LD is found and multi-agent mode is enabled, the system bypasses massive payload overhead by slicing the JSON and distributing specific fragments (e.g., `baseSalary`) only to the relevant agents. Missing fragments bypass the LLM completely, optimizing speed and reducing token limits.
 - **Streaming & Progress UI**: Extraction tasks use Server-Sent Events (SSE). The frontend `Ticker.tsx` displays real-time status updates (e.g., "Extracting Salary Range...", "Finalizing Description...").
 - **AI Validation & Completeness**: Uses a LangGraph-based `description_validator_node` that runs a 3-retry loop to ensure extracted descriptions are clean Markdown, verbatim, and **COMPLETE**.
-- **Guided AI Retries**: If validation fails, the specific feedback from the QA validator is injected into the next extraction prompt (Attempts 2 and 3), guiding the LLM to fix specifically identified issues like truncation or hallucinations.
+- **Guided AI Retries**: If validation fails, the specific feedback from the QA validator is injected into the next extraction prompt (Attempts 2 and 3), guiding the LLM to fix specifically identified issues like truncation or hallucinations. Features **robust variable injection** for `validation_feedback` and `custom_guidance` to support user-defined prompt overrides.
 - **Fail-Safe UI Warning**: If validation still fails after 3 retries, the system preserves the output but sets `hallucination_detected: True` and `hallucination_reasons` (using the final QA block), which triggers a warning banner in the frontend `AddJobModal.tsx`.
 - **Cancellation & Safety**: Explicit support for `AbortController`. If a user cancels in the UI, the backend immediately terminates the background AI processing.
 - **Selective Pass Logic**: Skips structured JSON extraction for the description field, using a direct verbatim retrieval prompt for speed and reliability, and defaults to generous 600s timeouts on hardware-limited setups.

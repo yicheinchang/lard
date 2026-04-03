@@ -137,7 +137,7 @@ def get_field_prompt(field_name: str, settings: dict | None = None):
     base = get_base_prompt(key, settings) if key else ""
     
     return ChatPromptTemplate.from_messages([
-        ("system", base + "{custom_guidance}"),
+        ("system", base + "{validation_feedback}{custom_guidance}"),
         ("user", "SOURCE URL: {url}\n\nCONTENT:\n\"\"\"\n{text}\n\"\"\"")
     ])
 
@@ -150,21 +150,21 @@ def _create_description_prompt(settings: dict | None = None):
 # Helper to create extraction prompt
 def get_extraction_prompt(settings: dict | None = None):
     return ChatPromptTemplate.from_messages([
-        ("system", get_base_prompt("extraction_base", settings) + "{custom_guidance}"),
+        ("system", get_base_prompt("extraction_base", settings) + "{validation_feedback}{custom_guidance}"),
         ("user", "SOURCE URL: {url}\n\nCONTENT TO PROCESS:\n\"\"\"\n{text}\n\"\"\"")
     ])
 
 # Helper to create JSON-LD prompt
 def get_json_ld_prompt(settings: dict | None = None):
     return ChatPromptTemplate.from_messages([
-        ("system", get_base_prompt("json_ld", settings) + "{custom_guidance}"),
+        ("system", get_base_prompt("json_ld", settings) + "{validation_feedback}{custom_guidance}"),
         ("user", "RAW JSON-LD DATA:\n{json_ld_data}")
     ])
 
 # Helper to create QA validation prompt
 def get_validation_prompt(settings: dict | None = None):
     return ChatPromptTemplate.from_messages([
-        ("system", get_base_prompt("qa_validator", settings)),
+        ("system", get_base_prompt("qa_validator", settings) + "{custom_guidance}"),
         ("user", "SOURCE TYPE: {source_type}\n\nRAW SOURCE:\n\"\"\"\n{source_text}\n\"\"\"\n\nGENERATED DESCRIPTION:\n\"\"\"\n{generated_description}\n\"\"\"")
     ])
 
@@ -186,7 +186,7 @@ def get_json_field_prompt(field_name: str, settings: dict | None = None):
     base = get_base_prompt(key, settings) if key else ""
 
     return ChatPromptTemplate.from_messages([
-        ("system", base + "{custom_guidance}"),
+        ("system", base + "{validation_feedback}{custom_guidance}"),
         ("user", "JSON FRAGMENT:\n{json_fragment}")
     ])
 

@@ -54,15 +54,17 @@ async def _run_field_extraction(field, schema, prompt, text, url, request, semap
                 # Check for validation feedback on retry
                 # Use prompt.input_variables for more reliable detection of placeholders
                 prompt_vars = prompt.input_variables if hasattr(prompt, 'input_variables') else []
-                inputs = {"text": text, "url": url or "Not provided"}
+                inputs = {
+                    "text": text,
+                    "url": url or "Not provided",
+                    "validation_feedback": "",
+                    "custom_guidance": custom_guidance
+                }
                 
+                # Check for validation feedback on retry
                 vf = state.get("validation_feedback", "") if state else ""
-                feedback_str = f"PREVIOUS ATTEMPT FAILED QA VALIDATION:\n{vf}\nPLEASE FIX THESE ISSUES.\n" if vf else ""
-                
-                if "validation_feedback" in prompt_vars:
-                    inputs["validation_feedback"] = feedback_str
-                if "custom_guidance" in prompt_vars:
-                    inputs["custom_guidance"] = custom_guidance
+                if vf:
+                    inputs["validation_feedback"] = f"PREVIOUS ATTEMPT FAILED QA VALIDATION:\n{vf}\nPLEASE FIX THESE ISSUES.\n"
                     
                 raw_res = await asyncio.wait_for(
                     raw_chain.ainvoke(inputs),
@@ -90,15 +92,17 @@ async def _run_field_extraction(field, schema, prompt, text, url, request, semap
                     if cg: custom_guidance = f"ADDITIONAL USER INSTRUCTIONS:\n{cg}"
 
             chain = prompt | llm.with_structured_output(schema)
-            inputs = {"text": text, "url": url or "Not provided"}
-            prompt_vars = prompt.input_variables if hasattr(prompt, 'input_variables') else []
-            if "custom_guidance" in prompt_vars:
-                inputs["custom_guidance"] = custom_guidance
+            inputs = {
+                "text": text,
+                "url": url or "Not provided",
+                "custom_guidance": custom_guidance,
+                "validation_feedback": ""
+            }
             
             # Also check for validation feedback in case user added it to base prompts
-            if "validation_feedback" in prompt_vars:
-                vf = state.get("validation_feedback", "") if state else ""
-                inputs["validation_feedback"] = f"PREVIOUS ATTEMPT FAILED QA VALIDATION:\n{vf}\nPLEASE FIX THESE ISSUES.\n" if vf else ""
+            vf = state.get("validation_feedback", "") if state else ""
+            if vf:
+                inputs["validation_feedback"] = f"PREVIOUS ATTEMPT FAILED QA VALIDATION:\n{vf}\nPLEASE FIX THESE ISSUES.\n"
 
             res = await asyncio.wait_for(
                 chain.ainvoke(inputs),
@@ -190,15 +194,16 @@ async def _run_field_json_extraction(field, schema, prompt, text, fragment, requ
                         if cg: custom_guidance = f"ADDITIONAL USER INSTRUCTIONS:\n{cg}"
 
                 raw_chain = prompt | llm
-                inputs = {"json_fragment": json.dumps(fragment, indent=2)}
-                
-                vf = state.get("validation_feedback", "") if state else ""
-                feedback_str = f"PREVIOUS ATTEMPT FAILED QA VALIDATION:\n{vf}\nPLEASE FIX THESE ISSUES.\n" if vf else ""
+                inputs = {
+                    "json_fragment": json.dumps(fragment, indent=2),
+                    "validation_feedback": "",
+                    "custom_guidance": custom_guidance
+                }
 
-                if "validation_feedback" in raw_chain.input_schema.model_fields:
-                    inputs["validation_feedback"] = feedback_str
-                if "custom_guidance" in raw_chain.input_schema.model_fields:
-                    inputs["custom_guidance"] = custom_guidance
+                # Dynamic check for variables in description prompt (JSON)
+                vf = state.get("validation_feedback", "") if state else ""
+                if vf:
+                    inputs["validation_feedback"] = f"PREVIOUS ATTEMPT FAILED QA VALIDATION:\n{vf}\nPLEASE FIX THESE ISSUES.\n"
 
                 raw_res = await asyncio.wait_for(raw_chain.ainvoke(inputs), timeout=600)
                 val = raw_res.content
@@ -208,21 +213,16 @@ async def _run_field_json_extraction(field, schema, prompt, text, fragment, requ
 
             chain = prompt | llm.with_structured_output(schema)
             
-            inputs = {"json_fragment": json.dumps(fragment, indent=2)}
-            custom_guidance = ""
-            settings = load_app_settings()
-            if settings.get("custom_prompts"):
-                mode = settings.get("extraction_mode", "single")
-                if mode == "multi":
-                    cg = settings["custom_prompts"]["multi_agent"].get(field, "")
-                    if cg: custom_guidance = f"ADDITIONAL USER INSTRUCTIONS:\n{cg}"
-                else:
-                    cg = settings["custom_prompts"].get("single_agent", "")
-                    if cg: custom_guidance = f"ADDITIONAL USER INSTRUCTIONS:\n{cg}"
-
-            vars_needed = [p for p in chain.input_schema.model_fields.keys()]
-            if "custom_guidance" in vars_needed:
-                inputs["custom_guidance"] = custom_guidance
+            inputs = {
+                "json_fragment": json.dumps(fragment, indent=2),
+                "custom_guidance": custom_guidance,
+                "validation_feedback": ""
+            }
+            
+            # Also check for validation feedback in base prompts
+            vf = state.get("validation_feedback", "") if state else ""
+            if vf:
+                inputs["validation_feedback"] = f"PREVIOUS ATTEMPT FAILED QA VALIDATION:\n{vf}\nPLEASE FIX THESE ISSUES.\n"
 
             res = await asyncio.wait_for(chain.ainvoke(inputs), timeout=300)
             val = res.model_dump()
@@ -311,20 +311,16 @@ async def extract_node(state: AgentState):
             else:
                 llm = get_llm(num_ctx=8190)
                 extractor = get_extraction_prompt(settings) | llm.with_structured_output(JobDetails)
-                inputs = { "text": text_with_feedback, "url": url or "Not provided" }
                 
-                # Dynamic check for variables in extraction prompt
-                prompt_vars = extractor.get_graph().nodes['__start__']['data'].input_variables if hasattr(extractor, 'get_graph') else []
-                # Fallback: check the prompt directly if possible
-                if not prompt_vars:
-                    prompt_vars = get_extraction_prompt(settings).input_variables
+                cg = settings.get("custom_prompts", {}).get("single_agent", "")
+                vf = state.get("validation_feedback", "")
                 
-                if "custom_guidance" in prompt_vars:
-                    cg = settings.get("custom_prompts", {}).get("single_agent", "")
-                    inputs["custom_guidance"] = f"ADDITIONAL USER INSTRUCTIONS:\n{cg}" if cg else ""
-                if "validation_feedback" in prompt_vars:
-                    vf = state.get("validation_feedback", "")
-                    inputs["validation_feedback"] = f"PREVIOUS ATTEMPT FAILED QA VALIDATION:\n{vf}\nPLEASE FIX THESE ISSUES.\n" if vf else ""
+                inputs = { 
+                    "text": text_with_feedback, 
+                    "url": url or "Not provided",
+                    "custom_guidance": f"ADDITIONAL USER INSTRUCTIONS:\n{cg}" if cg else "",
+                    "validation_feedback": f"PREVIOUS ATTEMPT FAILED QA VALIDATION:\n{vf}\nPLEASE FIX THESE ISSUES.\n" if vf else ""
+                }
                 
                 result = await asyncio.wait_for(extractor.ainvoke(inputs), timeout=600)
                 results["description"] = result.model_dump().get("description")
@@ -347,10 +343,15 @@ async def extract_node(state: AgentState):
                 llm = get_llm(num_ctx=8190)
                 chain = structured_data_validation_prompt | llm.with_structured_output(JobDetails)
                 
-                inputs = {"json_ld_data": json.dumps(structured_data, indent=2)}
-                if "custom_guidance" in chain.input_schema.model_fields:
-                    cg = settings.get("custom_prompts", {}).get("single_agent", "")
-                    inputs["custom_guidance"] = f"ADDITIONAL USER INSTRUCTIONS:\n{cg}" if cg else ""
+                inputs = {
+                    "json_ld_data": json.dumps(structured_data, indent=2),
+                    "custom_guidance": "",
+                    "validation_feedback": ""
+                }
+                
+                cg = settings.get("custom_prompts", {}).get("single_agent", "")
+                if cg:
+                    inputs["custom_guidance"] = f"ADDITIONAL USER INSTRUCTIONS:\n{cg}"
 
                 result = await asyncio.wait_for(
                     chain.ainvoke(inputs),
@@ -375,15 +376,13 @@ async def extract_node(state: AgentState):
 
             extractor = get_extraction_prompt(settings) | llm.with_structured_output(JobDetails)
             
-            inputs = { "text": state["text"], "url": state.get("url") or "Not provided" }
-            
-            # Dynamic check for variables
-            prompt_vars = get_extraction_prompt(settings).input_variables
-            if "custom_guidance" in prompt_vars:
-                cg = settings.get("custom_prompts", {}).get("single_agent", "")
-                inputs["custom_guidance"] = f"ADDITIONAL USER INSTRUCTIONS:\n{cg}" if cg else ""
-            if "validation_feedback" in prompt_vars:
-                inputs["validation_feedback"] = "" # No feedback on first pass
+            cg = settings.get("custom_prompts", {}).get("single_agent", "")
+            inputs = { 
+                "text": state["text"], 
+                "url": state.get("url") or "Not provided",
+                "custom_guidance": f"ADDITIONAL USER INSTRUCTIONS:\n{cg}" if cg else "",
+                "validation_feedback": "" # No feedback on first pass
+            }
                 
             result = await asyncio.wait_for(
                 extractor.ainvoke(inputs),
@@ -440,11 +439,13 @@ async def description_validator_node(state: AgentState):
         source_type = "JSON-LD" if is_json_ld else "TEXT"
         raw_source = state.get("structured_data", {}).get("description", "") if is_json_ld else state["text"]
         
+        cg = settings.get("custom_prompts", {}).get("single_agent", "") # Use single agent guidance as fallback for QA
         result = await asyncio.wait_for(
             validator.ainvoke({
                 "source_type": source_type,
                 "source_text": str(raw_source)[:5000], 
-                "generated_description": str(description)
+                "generated_description": str(description),
+                "custom_guidance": f"ADDITIONAL QA GUIDANCE:\n{cg}" if cg else ""
             }),
             timeout=180
         )
