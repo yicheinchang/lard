@@ -881,6 +881,7 @@ export function SettingsPage() {
                             {tab.label}
                           </button>
                         ))}
+                        {activeSystemTab === 'text' && [
                           { id: 'field_company', label: 'Company' },
                           { id: 'field_role', label: 'Role' },
                           { id: 'field_location', label: 'Location' },
@@ -903,6 +904,7 @@ export function SettingsPage() {
                             {tab.label}
                           </button>
                         ))}
+                        {activeSystemTab === 'json' && [
                           { id: 'json_company', label: 'Company' },
                           { id: 'json_role', label: 'Role' },
                           { id: 'json_location', label: 'Location' },
