@@ -83,6 +83,16 @@ def get_base_prompt(key: str, settings: dict | None = None) -> str:
 
 # --- Single Agent (Base Baseline) ---
 
+class JobDetails(BaseModel):
+    company: str = Field(description="The name of the company.")
+    role: str = Field(description="The job title or role.")
+    location: str | None = Field(default=None, description="The job location (e.g., 'Cambridge, MA').")
+    salary_range: str | None = Field(default=None, description="The salary range, if specified (e.g., '$100k-$150k').")
+    company_job_id: str | None = Field(default=None, description="The internal Job ID (REQ-1234, R09384, or a simple number). Use URL ONLY if text does not contain it.")
+    job_posted_date: str | None = Field(default=None, description="The date the job was posted (YYYY-MM-DD or null).")
+    application_deadline: str | None = Field(default=None, description="The application deadline (YYYY-MM-DD or null).")
+    description: str = Field(description="The FULL job description, extracted VERBATIM from the source and formatted in clean Markdown.")
+
 # --- Multi-Agent (Granular Splits) ---
 
 class JobCompany(BaseModel):
@@ -179,6 +189,15 @@ def get_json_field_prompt(field_name: str, settings: dict | None = None):
         ("system", base + "{custom_guidance}"),
         ("user", "JSON FRAGMENT:\n{json_fragment}")
     ])
+
+# --- Aliases for Graph Compatibility ---
+
+def description_extraction_prompt(settings: dict | None = None):
+    return _create_description_prompt(settings)
+
+def description_json_prompt(settings: dict | None = None):
+    # This matches the legacy name used in graph.py
+    return _create_description_prompt(settings)
 
 # --- Static wrappers removed in favor of dynamic get_* functions ---
 

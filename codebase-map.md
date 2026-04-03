@@ -254,7 +254,7 @@ The workspace uses a formalized rule system in `.agents/rules/workspace-role.md`
 - **Micro Git Commits**: Atomic, granular commits for every stable change.
 - **Synchronized Versioning**: Automated SemVer updates across backend and frontend.
 - **Codebase Map Sync**: Mandatory updates to this document to maintain architectural context.
-- Git Tagging: Automated tagging for every version = "0.39.2"
+- Git Tagging: Automated tagging for every version = "0.39.3"
 
 ### 3. State Management (LangGraph)
 The AI assistant uses **LangGraph** to manage conversational state, enabling multi-turn workflows and tool-calling (e.g., querying the database vs. searching documents).
