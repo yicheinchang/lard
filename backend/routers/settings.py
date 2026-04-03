@@ -1,4 +1,5 @@
-from fastapi import APIRouter, HTTPException, BackgroundTasks
+from fastapi import APIRouter, HTTPException, BackgroundTasks, Query
+import httpx
 from pydantic import BaseModel
 from typing import Optional
 from config import load_app_settings, save_app_settings
@@ -61,6 +62,22 @@ def test_llm_connection(payload: Optional[TestConfigPayload] = None):
         return {"status": "ok", "response": str(response.content)[:200]}
     except Exception as e:
         raise HTTPException(status_code=502, detail=str(e))
+
+
+@router.get("/ollama-models")
+async def get_ollama_models(base_url: str = Query(..., alias="base_url")):
+    """Fetch available models from an Ollama server."""
+    try:
+        async with httpx.AsyncClient(timeout=5.0) as client:
+            # Ollama tags endpoint
+            url = f"{base_url.rstrip('/')}/api/tags"
+            resp = await client.get(url)
+            resp.raise_for_status()
+            data = resp.json()
+            models = [m["name"] for m in data.get("models", [])]
+            return {"status": "ok", "models": models}
+    except Exception as e:
+        raise HTTPException(status_code=502, detail=f"Ollama server unreachable or error: {str(e)}")
 
 
 @router.post("/test-embedding")
