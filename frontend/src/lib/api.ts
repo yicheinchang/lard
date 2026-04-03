@@ -93,6 +93,7 @@ export interface AppSettings {
       application_deadline: string;
       description: string;
     };
+    job_post_check: string;
   };
   system_prompts: {
     extraction_base: string;
@@ -115,6 +116,7 @@ export interface AppSettings {
     json_id: string;
     json_posted: string;
     json_deadline: string;
+    job_post_check: string;
   };
 }
 

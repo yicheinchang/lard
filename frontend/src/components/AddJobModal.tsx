@@ -243,7 +243,12 @@ export const AddJobModal: React.FC<AddJobModalProps> = ({ isOpen, onClose, onAdd
               } else if (data.event === 'final_result') {
                 applyExtraction(data);
               } else if (data.event === 'error') {
-                setError(data.msg);
+                if (data.msg?.startsWith('NOT_A_JOB_POST:')) {
+                  const reason = data.msg.replace('NOT_A_JOB_POST:', '').trim();
+                  setError(`Verification Failed: ${reason}`);
+                } else {
+                  setError(data.msg);
+                }
               }
             } catch (e) {
               console.error('Error parsing SSE:', e);

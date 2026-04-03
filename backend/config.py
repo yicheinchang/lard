@@ -51,7 +51,8 @@ DEFAULT_APP_SETTINGS = {
             "job_posted_date": "",
             "application_deadline": "",
             "description": ""
-        }
+        },
+        "job_post_check": ""
     },
     "system_prompts": {
         "extraction_base": DEFAULT_SYSTEM_PROMPTS["extraction_base"],
@@ -73,7 +74,8 @@ DEFAULT_APP_SETTINGS = {
         "json_salary": DEFAULT_SYSTEM_PROMPTS["json_salary"],
         "json_id": DEFAULT_SYSTEM_PROMPTS["json_id"],
         "json_posted": DEFAULT_SYSTEM_PROMPTS["json_posted"],
-        "json_deadline": DEFAULT_SYSTEM_PROMPTS["json_deadline"]
+        "json_deadline": DEFAULT_SYSTEM_PROMPTS["json_deadline"],
+        "job_post_check": DEFAULT_SYSTEM_PROMPTS["job_post_check"]
     }
 }
 

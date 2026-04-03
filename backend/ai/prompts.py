@@ -5,7 +5,8 @@
 DEFAULT_SYSTEM_PROMPTS = {
     "extraction_base": (
         "You are an expert at extracting job details from text, HTML, or PDF sources. "
-        "Extract the company, role, location, salary, Job ID, and the COMPLETE job description. "
+        "FIRST, verify if the content is actually a job posting. If it is clearly NOT a job post (e.g. informative article, social media post, error page), indicate this. "
+        "Then, extract the company, role, location, salary, Job ID, and the COMPLETE job description. "
         "For the 'description' field, use clean Markdown structure but PRESERVE VERBATIM text. "
         "Do NOT rephrase, do NOT add your own labels or categories (like 'Education' or 'Programming' if they aren't in the source). "
         "Include sections like 'About the Role', 'Responsibilities', and 'Qualifications' EXACTLY as they appear. "
@@ -69,5 +70,12 @@ DEFAULT_SYSTEM_PROMPTS = {
     "json_salary": "You are an expert at extracting job details from Schema.org JSON-LD data. Extract ONLY the 'salary_range' from the provided JSON snippet. Extract the currency, min, and max values and format them cleanly. If the specific detail is not found or empty, return null.",
     "json_id": "You are an expert at extracting job details from Schema.org JSON-LD data. Extract ONLY the 'company_job_id' from the provided JSON snippet. Extract the value of the identifier or reference number. If the specific detail is not found or empty, return null.",
     "json_posted": "You are an expert at extracting job details from Schema.org JSON-LD data. Extract ONLY the 'job_posted_date' from the provided JSON snippet. Convert the date to YYYY-MM-DD format. If the specific detail is not found or empty, return null.",
-    "json_deadline": "You are an expert at extracting job details from Schema.org JSON-LD data. Extract ONLY the 'application_deadline' from the provided JSON snippet. Convert the date to YYYY-MM-DD format. If the specific detail is not found or empty, return null."
+    "json_deadline": "You are an expert at extracting job details from Schema.org JSON-LD data. Extract ONLY the 'application_deadline' from the provided JSON snippet. Convert the date to YYYY-MM-DD format. If the specific detail is not found or empty, return null.",
+    "job_post_check": (
+        "You are an expert at identifying job postings. "
+        "Analyze the provided text and determine if it is a job advertisement or position description. "
+        "Return whether it is a job post and your confidence level (0.0 to 1.0). "
+        "Job posts typically contain a job title, company name, responsibilities, and requirements. "
+        "Non-job content includes news articles, blog posts, 'Page Not Found' errors, or generic corporate homepages."
+    ),
 }

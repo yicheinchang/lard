@@ -14,14 +14,16 @@ def get_base_prompt(key: str, settings: dict | None = None) -> str:
 # --- Single Agent (Base Baseline) ---
 
 class JobDetails(BaseModel):
-    company: str = Field(description="The name of the company.")
-    role: str = Field(description="The job title or role.")
+    is_job_post: bool = Field(description="True if the provided content is likely a job description or position advertisement.")
+    likelihood: float = Field(description="The confidence level that the content is a job post, from 0.0 to 1.0.")
+    company: str | None = Field(default=None, description="The name of the company.")
+    role: str | None = Field(default=None, description="The job title or role.")
     location: str | None = Field(default=None, description="The job location (e.g., 'Cambridge, MA').")
     salary_range: str | None = Field(default=None, description="The salary range, if specified (e.g., '$100k-$150k').")
     company_job_id: str | None = Field(default=None, description="The internal Job ID (REQ-1234, R09384, or a simple number). Use URL ONLY if text does not contain it.")
     job_posted_date: str | None = Field(default=None, description="The date the job was posted (YYYY-MM-DD or null).")
     application_deadline: str | None = Field(default=None, description="The application deadline (YYYY-MM-DD or null).")
-    description: str = Field(description="The FULL job description, extracted VERBATIM from the source and formatted in clean Markdown.")
+    description: str | None = Field(default=None, description="The FULL job description, extracted VERBATIM from the source and formatted in clean Markdown.")
 
 # --- Multi-Agent (Granular Splits) ---
 
@@ -48,6 +50,13 @@ class DeadlineDate(BaseModel):
 
 class JobDescription(BaseModel):
     description: str | None = Field(default=None, description="The FULL job description, extracted VERBATIM from the source and formatted in Markdown.")
+
+# --- Verification (Multi-Agent Entry) ---
+
+class JobPostCheck(BaseModel):
+    is_job_post: bool = Field(description="True if the provided content is likely a job description or position advertisement.")
+    likelihood: float = Field(description="The confidence level that the content is a job post, from 0.0 to 1.0.")
+    reason: str | None = Field(default=None, description="Optional brief reason if it's unlikely to be a job post.")
 
 # --- Specialized Multi-Agent Prompts ---
 
@@ -96,6 +105,18 @@ def get_validation_prompt(settings: dict | None = None):
     return ChatPromptTemplate.from_messages([
         ("system", get_base_prompt("qa_validator", settings) + "{custom_guidance}"),
         ("user", "SOURCE TYPE: {source_type}\n\nRAW SOURCE:\n\"\"\"\n{source_text}\n\"\"\"\n\nGENERATED DESCRIPTION:\n\"\"\"\n{generated_description}\n\"\"\"")
+    ])
+
+# Helper to create Job Post Check prompt
+def get_job_post_check_prompt(settings: dict | None = None):
+    custom_guidance = ""
+    if settings and "custom_prompts" in settings:
+        cg = settings["custom_prompts"].get("job_post_check", "")
+        if cg: custom_guidance = f"\n\nADDITIONAL USER INSTRUCTIONS:\n{cg}"
+        
+    return ChatPromptTemplate.from_messages([
+        ("system", get_base_prompt("job_post_check", settings) + custom_guidance),
+        ("user", "CONTENT TO ANALYZE:\n\"\"\"\n{text}\n\"\"\"")
     ])
 
 # --- JSON-LD Metadata Support ---

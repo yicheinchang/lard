@@ -173,9 +173,11 @@ export function SettingsPage() {
       application_deadline: string;
       description: string;
     };
+    job_post_check: string;
   }>({
     single_agent: '',
-    multi_agent: { company: '', role: '', location: '', salary_range: '', job_posted_date: '', application_deadline: '', description: '' }
+    multi_agent: { company: '', role: '', location: '', salary_range: '', job_posted_date: '', application_deadline: '', description: '' },
+    job_post_check: ''
   });
   const [systemPrompts, setSystemPrompts] = useState<AppSettings['system_prompts']>({
     extraction_base: '',
@@ -196,6 +198,7 @@ export function SettingsPage() {
     json_id: '',
     json_posted: '',
     json_deadline: '',
+    job_post_check: '',
   });
 
   // UI states
@@ -210,7 +213,7 @@ export function SettingsPage() {
   const [showRebuildConfirm, setShowRebuildConfirm] = useState(false);
   const [showAdvancedPrompts, setShowAdvancedPrompts] = useState(false);
   const [showSystemPrompts, setShowSystemPrompts] = useState(false);
-  const [activePromptField, setActivePromptField] = useState<keyof typeof customPrompts.multi_agent>('company');
+  const [activePromptField, setActivePromptField] = useState<keyof typeof customPrompts.multi_agent | 'job_post_check'>('company');
   const [activeSystemTab, setActiveSystemTab] = useState<'global' | 'text' | 'json'>('global');
   const [activeSystemPrompt, setActiveSystemPrompt] = useState<keyof AppSettings['system_prompts']>('extraction_base');
 
@@ -293,7 +296,8 @@ export function SettingsPage() {
     setOriginalEmbeddingConfig(settings.embedding_config);
     setCustomPrompts(settings.custom_prompts || {
       single_agent: '',
-      multi_agent: { company: '', role: '', location: '', salary_range: '', job_posted_date: '', application_deadline: '', description: '' }
+      multi_agent: { company: '', role: '', location: '', salary_range: '', job_posted_date: '', application_deadline: '', description: '' },
+      job_post_check: ''
     });
     if (settings.system_prompts) {
       setSystemPrompts(settings.system_prompts);
@@ -708,7 +712,8 @@ export function SettingsPage() {
                         <button
                           onClick={() => setCustomPrompts({
                             single_agent: '',
-                            multi_agent: { company: '', role: '', location: '', salary_range: '', job_posted_date: '', application_deadline: '', description: '' }
+                            multi_agent: { company: '', role: '', location: '', salary_range: '', job_posted_date: '', application_deadline: '', description: '' },
+                            job_post_check: ''
                           })}
                           className="mt-3 px-3 py-1.5 rounded-lg text-[10px] font-bold bg-[var(--surface)] border border-violet-500/20 hover:bg-violet-500/10 transition-all text-violet-300 uppercase tracking-tight"
                         >
@@ -743,6 +748,7 @@ export function SettingsPage() {
                             { id: 'job_posted_date', label: 'Posted' },
                             { id: 'application_deadline', label: 'Deadline' },
                             { id: 'description', label: 'Description' },
+                            { id: 'job_post_check', label: 'Job Check' },
                           ].map(tab => (
                             <button
                               key={tab.id}
@@ -771,11 +777,17 @@ export function SettingsPage() {
                           </Label>
                           <TextAreaInput
                             rows={12}
-                            value={customPrompts.multi_agent[activePromptField]}
-                            onChange={v => setCustomPrompts(p => ({
-                              ...p,
-                              multi_agent: { ...p.multi_agent, [activePromptField]: v }
-                            }))}
+                            value={activePromptField === 'job_post_check' ? customPrompts.job_post_check : customPrompts.multi_agent[activePromptField as keyof typeof customPrompts.multi_agent]}
+                            onChange={v => {
+                              if (activePromptField === 'job_post_check') {
+                                setCustomPrompts(p => ({ ...p, job_post_check: v }));
+                              } else {
+                                setCustomPrompts(p => ({
+                                  ...p,
+                                  multi_agent: { ...p.multi_agent, [activePromptField]: v }
+                                }));
+                              }
+                            }}
                             placeholder={`Provide custom instructions for parsing the ${activePromptField.replace(/_/g, ' ')}...`}
                           />
                         </div>
@@ -830,6 +842,7 @@ export function SettingsPage() {
                             json_id: '',
                             json_posted: '',
                             json_deadline: '',
+                            job_post_check: '',
                           })}
                           className="mt-3 px-3 py-1.5 rounded-lg text-[10px] font-bold bg-[var(--surface)] border border-amber-500/20 hover:bg-amber-500/10 transition-all text-amber-300 uppercase tracking-tight"
                         >
@@ -872,6 +885,7 @@ export function SettingsPage() {
                           { id: 'extraction_base', label: 'Main (Single)', hide: extractionMode === 'multi' },
                           { id: 'extraction_description', label: 'Desc (Multi)', hide: extractionMode === 'single' },
                           { id: 'json_ld', label: 'JSON-LD' },
+                          { id: 'job_post_check', label: 'Job Check' },
                           { id: 'qa_validator', label: 'QA Validator' },
                         ].filter(tab => !tab.hide).map(tab => (
                           <button

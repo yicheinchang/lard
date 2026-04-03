@@ -271,6 +271,51 @@ async def _run_multi_agent_json_extraction(structured_data: dict, text: str, req
             
     return results
 
+async def check_job_post_node(state: AgentState):
+    """
+    New node to confirm if the input is a job post (Multi-Agent mode only).
+    Single-agent mode embeds this check into its main prompt to save calls.
+    """
+    request = state.get("request")
+    if request and await request.is_disconnected():
+        return state
+
+    # If JSON-LD structured data is found, it's definitely a job post
+    if state.get("structured_data"):
+        return {"error": None}
+
+    settings = load_app_settings()
+    mode = settings.get("extraction_mode", "single")
+    
+    # Requirement: In single-agent strategy, this feature is embedded in the agent prompt.
+    if mode == "single":
+        return {"error": None}
+
+    progress_cb = state.get("progress_callback")
+    if progress_cb:
+        await progress_cb({"event": "progress", "msg": "AI: Verifying content (Job Post Confirmation)..."})
+
+    from ai.chains import get_job_post_check_prompt, JobPostCheck
+    llm = get_llm(num_ctx=4096)
+    checker = get_job_post_check_prompt(settings) | llm.with_structured_output(JobPostCheck)
+
+    try:
+        # Check first 8000 chars for identification
+        res = await asyncio.wait_for(
+            checker.ainvoke({"text": state["text"][:8000]}),
+            timeout=120
+        )
+        
+        if not res.is_job_post or res.likelihood < 0.8:
+            reason = res.reason or "The content does not appear to be a job posting."
+            return {"error": f"NOT_A_JOB_POST: {reason}"}
+            
+        return {"error": None}
+    except Exception as e:
+        print(f"Error in job post check node: {e}")
+        # Silently proceed on tech errors to avoid blocking the user
+        return {"error": None}
+
 async def extract_node(state: AgentState):
     settings = load_app_settings()
     mode = settings.get("extraction_mode", "single")
@@ -326,7 +371,6 @@ async def extract_node(state: AgentState):
                 results["description"] = result.model_dump().get("description")
 
             return {"extracted_data": results, "error": None}
-
 
         if is_json_ld:
             # --- PATH A: JSON-LD Structured Data found ---
@@ -388,7 +432,13 @@ async def extract_node(state: AgentState):
                 extractor.ainvoke(inputs),
                 timeout=600
             )
-            return {"extracted_data": result.model_dump(), "error": None}
+            data = result.model_dump()
+            
+            # Single-Agent Embedding Check
+            if not data.get("is_job_post") or data.get("likelihood", 1.0) < 0.8:
+                 return {"extracted_data": None, "error": f"NOT_A_JOB_POST: Likely not a job post."}
+
+            return {"extracted_data": data, "error": None}
     except asyncio.TimeoutError:
         return {"extracted_data": None, "error": "Extraction timed out after 5 minutes. Try smaller snippets or Multi-Agent mode."}
     except Exception as e:
@@ -471,6 +521,11 @@ async def description_validator_node(state: AgentState):
         print(f"Validation failed temporarily: {e}")
         return state
 
+def should_continue_after_check(state: AgentState):
+    if state.get("error") and state["error"].startswith("NOT_A_JOB_POST"):
+        return "end"
+    return "extract"
+
 def should_retry(state: AgentState):
     if state.get("error") is not None:
         return "end"
@@ -485,9 +540,17 @@ def get_agent_app():
     if _agent_app_instance is None:
         from langgraph.graph import StateGraph, END
         workflow = StateGraph(AgentState)
+        workflow.add_node("check", check_job_post_node)
         workflow.add_node("extract", extract_node)
         workflow.add_node("validate", description_validator_node)
-        workflow.set_entry_point("extract")
+        
+        workflow.set_entry_point("check")
+        
+        workflow.add_conditional_edges("check", should_continue_after_check, {
+            "extract": "extract",
+            "end": END
+        })
+        
         workflow.add_edge("extract", "validate")
         workflow.add_conditional_edges("validate", should_retry, {
             "retry": "extract",
