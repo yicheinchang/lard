@@ -333,7 +333,8 @@ async def check_job_post_node(state: AgentState):
             checker.ainvoke({"text": state["text"][:8000]}),
             timeout=120
         )
-        
+        if not res.is_job_post:
+            category = res.detected_category or "Unknown"
             reason = res.reason or "The content does not appear to be a job posting."
             # Log result
             agnt_log("Verifier", result=f"FAIL: {category}")
@@ -474,11 +475,11 @@ async def extract_node(state: AgentState):
             )
             data = result.model_dump()
             
-             if not data.get("is_job_post") or data.get("likelihood", 1.0) < 0.8:
-                  category = data.get("detected_category") or "Unknown"
-                  # Log failure
-                  agnt_log("Extractor", result=f"FAIL: Not a job post ({category})")
-                  return {"extracted_data": None, "error": f"NOT_A_JOB_POST: This document looks like a {category}. This content does not appear to be a job posting."}
+            if not data.get("is_job_post") or data.get("likelihood", 1.0) < 0.8:
+                category = data.get("detected_category") or "Unknown"
+                # Log failure
+                agnt_log("Extractor", result=f"FAIL: Not a job post ({category})")
+                return {"extracted_data": None, "error": f"NOT_A_JOB_POST: This document looks like a {category}. This content does not appear to be a job posting."}
 
             # Log success
             agnt_log("Extractor", result="SUCCESS: Data extracted.")
@@ -559,7 +560,8 @@ async def description_validator_node(state: AgentState):
                 extracted["hallucination_reasons"] = f"QA Fail (Final Attempt): {reason}"
                 return {"extracted_data": extracted, "retries": retries + 1, "validation_feedback": reason}
 
-                 await progress_cb({"event": "progress", "msg": f"AI Validator issue: {reason}"})
+            if progress_cb:
+                await progress_cb({"event": "progress", "msg": f"AI Validator issue: {reason}"})
             return {"retries": retries + 1, "validation_feedback": reason}
             
         # Log success
