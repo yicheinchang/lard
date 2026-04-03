@@ -2,6 +2,7 @@ from langchain_core.tools import tool
 from langchain_core.messages import SystemMessage
 from langgraph.prebuilt import create_react_agent
 from ai.llm_factory import get_llm
+from ai.logger import agnt_log, log_llm_info
 from database.relational import run_query
 from database.vector_store import get_vector_store_manager
 import json
@@ -17,11 +18,15 @@ def query_database(sql_query: str):
     Important: Only perform SELECT operations. No updates or deletes.
     """
     try:
+        agnt_log("Assistant", task="Database Query", input_data=sql_query[:60])
         if not sql_query.strip().lower().startswith("select"):
             return "Error: Only SELECT queries are allowed."
         results = run_query(sql_query)
-        return json.dumps(results, default=str)
+        res_str = json.dumps(results, default=str)
+        agnt_log("Assistant", task="DB Result", result=f"Found {len(results)} rows")
+        return res_str
     except Exception as e:
+        agnt_log("Assistant", task="DB Error", result=str(e))
         return f"Error executing query: {str(e)}"
 
 # --- RAG / Document Search Tool --- #
@@ -35,6 +40,7 @@ def search_documents(query: str, job_id: Optional[int] = None):
     The 'job_id' is optional. ONLY provide it if you are looking for information about a specific job ID already known from database results. If searching across all jobs, omit 'job_id' or set it to null.
     """
     try:
+        agnt_log("Assistant", task="Document Search", input_data=query[:60])
         search_kwargs = {"k": 5}
         if job_id:
             search_kwargs["filter"] = {"job_id": job_id}
@@ -47,8 +53,10 @@ def search_documents(query: str, job_id: Optional[int] = None):
                 "job_id": doc.metadata.get("job_id"),
                 "content": doc.page_content
             })
+        agnt_log("Assistant", task="RAG Result", result=f"Found {len(docs)} docs")
         return json.dumps(formatted_docs)
     except Exception as e:
+        agnt_log("Assistant", task="RAG Error", result=str(e))
         return f"Error searching documents: {str(e)}"
 
 # --- Agent Setup --- #
@@ -90,7 +98,7 @@ When the user asks a question:
 """
 
 def get_assistant_agent():
-    print("DEBUG: CALLING GET_ASSISTANT_AGENT FROM /home/Lard/backend/ai/assistant.py")
+    log_llm_info()
     llm = get_llm()
     tools = [query_database, search_documents]
     # Use prompt instead of messages_modifier/state_modifier for broader compatibility if unsure

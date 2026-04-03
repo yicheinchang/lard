@@ -2,6 +2,7 @@ import asyncio
 import json
 from typing import TypedDict, Any, Callable
 from ai.llm_factory import get_llm
+from ai.logger import agnt_log, log_llm_info
 from config import load_app_settings
 
 class AgentState(TypedDict):
@@ -14,6 +15,7 @@ class AgentState(TypedDict):
     structured_data: dict | None
     retries: int
     validation_feedback: str | None
+    llm_logged: bool
 
 async def _run_field_extraction(field, schema, prompt, text, url, request, semaphore, progress_cb=None, state=None):
     """Async helper to execute a single agent task within a concurrency limit."""
@@ -31,6 +33,9 @@ async def _run_field_extraction(field, schema, prompt, text, url, request, semap
         # Using a stable, fixed context window for local LLM performance as requested
         num_ctx = 8190 
         llm = get_llm(num_ctx=num_ctx)
+
+        # Log calling
+        agnt_log(f"Agent:{field}", task="Extracting Field", input_data=str(text)[:50])
 
         try:
             # SPECIAL CASE: Job Description (Raw Pass)
@@ -76,6 +81,9 @@ async def _run_field_extraction(field, schema, prompt, text, url, request, semap
                     snippet = str(verbatim_text)[:40] + ("..." if len(str(verbatim_text)) > 40 else "")
                     await progress_cb({"event": "field_done", "field": field, "msg": f"Captured Description: {snippet}"})
                 
+                # Log completion
+                agnt_log(f"Agent:{field}", result=str(verbatim_text)[:50])
+                
                 return field, {"description": verbatim_text}
 
             # STANDARD CASE: Metadata (Structured JSON)
@@ -114,6 +122,9 @@ async def _run_field_extraction(field, schema, prompt, text, url, request, semap
                 raw_val = list(val.values())[0]
                 snippet = str(raw_val)[:40] + ("..." if len(str(raw_val)) > 40 else "")
                 await progress_cb({"event": "field_done", "field": field, "msg": f"Found {field.replace('_', ' ')}: {snippet}"})
+            
+            # Log completion
+            agnt_log(f"Agent:{field}", result=str(val)[:50])
                 
             return field, val
 
@@ -180,6 +191,9 @@ async def _run_field_json_extraction(field, schema, prompt, text, fragment, requ
         num_ctx = 8190
         llm = get_llm(num_ctx=num_ctx)
 
+        # Log calling
+        agnt_log(f"Agent:{field} (JSON)", task="Parsing Field", input_data=str(fragment)[:50])
+
         try:
             custom_guidance = ""
             settings = load_app_settings()
@@ -209,6 +223,9 @@ async def _run_field_json_extraction(field, schema, prompt, text, fragment, requ
                 val = raw_res.content
                 if progress_cb:
                     await progress_cb({"event": "field_done", "field": field, "msg": f"Captured Description (JSON)"})
+                
+                # Log completion
+                agnt_log(f"Agent:{field} (JSON)", result=str(val)[:50])
                 return field, {"description": val}
 
             chain = prompt | llm.with_structured_output(schema)
@@ -229,6 +246,9 @@ async def _run_field_json_extraction(field, schema, prompt, text, fragment, requ
 
             if progress_cb:
                 await progress_cb({"event": "field_done", "field": field, "msg": f"Parsed {field} from JSON"})
+            
+            # Log completion
+            agnt_log(f"Agent:{field} (JSON)", result=str(val)[:50])
             return field, val
         except Exception as e:
             print(f"Error extracting JSON {field}: {e}")
@@ -284,6 +304,11 @@ async def check_job_post_node(state: AgentState):
     if state.get("structured_data"):
         return {"error": None}
 
+    # Log LLM Info once
+    if not state.get("llm_logged"):
+        log_llm_info()
+        state["llm_logged"] = True
+
     settings = load_app_settings()
     mode = settings.get("extraction_mode", "single")
     
@@ -299,6 +324,9 @@ async def check_job_post_node(state: AgentState):
     llm = get_llm(num_ctx=4096)
     checker = get_job_post_check_prompt(settings) | llm.with_structured_output(JobPostCheck)
 
+    # Log calling
+    agnt_log("Verifier", task="Checking Job Post Content", input_data=str(state["text"])[:50])
+
     try:
         # Check first 8000 chars for identification
         res = await asyncio.wait_for(
@@ -306,11 +334,13 @@ async def check_job_post_node(state: AgentState):
             timeout=120
         )
         
-        if not res.is_job_post or res.likelihood < 0.8:
-            category = res.detected_category or "Unknown"
             reason = res.reason or "The content does not appear to be a job posting."
+            # Log result
+            agnt_log("Verifier", result=f"FAIL: {category}")
             return {"error": f"NOT_A_JOB_POST: This document looks like a {category}. {reason}"}
             
+        # Log result
+        agnt_log("Verifier", result="PASS: Job post confirmed.")
         return {"error": None}
     except Exception as e:
         print(f"Error in job post check node: {e}")
@@ -413,6 +443,12 @@ async def extract_node(state: AgentState):
         else:
             # Single-Agent (Default) using fixed 8190 context
             llm = get_llm(num_ctx=8190)
+
+            # Log LLM Info if not already logged (Single mode entry)
+            if not state.get("llm_logged"):
+                log_llm_info()
+                state["llm_logged"] = True
+
             if request and await request.is_disconnected():
                 return {"extracted_data": None, "error": "Cancelled"}
                 
@@ -429,17 +465,23 @@ async def extract_node(state: AgentState):
                 "validation_feedback": "" # No feedback on first pass
             }
                 
+            # Log calling
+            agnt_log("Extractor", task="Full Job Extraction", input_data=str(state["text"])[:50])
+
             result = await asyncio.wait_for(
                 extractor.ainvoke(inputs),
                 timeout=600
             )
             data = result.model_dump()
             
-            # Single-Agent Embedding Check
-            if not data.get("is_job_post") or data.get("likelihood", 1.0) < 0.8:
-                 category = data.get("detected_category") or "Unknown"
-                 return {"extracted_data": None, "error": f"NOT_A_JOB_POST: This document looks like a {category}. This content does not appear to be a job posting."}
+             if not data.get("is_job_post") or data.get("likelihood", 1.0) < 0.8:
+                  category = data.get("detected_category") or "Unknown"
+                  # Log failure
+                  agnt_log("Extractor", result=f"FAIL: Not a job post ({category})")
+                  return {"extracted_data": None, "error": f"NOT_A_JOB_POST: This document looks like a {category}. This content does not appear to be a job posting."}
 
+            # Log success
+            agnt_log("Extractor", result="SUCCESS: Data extracted.")
             return {"extracted_data": data, "error": None}
     except asyncio.TimeoutError:
         return {"extracted_data": None, "error": "Extraction timed out after 5 minutes. Try smaller snippets or Multi-Agent mode."}
@@ -486,6 +528,9 @@ async def description_validator_node(state: AgentState):
     settings = load_app_settings()
     validator = get_validation_prompt(settings) | llm.with_structured_output(DescriptionValidation)
     
+    # Log calling
+    agnt_log("Validator", task="Validating Description", input_data=str(description)[:50])
+
     try:
         is_json_ld = state.get("structured_data") is not None
         source_type = "JSON-LD" if is_json_ld else "TEXT"
@@ -514,10 +559,11 @@ async def description_validator_node(state: AgentState):
                 extracted["hallucination_reasons"] = f"QA Fail (Final Attempt): {reason}"
                 return {"extracted_data": extracted, "retries": retries + 1, "validation_feedback": reason}
 
-            if progress_cb:
                  await progress_cb({"event": "progress", "msg": f"AI Validator issue: {reason}"})
             return {"retries": retries + 1, "validation_feedback": reason}
             
+        # Log success
+        agnt_log("Validator", result="PASS: Description is valid.")
         return {"extracted_data": extracted, "validation_feedback": None}
     except Exception as e:
         print(f"Validation failed temporarily: {e}")

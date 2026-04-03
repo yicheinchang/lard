@@ -46,6 +46,7 @@ This document provides a summary of the project's architecture, tech stack, and 
   - `llm_factory.py`: Multi-provider support (Ollama, OpenAI, Anthropic).
   - `chains.py`: Specific LangChain sequences (e.g., for extraction).
   - `graph.py`: LangGraph state machine definitions. Uses a `get_agent_app()` lazy loader to defer graph compilation and heavy library imports.
+  - `logger.py`: Standardized AI agent console logging for troubleshooting (AGNT prefix, 80-char limit). Provides provider/model info and per-agent task/result monitoring.
 - `uploads/`: Local storage for uploaded job documents.
 - `run.sh`: Unified startup script. Development mode uses a targeted `uvicorn` reloader that excludes large directories (like `.venv`) to minimize file system scanning and CPU usage.
 
