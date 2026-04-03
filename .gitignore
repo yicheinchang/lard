@@ -19,6 +19,8 @@ backend/uploads/
 backend/*.log
 backend/app_settings.json
 backend/chroma_db/*
+backend/test/
+backend/tmp/
 !backend/chroma_db/.gitkeep
 
 # Frontend

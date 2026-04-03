@@ -6,7 +6,6 @@ import json
 import asyncio
 import os
 import shutil
-from ai.graph import get_agent_app
 from config import load_app_settings
 
 router = APIRouter(prefix="/api/ai", tags=["AI"])
@@ -148,6 +147,7 @@ async def _extract_stream_generator(request: Request, url: str = None, text: str
     q = asyncio.Queue()
 
     async def run_ai():
+        from ai.graph import get_agent_app
         try:
             result = await get_agent_app().ainvoke({
                 "text": text, 
@@ -199,6 +199,7 @@ async def extract_text_stream(req: TextExtractRequest, request: Request):
 async def extract_from_text(req: TextExtractRequest, request: Request):
     _check_ai_enabled()
     text = _preprocess_text(req.text)
+    from ai.graph import get_agent_app
     result = await get_agent_app().ainvoke({"text": text, "url": None, "request": request})
     return {"extracted": result["extracted_data"], "error": result["error"]}
 

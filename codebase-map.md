@@ -156,9 +156,8 @@ Global configuration persisted on the server (`app_settings.json`).
 - `company`: (String, index) Redundant company name for display/legacy caching.
   - `closed_date`: Optional date when the job listing was closed.
   - `last_operation`: Controlled vocabulary string for audit trails. Automatically managed by `update_job_status`.
-  - `last_updated`: Refreshed on successful, meaningful application-related changes.
-  - Automated status logic in `update_job_status` handles transitions between "Wishlist", "Applied", and "Interviewing".
-, Offered, Rejected, Closed, Discontinued.
+- `status`: Lifecycle stage (Wishlist, Applied, Interviewing, Offered, Rejected, Closed, Discontinued).
+- `last_updated`: Refreshed on successful, meaningful application-related changes.
 - `url`: (String) Application web link.
 - `job_posted_date`, `application_deadline`: (DateTime)
 - `company_job_id`, `location`, `salary_range`: (String)
@@ -260,7 +259,7 @@ The workspace uses a formalized rule system in `.agents/rules/workspace-role.md`
     - **Deep Lazy Loading**: Heavy AI prompts and `langchain` utilities are imported strictly inside the functions that need them.
     - **Production Ready**: Use `./run.sh prod` for optimized concurrency (multiple workers) without file watching.
     - **Persistent Model Cache**: Embedding models are cached locally in `backend/chroma_db/models/` to bypass re-downloads.
-- Git Tagging: Automated tagging for every version = "0.39.6"
+- **Git Tagging**: Automated tagging for every version.
 
 ### 3. State Management (LangGraph)
 The AI assistant uses **LangGraph** to manage conversational state, enabling multi-turn workflows and tool-calling (e.g., querying the database vs. searching documents).
