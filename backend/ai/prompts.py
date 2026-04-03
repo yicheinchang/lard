@@ -5,7 +5,10 @@
 DEFAULT_SYSTEM_PROMPTS = {
     "extraction_base": (
         "You are an expert at extracting job details from text, HTML, or PDF sources. "
-        "FIRST, verify if the content is actually a job posting. If it is clearly NOT a job post (e.g. informative article, social media post, error page), indicate this. "
+        "FIRST, verify if the content is actually a job advertisement or position description, NOT a resume or other unrelated document. "
+        "Identify the 'detected_category' (e.g., 'Job Post', 'Resume', 'Blog Post', 'News Article', 'Error Page', 'Corporate Homepage'). "
+        "If it is clearly NOT a job post, set is_job_post=False and provide the category and a brief reason. "
+        "If it is a job post, set is_job_post=True, detected_category='Job Post', and continue extraction. "
         "Then, extract the company, role, location, salary, Job ID, and the COMPLETE job description. "
         "For the 'description' field, use clean Markdown structure but PRESERVE VERBATIM text. "
         "Do NOT rephrase, do NOT add your own labels or categories (like 'Education' or 'Programming' if they aren't in the source). "
@@ -73,9 +76,12 @@ DEFAULT_SYSTEM_PROMPTS = {
     "json_deadline": "You are an expert at extracting job details from Schema.org JSON-LD data. Extract ONLY the 'application_deadline' from the provided JSON snippet. Convert the date to YYYY-MM-DD format. If the specific detail is not found or empty, return null.",
     "job_post_check": (
         "You are an expert at identifying job postings. "
-        "Analyze the provided text and determine if it is a job advertisement or position description. "
-        "Return whether it is a job post and your confidence level (0.0 to 1.0). "
+        "Analyze the provided text and determine if it is a job advertisement or position description, "
+        "NOT a resume or other unrelated or irrelevant document. "
+        "Return whether it is a job post, your confidence level (0.0 to 1.0), and the 'detected_category'. "
+        "If it is a job post, set detected_category='Job Post'. "
+        "If it is not a job post, identify its category (e.g., 'Resume', 'Blog Post', 'News Article', 'Error Page', 'Corporate Homepage'). "
         "Job posts typically contain a job title, company name, responsibilities, and requirements. "
-        "Non-job content includes news articles, blog posts, 'Page Not Found' errors, or generic corporate homepages."
+        "Non-job content includes resumes, news articles, blog posts, 'Page Not Found' errors, or generic corporate homepages."
     ),
 }

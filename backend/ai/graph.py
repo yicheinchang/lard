@@ -307,8 +307,9 @@ async def check_job_post_node(state: AgentState):
         )
         
         if not res.is_job_post or res.likelihood < 0.8:
+            category = res.detected_category or "Unknown"
             reason = res.reason or "The content does not appear to be a job posting."
-            return {"error": f"NOT_A_JOB_POST: {reason}"}
+            return {"error": f"NOT_A_JOB_POST: Detected as '{category}'. {reason}"}
             
         return {"error": None}
     except Exception as e:
@@ -436,7 +437,8 @@ async def extract_node(state: AgentState):
             
             # Single-Agent Embedding Check
             if not data.get("is_job_post") or data.get("likelihood", 1.0) < 0.8:
-                 return {"extracted_data": None, "error": f"NOT_A_JOB_POST: Likely not a job post."}
+                 category = data.get("detected_category") or "Unknown"
+                 return {"extracted_data": None, "error": f"NOT_A_JOB_POST: Detected as '{category}'. This content does not appear to be a job posting."}
 
             return {"extracted_data": data, "error": None}
     except asyncio.TimeoutError:

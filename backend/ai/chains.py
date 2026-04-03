@@ -24,6 +24,7 @@ class JobDetails(BaseModel):
     job_posted_date: str | None = Field(default=None, description="The date the job was posted (YYYY-MM-DD or null).")
     application_deadline: str | None = Field(default=None, description="The application deadline (YYYY-MM-DD or null).")
     description: str | None = Field(default=None, description="The FULL job description, extracted VERBATIM from the source and formatted in clean Markdown.")
+    detected_category: str | None = Field(default=None, description="The identified category of the content (e.g., 'Job Post', 'Resume', 'Blog Post', 'News Article', 'Error Page').")
 
 # --- Multi-Agent (Granular Splits) ---
 
@@ -57,6 +58,7 @@ class JobPostCheck(BaseModel):
     is_job_post: bool = Field(description="True if the provided content is likely a job description or position advertisement.")
     likelihood: float = Field(description="The confidence level that the content is a job post, from 0.0 to 1.0.")
     reason: str | None = Field(default=None, description="Optional brief reason if it's unlikely to be a job post.")
+    detected_category: str | None = Field(default=None, description="The identified category of the content (e.g., 'Job Post', 'Resume', 'Blog Post', 'News Article', 'Error Page').")
 
 # --- Specialized Multi-Agent Prompts ---
 
