@@ -204,7 +204,7 @@ export const AddJobModal: React.FC<AddJobModalProps> = ({ isOpen, onClose, onAdd
     abortControllerRef.current = new AbortController();
 
     try {
-      const endpoint = selectedFile ? '/api/ai/extract-pdf-stream' : '/api/ai/extract-url-stream';
+      const endpoint = selectedFile ? '/api/ai/extract-file-stream' : '/api/ai/extract-url-stream';
       const body = selectedFile ? (() => {
         const fd = new FormData();
         fd.append('file', selectedFile);

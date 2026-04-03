@@ -221,7 +221,8 @@ Global configuration persisted on the server (`app_settings.json`).
 - `POST /ai/chat`: LangGraph-driven interactive chat with RAG.
 - `POST /ai/extract-url`: Scrape and extract job data from a webpage.
 - `POST /ai/extract-text`: Process raw text into a structured job.
-- `POST /ai/extract-pdf`: Process uploaded PDF into a structured job.
+- `POST /ai/extract-file-stream`: Process uploaded file (PDF, Markdown, Plain Text) into a structured job via SSE.
+- `POST /ai/extract-pdf-stream`: Alias for `extract-file-stream` for backward compatibility.
 
 ### Settings (`/api/settings`)
 - `GET /settings`: Retrieve global app configuration.

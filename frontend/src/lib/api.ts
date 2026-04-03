@@ -298,16 +298,20 @@ export const extractJobFromText = async (text: string, signal?: AbortSignal) => 
   return response.data;
 };
 
-export const extractJobFromPdf = async (file: File, signal?: AbortSignal) => {
+export const extractJobFromFile = async (file: File, signal?: AbortSignal) => {
   const formData = new FormData();
   formData.append('file', file);
-  const response = await api.post('/ai/extract-pdf', formData, {
+  const response = await api.post('/ai/extract-file', formData, {
     headers: {
       'Content-Type': 'multipart/form-data'
     },
     signal
   });
   return response.data;
+};
+
+export const extractJobFromPdf = async (file: File, signal?: AbortSignal) => {
+  return extractJobFromFile(file, signal);
 };
 
 export const uploadJobDocumentStream = async (jobId: number, file: File, docType: string, onProgress: (event: string, msg: string, data?: any) => void) => {

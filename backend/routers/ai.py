@@ -154,9 +154,13 @@ async def _extract_stream_generator(request: Request, url: str = None, text: str
                 "url": url, 
                 "request": request, 
                 "progress_callback": progress_callback,
-                "structured_data": structured_data
+                "structured_data": structured_data,
+                "extracted_data": None,
+                "error": None,
+                "retries": 0,
+                "validation_feedback": None
             })
-            await q.put(f"data: {json.dumps({'event': 'final_result', 'extracted': result['extracted_data'], 'error': result['error']})}\n\n")
+            await q.put(f"data: {json.dumps({'event': 'final_result', 'extracted': result.get('extracted_data'), 'error': result.get('error')})}\n\n")
         except Exception as e:
             await q.put(f"data: {json.dumps({'event': 'error', 'msg': str(e)})}\n\n")
         finally:
@@ -203,24 +207,43 @@ async def extract_from_text(req: TextExtractRequest, request: Request):
     result = await get_agent_app().ainvoke({"text": text, "url": None, "request": request})
     return {"extracted": result["extracted_data"], "error": result["error"]}
 
-@router.post("/extract-pdf-stream")
-async def extract_pdf_stream(request: Request, file: UploadFile = File(...)):
+@router.post("/extract-file-stream")
+async def extract_file_stream(request: Request, file: UploadFile = File(...)):
     _check_ai_enabled()
     # Save temporarily
     os.makedirs("tmp", exist_ok=True)
     temp_path = f"tmp/{file.filename}"
+    content = await file.read()
     with open(temp_path, "wb") as buffer:
-        shutil.copyfileobj(file.file, buffer)
+        buffer.write(content)
     
-    async def pdf_gen():
+    async def file_gen():
         try:
-            yield f"data: {json.dumps({'event': 'progress', 'msg': f'Parsing PDF: {file.filename}'})}\n\n"
-            from langchain_community.document_loaders import PyPDFLoader
-            loader = PyPDFLoader(temp_path)
-            pages = await asyncio.to_thread(loader.load) # Run blocking load in thread
-            text = "\n".join([page.page_content for page in pages])
-            text = _preprocess_text(text)
+            filename = file.filename or "unknown"
+            ext = filename.split('.')[-1].lower() if '.' in filename else ''
+            text = ""
             
+            if ext == 'pdf':
+                yield f"data: {json.dumps({'event': 'progress', 'msg': f'Parsing PDF: {filename}'})}\n\n"
+                from langchain_community.document_loaders import PyPDFLoader
+                loader = PyPDFLoader(temp_path)
+                pages = await asyncio.to_thread(loader.load) # Run blocking load in thread
+                text = "\n".join([page.page_content for page in pages])
+            elif ext in ['md', 'txt'] or not ext:
+                yield f"data: {json.dumps({'event': 'progress', 'msg': f'Reading File: {filename}'})}\n\n"
+                with open(temp_path, "r", encoding="utf-8") as f:
+                    text = f.read()
+            else:
+                yield f"data: {json.dumps({'event': 'progress', 'msg': f'Reading File ({ext}): {filename}'})}\n\n"
+                try:
+                    with open(temp_path, "r", encoding="utf-8") as f:
+                        text = f.read()
+                except UnicodeDecodeError:
+                    raise Exception(f"Unsupported binary file type: {ext}")
+
+            print(f"DEBUG: Extracted text length: {len(text)}")
+            print(f"DEBUG: Text preview: {text[:200]}...")
+            text = _preprocess_text(text)
             async for event in _extract_stream_generator(request, text=text):
                 yield event
         except Exception as e:
@@ -229,19 +252,35 @@ async def extract_pdf_stream(request: Request, file: UploadFile = File(...)):
             if os.path.exists(temp_path):
                 os.remove(temp_path)
 
-    return StreamingResponse(pdf_gen(), media_type="text/event-stream")
+    return StreamingResponse(file_gen(), media_type="text/event-stream")
+
+# Keep alias for backward compatibility
+@router.post("/extract-pdf-stream")
+async def extract_pdf_stream(request: Request, file: UploadFile = File(...)):
+    return await extract_file_stream(request, file)
+
+@router.post("/extract-file")
+async def extract_from_file(request: Request, file: UploadFile = File(...)):
+    # Backward compatibility
+    res = {"extracted": None, "error": None}
+    async for event in (await extract_file_stream(request, file)).body_iterator:
+        event_str = event.strip()
+        if not event_str.startswith("data: "):
+            continue
+        try:
+            payload = event_str.replace("data: ", "", 1)
+            data = json.loads(payload)
+            if data["event"] == "final_result":
+                res["extracted"] = data.get("extracted")
+            elif data.get("event") == "error":
+                res["error"] = data.get("msg")
+        except json.JSONDecodeError:
+            continue
+    return res
 
 @router.post("/extract-pdf")
 async def extract_from_pdf(request: Request, file: UploadFile = File(...)):
-    # Backward compatibility
-    res = {"extracted": None, "error": None}
-    async for event in (await extract_pdf_stream(request, file)).body_iterator:
-        data = json.loads(event.replace("data: ", ""))
-        if data["event"] == "final_result":
-            res["extracted"] = data.get("extracted")
-        elif data.get("event") == "error":
-            res["error"] = data.get("msg")
-    return res
+    return await extract_from_file(request, file)
 
 class ChatRequest(BaseModel):
     message: str
