@@ -2,8 +2,9 @@
 
 import React, { useState, useEffect } from 'react';
 import { Sun, Moon, Monitor, Bot, BotOff, Server, Key, Database, RefreshCw,
-  CheckCircle2, XCircle, Loader2, AlertTriangle, Sparkles, ChevronDown
+  CheckCircle2, XCircle, Loader2, AlertTriangle, Sparkles, ChevronDown, RotateCcw
 } from 'lucide-react';
+import { DEFAULT_SYSTEM_PROMPTS } from '@/lib/constants';
 import { useSettings, applyTheme } from '@/lib/SettingsContext';
 import { useView } from '@/lib/ViewContext';
 import {
@@ -298,8 +299,24 @@ export function SettingsPage() {
     </div>
   );
 
-  const Label = ({ children }: { children: React.ReactNode }) => (
-    <label className="block text-sm font-medium mb-1.5" style={{ color: 'var(--fg-muted)' }}>{children}</label>
+  const Label = ({ children, onReset, resetLabel = "Reset to default" }: { 
+    children: React.ReactNode; 
+    onReset?: () => void;
+    resetLabel?: string;
+  }) => (
+    <div className="flex items-center justify-between mb-1.5">
+      <label className="block text-sm font-medium" style={{ color: 'var(--fg-muted)' }}>{children}</label>
+      {onReset && (
+        <button
+          type="button"
+          onClick={onReset}
+          title={resetLabel}
+          className="p-1 rounded-md hover:bg-[var(--surface-hover)] text-[var(--fg-subtle)] hover:text-violet-400 transition-all"
+        >
+          <RotateCcw className="w-3.5 h-3.5" />
+        </button>
+      )}
+    </div>
   );
 
   const TextInput = ({ value, onChange, placeholder, type = 'text' }: {
@@ -319,14 +336,14 @@ export function SettingsPage() {
     />
   );
 
-  const TextAreaInput = ({ value, onChange, placeholder }: {
-    value: string; onChange: (v: string) => void; placeholder?: string;
+  const TextAreaInput = ({ value, onChange, placeholder, rows = 12 }: {
+    value: string; onChange: (v: string) => void; placeholder?: string; rows?: number;
   }) => (
     <textarea
       value={value}
       onChange={e => onChange(e.target.value)}
       placeholder={placeholder}
-      rows={3}
+      rows={rows}
       className="w-full rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500/40 transition-all resize-y custom-scrollbar"
       style={{
         backgroundColor: 'var(--input-bg)',
@@ -634,8 +651,14 @@ export function SettingsPage() {
 
                     {extractionMode === 'single' ? (
                       <div className="space-y-2">
-                        <Label>Single-Agent System Instructions</Label>
+                        <Label 
+                          onReset={() => setCustomPrompts(p => ({ ...p, single_agent: '' }))}
+                          resetLabel="Clear custom instructions"
+                        >
+                          Single-Agent System Instructions
+                        </Label>
                         <TextAreaInput
+                          rows={12}
                           value={customPrompts.single_agent}
                           onChange={v => setCustomPrompts(p => ({ ...p, single_agent: v }))}
                           placeholder="Example: Always prefer the remote office. Ensure base compensation is formatted strictly numerically..."
@@ -669,8 +692,17 @@ export function SettingsPage() {
                         </div>
 
                         <div className="animate-fade-in">
-                          <Label>{activePromptField.replace(/_/g, ' ')} guidance</Label>
+                          <Label 
+                            onReset={() => setCustomPrompts(p => ({
+                              ...p,
+                              multi_agent: { ...p.multi_agent, [activePromptField]: '' }
+                            }))}
+                            resetLabel={`Clear custom ${activePromptField.replace(/_/g, ' ')} guidance`}
+                          >
+                            {activePromptField.replace(/_/g, ' ')} guidance
+                          </Label>
                           <TextAreaInput
+                            rows={12}
                             value={customPrompts.multi_agent[activePromptField]}
                             onChange={v => setCustomPrompts(p => ({
                               ...p,
@@ -743,15 +775,15 @@ export function SettingsPage() {
                       <div className="flex gap-4 border-b border-[var(--border-color)]">
                         {[
                           { id: 'global', label: 'Global' },
-                          { id: 'text', label: 'Field (Text)' },
-                          { id: 'json', label: 'Field (JSON)' },
-                        ].map(t => (
+                          { id: 'text', label: 'Field (Text)', hide: extractionMode === 'single' },
+                          { id: 'json', label: 'Field (JSON)', hide: extractionMode === 'single' },
+                        ].filter(t => !t.hide).map(t => (
                           <button
                             key={t.id}
                             type="button"
                             onClick={() => {
                               setActiveSystemTab(t.id as any);
-                              if (t.id === 'global') setActiveSystemPrompt('extraction_base');
+                              if (t.id === 'global') setActiveSystemPrompt(extractionMode === 'single' ? 'extraction_base' : 'extraction_description');
                               if (t.id === 'text') setActiveSystemPrompt('field_company');
                               if (t.id === 'json') setActiveSystemPrompt('json_company');
                             }}
@@ -769,11 +801,11 @@ export function SettingsPage() {
                       {/* Sub-tabs based on Category */}
                       <div className="flex flex-wrap gap-1.5 p-1 bg-[var(--surface)] rounded-xl border border-[var(--border-color)]">
                         {activeSystemTab === 'global' && [
-                          { id: 'extraction_base', label: 'Main (Single)' },
-                          { id: 'extraction_description', label: 'Desc (Multi)' },
+                          { id: 'extraction_base', label: 'Main (Single)', hide: extractionMode === 'multi' },
+                          { id: 'extraction_description', label: 'Desc (Multi)', hide: extractionMode === 'single' },
                           { id: 'json_ld', label: 'JSON-LD' },
                           { id: 'qa_validator', label: 'QA Validator' },
-                        ].map(tab => (
+                        ].filter(tab => !tab.hide).map(tab => (
                           <button
                             key={tab.id}
                             type="button"
@@ -834,8 +866,17 @@ export function SettingsPage() {
                       </div>
 
                       <div className="animate-fade-in min-h-[160px]">
-                        <Label>{activeSystemPrompt.replace(/^(field_|json_)/, '').replace(/_/g, ' ')} base text ({activeSystemTab})</Label>
+                        <Label 
+                          onReset={() => setSystemPrompts(p => ({
+                            ...p,
+                            [activeSystemPrompt]: DEFAULT_SYSTEM_PROMPTS[activeSystemPrompt as keyof typeof DEFAULT_SYSTEM_PROMPTS] || ''
+                          }))}
+                          resetLabel={`Restore default ${activeSystemPrompt.replace(/^(field_|json_)/, '').replace(/_/g, ' ')} prompt`}
+                        >
+                          {activeSystemPrompt.replace(/^(field_|json_)/, '').replace(/_/g, ' ')} base text ({activeSystemTab})
+                        </Label>
                         <TextAreaInput
+                          rows={12}
                           value={systemPrompts[activeSystemPrompt] || ''}
                           onChange={v => setSystemPrompts(p => ({
                             ...p,
