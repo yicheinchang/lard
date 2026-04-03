@@ -198,6 +198,7 @@ export function SettingsPage() {
     json_id: '',
     json_posted: '',
     json_deadline: '',
+    json_description: '',
     job_post_check: '',
   });
 
@@ -844,7 +845,7 @@ export function SettingsPage() {
                             type="button"
                             onClick={() => {
                               setActiveSystemTab(t.id as any);
-                              if (t.id === 'global') setActiveSystemPrompt(extractionMode === 'single' ? 'extraction_base' : 'extraction_description');
+                              if (t.id === 'global') setActiveSystemPrompt(extractionMode === 'single' ? 'extraction_base' : 'job_post_check');
                               if (t.id === 'text') setActiveSystemPrompt('field_company');
                               if (t.id === 'json') setActiveSystemPrompt('json_company');
                             }}
@@ -863,8 +864,7 @@ export function SettingsPage() {
                       <div className="flex flex-wrap gap-1.5 p-1 bg-[var(--surface)] rounded-xl border border-[var(--border-color)]">
                         {activeSystemTab === 'global' && [
                           { id: 'extraction_base', label: 'Main (Single)', hide: extractionMode === 'multi' },
-                          { id: 'extraction_description', label: 'Desc (Multi)', hide: extractionMode === 'single' },
-                          { id: 'json_ld', label: 'JSON-LD' },
+                          { id: 'json_ld', label: 'JSON-LD (Single)', hide: extractionMode === 'multi' },
                           { id: 'job_post_check', label: 'Job Check' },
                           { id: 'qa_validator', label: 'QA Validator' },
                         ].filter(tab => !tab.hide).map(tab => (
@@ -881,7 +881,6 @@ export function SettingsPage() {
                             {tab.label}
                           </button>
                         ))}
-                        {activeSystemTab === 'text' && [
                           { id: 'field_company', label: 'Company' },
                           { id: 'field_role', label: 'Role' },
                           { id: 'field_location', label: 'Location' },
@@ -889,6 +888,7 @@ export function SettingsPage() {
                           { id: 'field_id', label: 'Job ID' },
                           { id: 'field_posted', label: 'Posted' },
                           { id: 'field_deadline', label: 'Deadline' },
+                          { id: 'extraction_description', label: 'Description' },
                         ].map(tab => (
                           <button
                             key={tab.id}
@@ -903,7 +903,6 @@ export function SettingsPage() {
                             {tab.label}
                           </button>
                         ))}
-                        {activeSystemTab === 'json' && [
                           { id: 'json_company', label: 'Company' },
                           { id: 'json_role', label: 'Role' },
                           { id: 'json_location', label: 'Location' },
@@ -911,6 +910,7 @@ export function SettingsPage() {
                           { id: 'json_id', label: 'Job ID' },
                           { id: 'json_posted', label: 'Posted' },
                           { id: 'json_deadline', label: 'Deadline' },
+                          { id: 'json_description', label: 'Description' },
                         ].map(tab => (
                           <button
                             key={tab.id}

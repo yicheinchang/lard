@@ -254,6 +254,19 @@ async def _run_field_json_extraction(field, schema, prompt, text, fragment, requ
             print(f"Error extracting JSON {field}: {e}")
             return field, None
 
+def _get_json_ld_company(structured_data: dict) -> Any:
+    """Robustly find company information in Schema.org JobPosting data."""
+    # Official key: hiringOrganization
+    org = structured_data.get("hiringOrganization")
+    if org: return org
+    
+    # Common fallbacks
+    for key in ["organization", "brand", "author", "publisher"]:
+        val = structured_data.get(key)
+        if val: return val
+        
+    return None
+
 async def _run_multi_agent_json_extraction(structured_data: dict, text: str, request: Any = None, progress_cb: Callable = None, state: dict = None):
     semaphore = asyncio.Semaphore(1)
     from ai.chains import (
@@ -264,7 +277,7 @@ async def _run_multi_agent_json_extraction(structured_data: dict, text: str, req
     settings = load_app_settings()
     
     metadata_tasks = [
-        ("company", JobCompany, get_json_field_prompt("company", settings), structured_data.get("hiringOrganization")),
+        ("company", JobCompany, get_json_field_prompt("company", settings), _get_json_ld_company(structured_data)),
         ("role", JobRole, get_json_field_prompt("role", settings), structured_data.get("title")),
         ("location", JobLocation, get_json_field_prompt("location", settings), structured_data.get("jobLocation")),
         ("salary_range", JobSalary, get_json_field_prompt("salary_range", settings), structured_data.get("baseSalary")),

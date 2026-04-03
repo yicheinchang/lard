@@ -143,6 +143,14 @@ def get_json_field_prompt(field_name: str, settings: dict | None = None):
         ("user", "JSON FRAGMENT:\n{json_fragment}")
     ])
 
+def _create_description_json_prompt(settings: dict | None = None):
+    """Helper to create a dynamic metadata prompt for JSON-LD description extraction."""
+    base = get_base_prompt("json_description", settings)
+    return ChatPromptTemplate.from_messages([
+        ("system", base + "{validation_feedback}{custom_guidance}"),
+        ("user", "JSON FRAGMENT TO PROCESS (Markdown Output Required):\n\"\"\"\n{json_fragment}\n\"\"\"")
+    ])
+
 # --- Aliases for Graph Compatibility ---
 
 def description_extraction_prompt(settings: dict | None = None):
@@ -150,7 +158,7 @@ def description_extraction_prompt(settings: dict | None = None):
 
 def description_json_prompt(settings: dict | None = None):
     # This matches the legacy name used in graph.py
-    return _create_description_prompt(settings)
+    return _create_description_json_prompt(settings)
 
 # --- Static wrappers removed in favor of dynamic get_* functions ---
 

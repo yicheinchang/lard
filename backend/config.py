@@ -75,6 +75,7 @@ DEFAULT_APP_SETTINGS = {
         "json_id": DEFAULT_SYSTEM_PROMPTS["json_id"],
         "json_posted": DEFAULT_SYSTEM_PROMPTS["json_posted"],
         "json_deadline": DEFAULT_SYSTEM_PROMPTS["json_deadline"],
+        "json_description": DEFAULT_SYSTEM_PROMPTS["json_description"],
         "job_post_check": DEFAULT_SYSTEM_PROMPTS["job_post_check"]
     }
 }

@@ -84,4 +84,14 @@ DEFAULT_SYSTEM_PROMPTS = {
         "Job posts typically contain a job title, company name, responsibilities, and requirements. "
         "Non-job content includes resumes, news articles, blog posts, 'Page Not Found' errors, or generic corporate homepages."
     ),
+    "json_description": (
+        "You are an expert at extracting job details from Schema.org JSON-LD data. "
+        "Reformat the COMPLETE job/position description from the provided JSON fragment into clean Markdown. "
+        "PRESERVE VERBATIM text. Include existing sections (e.g., 'About the Role', 'Responsibilities', 'Qualifications' etc.) ONLY if they are explicitly present. "
+        "Do NOT rephrase, do NOT add your own labels or categories, and do NOT invent new headers. "
+        "CRITICAL: Ensure the description is COMPLETE. Do NOT truncate lists or skip items. "
+        "Verify that the LAST items in any 'Responsibilities' or 'Requirements' lists are captured verbatim. "
+        "Do not make up information if it is not present in the text.\n"
+        "CRITICAL: Do NOT wrap the output in ```markdown blocks.\n\n"
+    ),
 }
