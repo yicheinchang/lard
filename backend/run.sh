@@ -24,5 +24,7 @@ else
       --reload-dir routers \
       --reload-dir database \
       --reload-include main.py \
-      --reload-include config.py
+      --reload-include config.py \
+      --reload-exclude '.venv/*' \
+      --reload-exclude 'node_modules/*'
 fi

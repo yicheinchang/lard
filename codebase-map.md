@@ -254,7 +254,13 @@ The workspace uses a formalized rule system in `.agents/rules/workspace-role.md`
 - **Micro Git Commits**: Atomic, granular commits for every stable change.
 - **Synchronized Versioning**: Automated SemVer updates across backend and frontend.
 - **Codebase Map Sync**: Mandatory updates to this document to maintain architectural context.
-- Git Tagging: Automated tagging for every version = "0.39.5"
+- **Backend Startup Optimization (Extreme v3)**: The backend is optimized for sub-10s startup even with heavy AI dependencies:
+    - **Decoupled Prompts**: Raw system prompts are isolated in `backend/ai/prompts.py` to prevent heavy LangChain library loads (and 3.14 compatibility hangs) during initial app configuration.
+    - **Reloader Indexing**: The `uvicorn` reloader is configured via `run.sh` to watch only source directories and explicitly exclude `.venv` and `node_modules`.
+    - **Deep Lazy Loading**: Heavy AI prompts and `langchain` utilities are imported strictly inside the functions that need them.
+    - **Production Ready**: Use `./run.sh prod` for optimized concurrency (multiple workers) without file watching.
+    - **Persistent Model Cache**: Embedding models are cached locally in `backend/chroma_db/models/` to bypass re-downloads.
+- Git Tagging: Automated tagging for every version = "0.39.6"
 
 ### 3. State Management (LangGraph)
 The AI assistant uses **LangGraph** to manage conversational state, enabling multi-turn workflows and tool-calling (e.g., querying the database vs. searching documents).

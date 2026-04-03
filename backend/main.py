@@ -3,6 +3,10 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 import os
 from contextlib import asynccontextmanager
+import warnings
+
+# Suppress Pydantic V1/Python 3.14 compatibility warning from LangChain
+warnings.filterwarnings("ignore", message="Core Pydantic V1 functionality isn't compatible with Python 3.14 or greater.")
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):

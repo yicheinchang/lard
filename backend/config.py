@@ -1,7 +1,7 @@
 import json
 import os
 from pydantic_settings import BaseSettings
-from ai.chains import DEFAULT_SYSTEM_PROMPTS
+from ai.prompts import DEFAULT_SYSTEM_PROMPTS
 
 class Settings(BaseSettings):
     """Env-var based settings — used as fallback defaults for app_settings.json."""
