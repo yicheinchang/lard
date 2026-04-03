@@ -73,6 +73,11 @@ class VectorStoreManager:
         metadata: dict,
         collection_name: str = COLLECTION_NAME,
     ):
+        from ai.logger import agnt_log
+        
+        source = metadata.get("source", document_id)
+        agnt_log("VectorDB", task="Ingesting Text", input_data=source[:40])
+        
         store = self.get_store(collection_name)
         from langchain_text_splitters import RecursiveCharacterTextSplitter
 
@@ -86,6 +91,7 @@ class VectorStoreManager:
             for i, c in enumerate(chunks)
         ]
         store.add_documents(docs, ids=[f"{document_id}_{i}" for i in range(len(docs))])
+        agnt_log("VectorDB", result=f"Stored {len(docs)} chunks for {source[:30]}")
 
 
 _manager_instance = None
