@@ -30,6 +30,8 @@ const defaultSettings: AppSettings = {
     openai_api_key: '',
     openai_model: 'text-embedding-3-small',
   },
+  extraction_mode: 'single',
+  max_concurrency: 2,
 };
 
 const SettingsContext = createContext<SettingsContextType | undefined>(undefined);

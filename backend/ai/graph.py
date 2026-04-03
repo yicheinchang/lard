@@ -134,15 +134,15 @@ async def _run_field_extraction(field, schema, prompt, text, url, request, semap
 
 async def _run_multi_agent_extraction(text: str, url: str, request: Any = None, progress_cb: Callable = None, state: dict = None):
     """Parallelized extraction for small models (Multi-Agent mode) with streaming support."""
-    # Concurrency limit (Keep at 1 for stability when processing large descriptions on local LLM)
-    semaphore = asyncio.Semaphore(1)
+    settings = load_app_settings()
+    # Concurrency limit (Dynamic from settings)
+    semaphore = asyncio.Semaphore(settings.get("max_concurrency", 1))
     
     from ai.chains import (
         JobCompany, JobRole, JobLocation, JobSalary, JobId, 
         PostedDate, DeadlineDate, JobDescription,
         get_field_prompt, _create_description_prompt
     )
-    settings = load_app_settings()
     description_extraction_prompt = _create_description_prompt(settings)
 
     metadata_tasks = [
@@ -268,13 +268,14 @@ def _get_json_ld_company(structured_data: dict) -> Any:
     return None
 
 async def _run_multi_agent_json_extraction(structured_data: dict, text: str, request: Any = None, progress_cb: Callable = None, state: dict = None):
-    semaphore = asyncio.Semaphore(1)
+    settings = load_app_settings()
+    # Concurrency limit (Dynamic from settings)
+    semaphore = asyncio.Semaphore(settings.get("max_concurrency", 1))
     from ai.chains import (
         JobCompany, JobRole, JobLocation, JobSalary, JobId, 
         PostedDate, DeadlineDate, JobDescription,
         get_json_field_prompt, description_json_prompt
     )
-    settings = load_app_settings()
     
     metadata_tasks = [
         ("company", JobCompany, get_json_field_prompt("company", settings), _get_json_ld_company(structured_data)),
@@ -392,7 +393,7 @@ async def extract_node(state: AgentState):
             # Redo description only
             if mode == "multi":
                 from ai.chains import JobDescription, description_extraction_prompt, description_json_prompt
-                sema = asyncio.Semaphore(1)
+                sema = asyncio.Semaphore(settings.get("max_concurrency", 1))
                 if is_json_ld:
                     _, desc_val = await _run_field_json_extraction("description", JobDescription, description_json_prompt, text_with_feedback, structured_data.get("description"), request, sema, progress_cb, state=state)
                 else:    

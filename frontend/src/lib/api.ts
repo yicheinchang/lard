@@ -82,6 +82,7 @@ export interface AppSettings {
   embedding_provider: 'default' | 'ollama' | 'openai';
   embedding_config: EmbeddingConfig;
   extraction_mode: 'single' | 'multi';
+  max_concurrency: number;
   custom_prompts: {
     single_agent: string;
     multi_agent: {

@@ -157,6 +157,7 @@ export function SettingsPage() {
     anthropic_api_key: '', anthropic_model: '',
   });
   const [extractionMode, setExtractionMode] = useState<'single' | 'multi'>('single');
+  const [maxConcurrency, setMaxConcurrency] = useState(2);
   const [embeddingProvider, setEmbeddingProvider] = useState<EmbeddingProvider>('default');
   const [embeddingConfig, setEmbeddingConfig] = useState<EmbeddingConfig>({
     ollama_base_url: '', ollama_model: '',
@@ -241,6 +242,7 @@ export function SettingsPage() {
       llmProvider !== settings.llm_provider ||
       JSON.stringify(llmConfig) !== JSON.stringify(settings.llm_config) ||
       extractionMode !== settings.extraction_mode ||
+      maxConcurrency !== settings.max_concurrency ||
       embeddingProvider !== settings.embedding_provider ||
       JSON.stringify(embeddingConfig) !== JSON.stringify(settings.embedding_config) ||
       JSON.stringify(customPrompts) !== JSON.stringify(settings.custom_prompts) ||
@@ -291,6 +293,7 @@ export function SettingsPage() {
     setLlmProvider(settings.llm_provider);
     setLlmConfig(settings.llm_config);
     setExtractionMode(settings.extraction_mode);
+    setMaxConcurrency(settings.max_concurrency || 2);
     setEmbeddingProvider(settings.embedding_provider);
     setEmbeddingConfig(settings.embedding_config);
     setOriginalEmbeddingProvider(settings.embedding_provider);
@@ -350,6 +353,7 @@ export function SettingsPage() {
         llm_provider: llmProvider,
         llm_config: llmConfig,
         extraction_mode: extractionMode,
+        max_concurrency: maxConcurrency,
         embedding_provider: embeddingProvider,
         embedding_config: embeddingConfig,
         custom_prompts: customPrompts,
@@ -546,35 +550,6 @@ export function SettingsPage() {
                 />
               </div>
 
-              {/* Extraction Strategy */}
-              <div>
-                <Label>Extraction Strategy</Label>
-                <div className="grid grid-cols-2 gap-3">
-                  {[
-                    { id: 'single', label: 'Single-Agent', desc: 'Fast, for Large LLMs' },
-                    { id: 'multi', label: 'Multi-Agent', desc: 'Accurate, for Small LLMs' },
-                  ].map(mode => {
-                    const active = extractionMode === mode.id;
-                    return (
-                      <button
-                        key={mode.id}
-                        type="button"
-                        onClick={() => setExtractionMode(mode.id as 'single' | 'multi')}
-                        className={`
-                          p-3 rounded-xl border-2 transition-all text-left
-                          ${active
-                            ? 'border-violet-500 bg-violet-500/10'
-                            : 'border-[var(--border-color)] hover:border-violet-500/40 hover:bg-violet-500/5'
-                          }
-                        `}
-                      >
-                        <p className="font-medium text-sm" style={{ color: active ? 'var(--primary)' : 'var(--fg)' }}>{mode.label}</p>
-                        <p className="text-[10px] sm:text-xs" style={{ color: 'var(--fg-subtle)' }}>{mode.desc}</p>
-                      </button>
-                    )
-                  })}
-                </div>
-              </div>
 
               {/* Ollama Config */}
               {llmProvider === 'ollama' && (
@@ -684,6 +659,80 @@ export function SettingsPage() {
                 <TestButton onClick={handleTestLlm} loading={testingLlm} label="Test LLM Connection" />
               </div>
               <TestResult result={llmTestResult} />
+
+              <div className="pt-4 space-y-6">
+                {/* Extraction Strategy */}
+                <div>
+                  <Label>Extraction Strategy</Label>
+                  <div className="grid grid-cols-2 gap-3">
+                    {[
+                      { id: 'single', label: 'Single-Agent', desc: 'Fast, for Large LLMs' },
+                      { id: 'multi', label: 'Multi-Agent', desc: 'Accurate, for Small LLMs' },
+                    ].map(mode => {
+                      const active = extractionMode === mode.id;
+                      return (
+                        <button
+                          key={mode.id}
+                          type="button"
+                          onClick={() => setExtractionMode(mode.id as 'single' | 'multi')}
+                          className={`
+                            p-3 rounded-xl border-2 transition-all text-left
+                            ${active
+                              ? 'border-violet-500 bg-violet-500/10'
+                              : 'border-[var(--border-color)] hover:border-violet-500/40 hover:bg-violet-500/5'
+                            }
+                          `}
+                        >
+                          <p className="font-medium text-sm" style={{ color: active ? 'var(--primary)' : 'var(--fg)' }}>{mode.label}</p>
+                          <p className="text-[10px] sm:text-xs" style={{ color: 'var(--fg-subtle)' }}>{mode.desc}</p>
+                        </button>
+                      )
+                    })}
+                  </div>
+                </div>
+
+                {/* Max Concurrency AI Agents */}
+                <div className="animate-fade-in group">
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center gap-2">
+                      <Label>Max Concurrent AI Agents</Label>
+                      <div className="p-1 rounded-full bg-violet-500/10 text-violet-400 opacity-0 group-hover:opacity-100 transition-opacity cursor-help" title="Controls how many agents run in parallel during Multi-Agent extraction. Higher values improve speed but increase hardware load.">
+                        <Sparkles className="w-3 h-3" />
+                      </div>
+                    </div>
+                    <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-violet-500/20 text-violet-400 border border-violet-500/20">
+                      {maxConcurrency} Agents
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-4">
+                    <input
+                      type="range"
+                      min="1"
+                      max="10"
+                      step="1"
+                      value={maxConcurrency}
+                      onChange={(e) => setMaxConcurrency(parseInt(e.target.value))}
+                      className="flex-1 accent-violet-500 cursor-pointer h-1.5 rounded-lg appearance-none bg-[var(--border-color)]"
+                    />
+                    <div className="flex gap-1">
+                      {[1, 2, 3, 5, 10].map(v => (
+                        <button
+                          key={v}
+                          type="button"
+                          onClick={() => setMaxConcurrency(v)}
+                          className={`text-[9px] font-bold px-1.5 py-0.5 rounded border transition-all ${maxConcurrency === v ? 'bg-violet-500 border-violet-500 text-white' : 'border-[var(--border-color)] text-[var(--fg-subtle)] hover:border-violet-500/40'}`}
+                        >
+                          {v}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  <p className="text-[10px] mt-2 leading-relaxed" style={{ color: 'var(--fg-subtle)' }}>
+                    Recommended: <strong>2-3</strong> for local LLMs, <strong>5+</strong> for Cloud APIs. 
+                    <span className="text-amber-500 ml-1 opacity-80 italic">Overloading local servers may cause timeouts.</span>
+                  </p>
+                </div>
+              </div>
 
               {/* Collapsible Advanced Prompts */}
               <div className="mt-8 pt-6 border-t border-[var(--border-color)]">

@@ -41,6 +41,7 @@ DEFAULT_APP_SETTINGS = {
         "openai_model": "text-embedding-3-small",
     },
     "extraction_mode": "single",
+    "max_concurrency": 2,
     "custom_prompts": {
         "single_agent": "",
         "multi_agent": {
