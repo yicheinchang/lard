@@ -181,18 +181,18 @@ async def _run_field_json_extraction(field, schema, prompt, text, fragment, requ
         llm = get_llm(num_ctx=num_ctx)
 
         try:
-            if field == "description":
-                custom_guidance = ""
-                settings = load_app_settings()
-                if settings.get("custom_prompts"):
-                    mode = settings.get("extraction_mode", "single")
-                    if mode == "multi":
-                        cg = settings["custom_prompts"]["multi_agent"].get(field, "")
-                        if cg: custom_guidance = f"ADDITIONAL USER INSTRUCTIONS:\n{cg}"
-                    else:
-                        cg = settings["custom_prompts"].get("single_agent", "")
-                        if cg: custom_guidance = f"ADDITIONAL USER INSTRUCTIONS:\n{cg}"
+            custom_guidance = ""
+            settings = load_app_settings()
+            if settings.get("custom_prompts"):
+                mode = settings.get("extraction_mode", "single")
+                if mode == "multi":
+                    cg = settings["custom_prompts"]["multi_agent"].get(field, "")
+                    if cg: custom_guidance = f"ADDITIONAL USER INSTRUCTIONS:\n{cg}"
+                else:
+                    cg = settings["custom_prompts"].get("single_agent", "")
+                    if cg: custom_guidance = f"ADDITIONAL USER INSTRUCTIONS:\n{cg}"
 
+            if field == "description":
                 raw_chain = prompt | llm
                 inputs = {
                     "json_fragment": json.dumps(fragment, indent=2),
