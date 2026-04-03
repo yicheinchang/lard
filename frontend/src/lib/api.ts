@@ -149,6 +149,13 @@ export const testEmbeddingConnection = async (testConfig?: { provider: string; c
   return response.data;
 };
 
+export const getOllamaModels = async (baseUrl: string): Promise<string[]> => {
+  const response = await api.get('/settings/ollama-models', {
+    params: { base_url: baseUrl }
+  });
+  return response.data.models;
+};
+
 // ── Jobs ──────────────────────────────────────────────────────────────
 
 export const getJobs = async () => {

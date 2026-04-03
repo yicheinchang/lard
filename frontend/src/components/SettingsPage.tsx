@@ -12,6 +12,7 @@ import {
   testEmbeddingConnection,
   rebuildVectors,
   updateSettings as apiUpdateSettings,
+  getOllamaModels,
   type AppSettings,
   type LlmConfig,
   type EmbeddingConfig,
@@ -213,6 +214,11 @@ export function SettingsPage() {
   const [activeSystemTab, setActiveSystemTab] = useState<'global' | 'text' | 'json'>('global');
   const [activeSystemPrompt, setActiveSystemPrompt] = useState<keyof AppSettings['system_prompts']>('extraction_base');
 
+  // Ollama-specific states
+  const [ollamaOnline, setOllamaOnline] = useState<boolean | null>(null);
+  const [ollamaModels, setOllamaModels] = useState<string[]>([]);
+  const [isCheckingOllama, setIsCheckingOllama] = useState(false);
+
   // Track whether embedding provider was changed (needs rebuild warning)
   const [originalEmbeddingProvider, setOriginalEmbeddingProvider] = useState<EmbeddingProvider>('default');
   const [originalEmbeddingConfig, setOriginalEmbeddingConfig] = useState<EmbeddingConfig | null>(null);
@@ -293,6 +299,31 @@ export function SettingsPage() {
       setSystemPrompts(settings.system_prompts);
     }
   }, [settings]);
+
+  // Ollama status checker
+  useEffect(() => {
+    if (llmProvider !== 'ollama' || !llmConfig.ollama_base_url) {
+      setOllamaOnline(null);
+      return;
+    }
+
+    const checkOllama = async () => {
+      setIsCheckingOllama(true);
+      try {
+        const models = await getOllamaModels(llmConfig.ollama_base_url);
+        setOllamaModels(models);
+        setOllamaOnline(true);
+      } catch (err) {
+        setOllamaOnline(false);
+        setOllamaModels([]);
+      } finally {
+        setIsCheckingOllama(false);
+      }
+    };
+
+    const timer = setTimeout(checkOllama, 800);
+    return () => clearTimeout(timer);
+  }, [llmProvider, llmConfig.ollama_base_url]);
 
   // ── Save handler ───────────────────────────────────────────────────
 
@@ -542,23 +573,58 @@ export function SettingsPage() {
 
               {/* Ollama Config */}
               {llmProvider === 'ollama' && (
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 animate-fade-in">
-                  <div>
-                    <Label>Ollama Server URL</Label>
-                    <TextInput
-                      value={llmConfig.ollama_base_url}
-                      onChange={v => setLlmConfig(p => ({ ...p, ollama_base_url: v }))}
-                      placeholder="http://localhost:11434"
-                    />
+                <div className="space-y-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 animate-fade-in">
+                    <div>
+                      <div className="flex items-center gap-2 mb-1.5">
+                        <label className="block text-sm font-medium" style={{ color: 'var(--fg-muted)' }}>Ollama Server URL</label>
+                        <div className="flex items-center gap-1.5">
+                          <div className={`w-2 h-2 rounded-full ${
+                            isCheckingOllama ? 'bg-amber-400 animate-pulse' :
+                            ollamaOnline === true ? 'bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.6)]' :
+                            ollamaOnline === false ? 'bg-red-500' :
+                            'bg-gray-500'
+                          }`} />
+                          <span className="text-[10px] font-medium uppercase tracking-wider" style={{ color: 'var(--fg-subtle)' }}>
+                            {isCheckingOllama ? 'Checking...' :
+                             ollamaOnline === true ? 'Online' :
+                             ollamaOnline === false ? 'Offline' :
+                             'Enter URL'}
+                          </span>
+                        </div>
+                      </div>
+                      <TextInput
+                        value={llmConfig.ollama_base_url}
+                        onChange={v => setLlmConfig(p => ({ ...p, ollama_base_url: v }))}
+                        placeholder="http://localhost:11434"
+                      />
+                    </div>
+                    <div>
+                      <Label>Model Name</Label>
+                      <div className="relative group">
+                        <input
+                          list="ollama-models"
+                          value={llmConfig.ollama_model}
+                          onChange={e => setLlmConfig(p => ({ ...p, ollama_model: e.target.value }))}
+                          placeholder={ollamaOnline ? "Select or type model..." : "e.g. gemma3:4b-it-qat"}
+                          className="w-full rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500/40 transition-all border border-[var(--border-color)] bg-[var(--input-bg)] text-[var(--fg)]"
+                        />
+                        <datalist id="ollama-models">
+                          {ollamaModels.map(m => <option key={m} value={m} />)}
+                        </datalist>
+                      </div>
+                    </div>
                   </div>
-                  <div>
-                    <Label>Model Name</Label>
-                    <TextInput
-                      value={llmConfig.ollama_model}
-                      onChange={v => setLlmConfig(p => ({ ...p, ollama_model: v }))}
-                      placeholder="gemma3:4b-it-qat"
-                    />
-                  </div>
+
+                  {ollamaOnline === true && ollamaModels.length > 0 && llmConfig.ollama_model && !ollamaModels.includes(llmConfig.ollama_model) && (
+                    <div className="flex items-start gap-2 p-3 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 text-xs animate-shake">
+                      <AlertTriangle className="w-4 h-4 shrink-0" />
+                      <p>
+                        Model <strong>"{llmConfig.ollama_model}"</strong> is not found on the server. 
+                        Please select one from the list or ensure it is pulled correctly.
+                      </p>
+                    </div>
+                  )}
                 </div>
               )}
 
