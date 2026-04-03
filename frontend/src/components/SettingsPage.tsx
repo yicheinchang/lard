@@ -64,6 +64,20 @@ export function SettingsPage() {
     extraction_description: '',
     json_ld: '',
     qa_validator: '',
+    field_company: '',
+    field_role: '',
+    field_location: '',
+    field_salary: '',
+    field_id: '',
+    field_posted: '',
+    field_deadline: '',
+    json_company: '',
+    json_role: '',
+    json_location: '',
+    json_salary: '',
+    json_id: '',
+    json_posted: '',
+    json_deadline: '',
   });
 
   // UI states
@@ -79,6 +93,7 @@ export function SettingsPage() {
   const [showAdvancedPrompts, setShowAdvancedPrompts] = useState(false);
   const [showSystemPrompts, setShowSystemPrompts] = useState(false);
   const [activePromptField, setActivePromptField] = useState<keyof typeof customPrompts.multi_agent>('company');
+  const [activeSystemTab, setActiveSystemTab] = useState<'global' | 'text' | 'json'>('global');
   const [activeSystemPrompt, setActiveSystemPrompt] = useState<keyof AppSettings['system_prompts']>('extraction_base');
 
   // Track whether embedding provider was changed (needs rebuild warning)
@@ -701,6 +716,20 @@ export function SettingsPage() {
                             extraction_description: '',
                             json_ld: '',
                             qa_validator: '',
+                            field_company: '',
+                            field_role: '',
+                            field_location: '',
+                            field_salary: '',
+                            field_id: '',
+                            field_posted: '',
+                            field_deadline: '',
+                            json_company: '',
+                            json_role: '',
+                            json_location: '',
+                            json_salary: '',
+                            json_id: '',
+                            json_posted: '',
+                            json_deadline: '',
                           })}
                           className="mt-3 px-3 py-1.5 rounded-lg text-[10px] font-bold bg-[var(--surface)] border border-amber-500/20 hover:bg-amber-500/10 transition-all text-amber-300 uppercase tracking-tight"
                         >
@@ -710,9 +739,36 @@ export function SettingsPage() {
                     </div>
 
                     <div className="space-y-4">
-                      {/* Sub-tabs for System Prompts */}
-                      <div className="flex flex-wrap gap-1.5 p-1 bg-[var(--surface)] rounded-xl border border-[var(--border-color)]">
+                      {/* Prompts Category Tabs */}
+                      <div className="flex gap-4 border-b border-[var(--border-color)]">
                         {[
+                          { id: 'global', label: 'Global' },
+                          { id: 'text', label: 'Field (Text)' },
+                          { id: 'json', label: 'Field (JSON)' },
+                        ].map(t => (
+                          <button
+                            key={t.id}
+                            type="button"
+                            onClick={() => {
+                              setActiveSystemTab(t.id as any);
+                              if (t.id === 'global') setActiveSystemPrompt('extraction_base');
+                              if (t.id === 'text') setActiveSystemPrompt('field_company');
+                              if (t.id === 'json') setActiveSystemPrompt('json_company');
+                            }}
+                            className={`pb-2 text-xs font-bold transition-all uppercase tracking-tight ${
+                              activeSystemTab === t.id
+                                ? 'border-b-2 border-amber-500 text-amber-400'
+                                : 'text-[var(--fg-subtle)] hover:text-[var(--fg)]'
+                            }`}
+                          >
+                            {t.label}
+                          </button>
+                        ))}
+                      </div>
+
+                      {/* Sub-tabs based on Category */}
+                      <div className="flex flex-wrap gap-1.5 p-1 bg-[var(--surface)] rounded-xl border border-[var(--border-color)]">
+                        {activeSystemTab === 'global' && [
                           { id: 'extraction_base', label: 'Main (Single)' },
                           { id: 'extraction_description', label: 'Desc (Multi)' },
                           { id: 'json_ld', label: 'JSON-LD' },
@@ -731,10 +787,54 @@ export function SettingsPage() {
                             {tab.label}
                           </button>
                         ))}
+                        {activeSystemTab === 'text' && [
+                          { id: 'field_company', label: 'Company' },
+                          { id: 'field_role', label: 'Role' },
+                          { id: 'field_location', label: 'Location' },
+                          { id: 'field_salary', label: 'Salary' },
+                          { id: 'field_id', label: 'Job ID' },
+                          { id: 'field_posted', label: 'Posted' },
+                          { id: 'field_deadline', label: 'Deadline' },
+                        ].map(tab => (
+                          <button
+                            key={tab.id}
+                            type="button"
+                            onClick={() => setActiveSystemPrompt(tab.id as any)}
+                            className={`px-3 py-1.5 rounded-lg text-[10px] font-bold transition-all uppercase tracking-tight ${
+                              activeSystemPrompt === tab.id
+                                ? 'bg-amber-600 text-white shadow-md'
+                                : 'text-[var(--fg-subtle)] hover:text-[var(--fg)] hover:bg-amber-500/5'
+                            }`}
+                          >
+                            {tab.label}
+                          </button>
+                        ))}
+                        {activeSystemTab === 'json' && [
+                          { id: 'json_company', label: 'Company' },
+                          { id: 'json_role', label: 'Role' },
+                          { id: 'json_location', label: 'Location' },
+                          { id: 'json_salary', label: 'Salary' },
+                          { id: 'json_id', label: 'Job ID' },
+                          { id: 'json_posted', label: 'Posted' },
+                          { id: 'json_deadline', label: 'Deadline' },
+                        ].map(tab => (
+                          <button
+                            key={tab.id}
+                            type="button"
+                            onClick={() => setActiveSystemPrompt(tab.id as any)}
+                            className={`px-3 py-1.5 rounded-lg text-[10px] font-bold transition-all uppercase tracking-tight ${
+                              activeSystemPrompt === tab.id
+                                ? 'bg-amber-600 text-white shadow-md'
+                                : 'text-[var(--fg-subtle)] hover:text-[var(--fg)] hover:bg-amber-500/5'
+                            }`}
+                          >
+                            {tab.label}
+                          </button>
+                        ))}
                       </div>
 
-                      <div className="animate-fade-in">
-                        <Label>{activeSystemPrompt.replace(/_/g, ' ')} base text</Label>
+                      <div className="animate-fade-in min-h-[160px]">
+                        <Label>{activeSystemPrompt.replace(/^(field_|json_)/, '').replace(/_/g, ' ')} base text ({activeSystemTab})</Label>
                         <TextAreaInput
                           value={systemPrompts[activeSystemPrompt] || ''}
                           onChange={v => setSystemPrompts(p => ({

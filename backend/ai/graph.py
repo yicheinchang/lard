@@ -119,21 +119,19 @@ async def _run_multi_agent_extraction(text: str, url: str, request: Any = None, 
     from ai.chains import (
         JobCompany, JobRole, JobLocation, JobSalary, JobId, 
         PostedDate, DeadlineDate, JobDescription,
-        company_prompt, role_prompt, location_prompt, salary_prompt,
-        job_id_prompt, posted_date_prompt, deadline_date_prompt,
-        _create_description_prompt
+        get_field_prompt, _create_description_prompt
     )
     settings = load_app_settings()
     description_extraction_prompt = _create_description_prompt(settings)
 
     metadata_tasks = [
-        ("company", JobCompany, company_prompt),
-        ("role", JobRole, role_prompt),
-        ("location", JobLocation, location_prompt),
-        ("salary_range", JobSalary, salary_prompt),
-        ("company_job_id", JobId, job_id_prompt),
-        ("job_posted_date", PostedDate, posted_date_prompt),
-        ("application_deadline", DeadlineDate, deadline_date_prompt),
+        ("company", JobCompany, get_field_prompt("company", settings)),
+        ("role", JobRole, get_field_prompt("role", settings)),
+        ("location", JobLocation, get_field_prompt("location", settings)),
+        ("salary_range", JobSalary, get_field_prompt("salary_range", settings)),
+        ("company_job_id", JobId, get_field_prompt("company_job_id", settings)),
+        ("job_posted_date", PostedDate, get_field_prompt("job_posted_date", settings)),
+        ("application_deadline", DeadlineDate, get_field_prompt("application_deadline", settings)),
         ("description", JobDescription, description_extraction_prompt),
     ]
     
@@ -235,19 +233,18 @@ async def _run_multi_agent_json_extraction(structured_data: dict, text: str, req
     from ai.chains import (
         JobCompany, JobRole, JobLocation, JobSalary, JobId, 
         PostedDate, DeadlineDate, JobDescription,
-        company_json_prompt, role_json_prompt, location_json_prompt, salary_json_prompt,
-        job_id_json_prompt, posted_date_json_prompt, deadline_date_json_prompt,
-        description_json_prompt
+        get_json_field_prompt, description_json_prompt
     )
+    settings = load_app_settings()
     
     metadata_tasks = [
-        ("company", JobCompany, company_json_prompt, structured_data.get("hiringOrganization")),
-        ("role", JobRole, role_json_prompt, structured_data.get("title")),
-        ("location", JobLocation, location_json_prompt, structured_data.get("jobLocation")),
-                        ("salary_range", JobSalary, salary_json_prompt, structured_data.get("baseSalary")),
-        ("company_job_id", JobId, job_id_json_prompt, structured_data.get("identifier") or structured_data.get("url")),
-        ("job_posted_date", PostedDate, posted_date_json_prompt, structured_data.get("datePosted")),
-        ("application_deadline", DeadlineDate, deadline_date_json_prompt, structured_data.get("validThrough")),
+        ("company", JobCompany, get_json_field_prompt("company", settings), structured_data.get("hiringOrganization")),
+        ("role", JobRole, get_json_field_prompt("role", settings), structured_data.get("title")),
+        ("location", JobLocation, get_json_field_prompt("location", settings), structured_data.get("jobLocation")),
+        ("salary_range", JobSalary, get_json_field_prompt("salary_range", settings), structured_data.get("baseSalary")),
+        ("company_job_id", JobId, get_json_field_prompt("company_job_id", settings), structured_data.get("identifier") or structured_data.get("url")),
+        ("job_posted_date", PostedDate, get_json_field_prompt("job_posted_date", settings), structured_data.get("datePosted")),
+        ("application_deadline", DeadlineDate, get_json_field_prompt("application_deadline", settings), structured_data.get("validThrough")),
         ("description", JobDescription, description_json_prompt, structured_data.get("description")),
     ]
     

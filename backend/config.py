@@ -57,7 +57,23 @@ DEFAULT_APP_SETTINGS = {
         "extraction_base": DEFAULT_SYSTEM_PROMPTS["extraction_base"],
         "extraction_description": DEFAULT_SYSTEM_PROMPTS["extraction_description"],
         "json_ld": DEFAULT_SYSTEM_PROMPTS["json_ld"],
-        "qa_validator": DEFAULT_SYSTEM_PROMPTS["qa_validator"]
+        "qa_validator": DEFAULT_SYSTEM_PROMPTS["qa_validator"],
+        # Multi-Agent Fields (Text)
+        "field_company": DEFAULT_SYSTEM_PROMPTS["field_company"],
+        "field_role": DEFAULT_SYSTEM_PROMPTS["field_role"],
+        "field_location": DEFAULT_SYSTEM_PROMPTS["field_location"],
+        "field_salary": DEFAULT_SYSTEM_PROMPTS["field_salary"],
+        "field_id": DEFAULT_SYSTEM_PROMPTS["field_id"],
+        "field_posted": DEFAULT_SYSTEM_PROMPTS["field_posted"],
+        "field_deadline": DEFAULT_SYSTEM_PROMPTS["field_deadline"],
+        # Multi-Agent Fields (JSON)
+        "json_company": DEFAULT_SYSTEM_PROMPTS["json_company"],
+        "json_role": DEFAULT_SYSTEM_PROMPTS["json_role"],
+        "json_location": DEFAULT_SYSTEM_PROMPTS["json_location"],
+        "json_salary": DEFAULT_SYSTEM_PROMPTS["json_salary"],
+        "json_id": DEFAULT_SYSTEM_PROMPTS["json_id"],
+        "json_posted": DEFAULT_SYSTEM_PROMPTS["json_posted"],
+        "json_deadline": DEFAULT_SYSTEM_PROMPTS["json_deadline"]
     }
 }
 

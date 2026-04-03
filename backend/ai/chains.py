@@ -54,7 +54,23 @@ DEFAULT_SYSTEM_PROMPTS = {
         "4. VERBATIM: While formatting is flexible, the text content itself must remain verbatim. Minor punctuation/whitespace fixes are fine.\n"
         "5. FENCING: MUST NOT contain ```markdown blocks.\n"
         "CRITICAL: If is_valid or is_complete is False, you MUST provide a detailed failure_reason explaining what is missing or wrong."
-    )
+    ),
+    # --- Multi-Agent Field Basics (Text) ---
+    "field_company": "You are an expert at extracting job details. Extract ONLY the 'company' name verbatim from the text. Look for the employer or organization name. If not explicitly found, return null.",
+    "field_role": "You are an expert at extracting job details. Extract ONLY the 'role' verbatim from the text. Extract the professional job title verbatim. Do not truncate the text or remove words, even if they are separated by commas. If not explicitly found, return null.",
+    "field_location": "You are an expert at extracting job details. Extract ONLY the 'location' verbatim from the text. Extract the city, state/region, and country if available. If not explicitly found, return null.",
+    "field_salary": "You are an expert at extracting job details. Extract ONLY the 'salary_range' verbatim from the text. Extract the compensation range (e.g., '$100k - $150k per year'). If not explicitly found, return null.",
+    "field_id": "You are an expert at extracting job details. Extract ONLY the 'company_job_id' verbatim from the text. Look for 'Job ID', 'Req #', or 'Reference'. Prioritize text content. Fallback to URL only if text is missing it. If not explicitly found, return null.",
+    "field_posted": "You are an expert at extracting job details. Extract ONLY the 'job_posted_date' verbatim from the text. Extract the date the job was published. Return in YYYY-MM-DD format. If not explicitly found, return null.",
+    "field_deadline": "You are an expert at extracting job details. Extract ONLY the 'application_deadline' verbatim from the text. Extract the date applications close. Return in YYYY-MM-DD format. If not explicitly found, return null.",
+    # --- Multi-Agent Field Basics (JSON) ---
+    "json_company": "You are an expert at extracting job details from Schema.org JSON-LD data. Extract ONLY the 'company' from the provided JSON snippet. Use the embedded name or text. Return just the company name. If the specific detail is not found or empty, return null.",
+    "json_role": "You are an expert at extracting job details from Schema.org JSON-LD data. Extract ONLY the 'role' from the provided JSON snippet. Extract the professional job title verbatim. Do not truncate the text or remove words, even if they are separated by commas. If the specific detail is not found or empty, return null.",
+    "json_location": "You are an expert at extracting job details from Schema.org JSON-LD data. Extract ONLY the 'location' from the provided JSON snippet. Extract the city, state/region, and country. Format it simply (e.g., 'Cambridge, MA'). If the specific detail is not found or empty, return null.",
+    "json_salary": "You are an expert at extracting job details from Schema.org JSON-LD data. Extract ONLY the 'salary_range' from the provided JSON snippet. Extract the currency, min, and max values and format them cleanly. If the specific detail is not found or empty, return null.",
+    "json_id": "You are an expert at extracting job details from Schema.org JSON-LD data. Extract ONLY the 'company_job_id' from the provided JSON snippet. Extract the value of the identifier or reference number. If the specific detail is not found or empty, return null.",
+    "json_posted": "You are an expert at extracting job details from Schema.org JSON-LD data. Extract ONLY the 'job_posted_date' from the provided JSON snippet. Convert the date to YYYY-MM-DD format. If the specific detail is not found or empty, return null.",
+    "json_deadline": "You are an expert at extracting job details from Schema.org JSON-LD data. Extract ONLY the 'application_deadline' from the provided JSON snippet. Convert the date to YYYY-MM-DD format. If the specific detail is not found or empty, return null."
 }
 
 def get_base_prompt(key: str, settings: dict | None = None) -> str:
@@ -95,11 +111,23 @@ class JobDescription(BaseModel):
 
 # --- Specialized Multi-Agent Prompts ---
 
-def _create_metadata_prompt(field_name: str, guidance: str = ""):
+def get_field_prompt(field_name: str, settings: dict | None = None):
+    """Helper to create a dynamic metadata prompt for standard text extraction."""
+    # Map field name to system prompt key
+    mapping = {
+        "company": "field_company",
+        "role": "field_role",
+        "location": "field_location",
+        "salary_range": "field_salary",
+        "company_job_id": "field_id",
+        "job_posted_date": "field_posted",
+        "application_deadline": "field_deadline"
+    }
+    key = mapping.get(field_name)
+    base = get_base_prompt(key, settings) if key else ""
+    
     return ChatPromptTemplate.from_messages([
-        ("system", f"You are an expert at extracting job details. Extract ONLY the '{field_name}' verbatim from the text. "
-                   f"{guidance} "
-                   "If not explicitly found, return null.\n\n{custom_guidance}"),
+        ("system", base + "{custom_guidance}"),
         ("user", "SOURCE URL: {url}\n\nCONTENT:\n\"\"\"\n{text}\n\"\"\"")
     ])
 
@@ -132,33 +160,27 @@ def get_validation_prompt(settings: dict | None = None):
 
 # --- JSON-LD Metadata Support ---
 
-def _create_json_metadata_prompt(field_name: str, guidance: str = ""):
+def get_json_field_prompt(field_name: str, settings: dict | None = None):
+    """Helper to create a dynamic metadata prompt for JSON-LD fragment extraction."""
+    # Map field name to system prompt key
+    mapping = {
+        "company": "json_company",
+        "role": "json_role",
+        "location": "json_location",
+        "salary_range": "json_salary",
+        "company_job_id": "json_id",
+        "job_posted_date": "json_posted",
+        "application_deadline": "json_deadline"
+    }
+    key = mapping.get(field_name)
+    base = get_base_prompt(key, settings) if key else ""
+
     return ChatPromptTemplate.from_messages([
-        ("system", f"You are an expert at extracting job details from Schema.org JSON-LD data. "
-                   f"Extract ONLY the '{field_name}' from the provided JSON snippet. "
-                   f"{guidance} "
-                   "If the specific detail is not found or empty, return null.\n\n{custom_guidance}"),
+        ("system", base + "{custom_guidance}"),
         ("user", "JSON FRAGMENT:\n{json_fragment}")
     ])
 
-company_prompt = _create_metadata_prompt("company", "Look for the employer or organization name.")
-role_prompt = _create_metadata_prompt("role", "Extract the professional job title verbatim. Do not truncate the text or remove words, even if they are separated by commas.")
-location_prompt = _create_metadata_prompt("location", "Extract the city, state/region, and country if available.")
-salary_prompt = _create_metadata_prompt("salary_range", "Extract the compensation range (e.g., '$100k - $150k per year').")
-job_id_prompt = _create_metadata_prompt("company_job_id", 
-    "Look for 'Job ID', 'Req #', or 'Reference'. "
-    "Prioritize text content. Fallback to URL only if text is missing it.")
-
-posted_date_prompt = _create_metadata_prompt("job_posted_date", "Extract the date the job was published. Return in YYYY-MM-DD format.")
-deadline_date_prompt = _create_metadata_prompt("application_deadline", "Extract the date applications close. Return in YYYY-MM-DD format.")
-
-company_json_prompt = _create_json_metadata_prompt("company", "Use the embedded name or text. Return just the company name.")
-role_json_prompt = _create_json_metadata_prompt("role", "Extract the professional job title verbatim. Do not truncate the text or remove words, even if they are separated by commas.")
-location_json_prompt = _create_json_metadata_prompt("location", "Extract the city, state/region, and country. Format it simply (e.g., 'Cambridge, MA').")
-salary_json_prompt = _create_json_metadata_prompt("salary_range", "Extract the currency, min, and max values and format them cleanly.")
-job_id_json_prompt = _create_json_metadata_prompt("company_job_id", "Extract the value of the identifier or reference number.")
-posted_date_json_prompt = _create_json_metadata_prompt("job_posted_date", "Convert the date to YYYY-MM-DD format.")
-deadline_date_json_prompt = _create_json_metadata_prompt("application_deadline", "Convert the date to YYYY-MM-DD format.")
+# --- Static wrappers removed in favor of dynamic get_* functions ---
 
 class DescriptionValidation(BaseModel):
     is_valid: bool = Field(description="True if the description is formatted correctly as clean Markdown and does NOT contain AI filler/conversational wrappers.")

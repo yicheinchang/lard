@@ -99,6 +99,22 @@ export interface AppSettings {
     extraction_description: string;
     json_ld: string;
     qa_validator: string;
+    # Multi-Agent Fields (Text)
+    field_company: string;
+    field_role: string;
+    field_location: string;
+    field_salary: string;
+    field_id: string;
+    field_posted: string;
+    field_deadline: string;
+    # Multi-Agent Fields (JSON)
+    json_company: string;
+    json_role: string;
+    json_location: string;
+    json_salary: string;
+    json_id: string;
+    json_posted: string;
+    json_deadline: string;
   };
 }
 
