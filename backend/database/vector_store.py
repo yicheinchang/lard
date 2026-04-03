@@ -5,32 +5,45 @@ DB_DIR = os.path.join(os.path.dirname(__file__), "..", "chroma_db")
 COLLECTION_NAME = "jobs_collection"
 
 
+_embedding_function_instance = None
+_embedding_provider_cache = None
+
 def get_embedding_function(provider: str = None, cfg: dict = None):
     """Build an embedding function based on settings or provided config."""
-    if provider is None or cfg is None:
-        s = load_app_settings()
-        provider = provider or s.get("embedding_provider", "default")
-        cfg = cfg or s.get("embedding_config", {})
+    global _embedding_function_instance, _embedding_provider_cache
 
-    if provider == "openai":
+    s = load_app_settings()
+    current_provider = provider or s.get("embedding_provider", "default")
+    current_cfg = cfg or s.get("embedding_config", {})
+    
+    # Return cached instance if provider and config match
+    cache_key = (current_provider, str(current_cfg))
+    if _embedding_function_instance is not None and _embedding_provider_cache == cache_key:
+        return _embedding_function_instance
+
+    if current_provider == "openai":
         from langchain_openai import OpenAIEmbeddings
-        return OpenAIEmbeddings(
-            api_key=cfg.get("openai_api_key", ""),
-            model=cfg.get("openai_model", "text-embedding-3-small"),
+        func = OpenAIEmbeddings(
+            api_key=current_cfg.get("openai_api_key", ""),
+            model=current_cfg.get("openai_model", "text-embedding-3-small"),
         )
-    elif provider == "ollama":
+    elif current_provider == "ollama":
         from langchain_ollama import OllamaEmbeddings
-        return OllamaEmbeddings(
-            base_url=cfg.get("ollama_base_url", "http://host.docker.internal:11434"),
-            model=cfg.get("ollama_model", "nomic-embed-text"),
+        func = OllamaEmbeddings(
+            base_url=current_cfg.get("ollama_base_url", "http://host.docker.internal:11434"),
+            model=current_cfg.get("ollama_model", "nomic-embed-text"),
         )
-
-    # Default: ChromaDB built-in all-MiniLM-L6-v2 via Sentence Transformers
-    from langchain_huggingface import HuggingFaceEmbeddings
-    model_name = "all-MiniLM-L6-v2"
-    cache_folder = os.path.join(DB_DIR, "models")
-    os.makedirs(cache_folder, exist_ok=True)
-    return HuggingFaceEmbeddings(model_name=model_name, cache_folder=cache_folder)
+    else:
+        # Default: ChromaDB built-in all-MiniLM-L6-v2 via Sentence Transformers
+        from langchain_huggingface import HuggingFaceEmbeddings
+        model_name = "all-MiniLM-L6-v2"
+        cache_folder = os.path.join(DB_DIR, "models")
+        os.makedirs(cache_folder, exist_ok=True)
+        func = HuggingFaceEmbeddings(model_name=model_name, cache_folder=cache_folder)
+        
+    _embedding_function_instance = func
+    _embedding_provider_cache = cache_key
+    return func
 
 
 class VectorStoreManager:

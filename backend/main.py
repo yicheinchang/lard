@@ -8,12 +8,28 @@ import warnings
 # Suppress Pydantic V1/Python 3.14 compatibility warning from LangChain
 warnings.filterwarnings("ignore", message="Core Pydantic V1 functionality isn't compatible with Python 3.14 or greater.")
 
+import threading
+
+def _preload_ai_components():
+    print("INFO:     Preloading AI libraries in background...")
+    try:
+        from ai.graph import get_agent_app
+        get_agent_app()
+        from database.vector_store import get_embedding_function
+        get_embedding_function() # This caches the embeddings
+        print("INFO:     AI libraries preloaded successfully.")
+    except Exception as e:
+        print(f"ERROR:    Failed to preload AI libraries: {e}")
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Startup: Ensure database tables exist
     from database.relational import engine, Base
     Base.metadata.create_all(bind=engine)
     print("INFO:     Application startup complete (Database Ready)")
+    
+    threading.Thread(target=_preload_ai_components, daemon=True).start()
+    
     yield
     # Shutdown: Clean up if needed
     pass

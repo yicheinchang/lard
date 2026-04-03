@@ -260,6 +260,8 @@ The workspace uses a formalized rule system in `.agents/rules/workspace-role.md`
 - **Synchronized Versioning**: Automated SemVer updates across backend and frontend.
 - **Codebase Map Sync**: Mandatory updates to this document to maintain architectural context.
 - **Backend Startup Optimization (Extreme v3)**: The backend is optimized for sub-10s startup even with heavy AI dependencies:
+    - **Background Eager Loading**: AI libraries (LangChain/PyTorch) and the LangGraph workflow are preloaded in a background thread during the FastAPI `lifespan` to guarantee instant first-call responses without penalizing backend startup speed.
+    - **Global Embedding Cache**: HuggingFace instances are cached to prevent repetitive PyTorch model reloads during large document ingestions.
     - **Decoupled Prompts**: Raw system prompts are isolated in `backend/ai/prompts.py` to prevent heavy LangChain library loads (and 3.14 compatibility hangs) during initial app configuration.
     - **Reloader Indexing**: The `uvicorn` reloader is configured via `run.sh` to watch only source directories and explicitly exclude `.venv` and `node_modules`.
     - **Deep Lazy Loading**: Heavy AI prompts and `langchain` utilities are imported strictly inside the functions that need them.
