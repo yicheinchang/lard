@@ -70,8 +70,8 @@ This document provides a summary of the project's architecture, tech stack, and 
   - `ChatAssistant.tsx`: Global drawer for the AI agent.
   - `SettingsPage.tsx`: Integrated configuration for LLMs and themes. Features a collapsible **Advanced AI Prompt Settings** subsection with:
       *   **Additive Guidance**: Field-specific instruction tabs for fine-tuning extraction.
-      *   **Base System Prompts**: Independent sub-section for modifying core backend prompts (Extraction, JSON-LD, QA Validator) and granular field-level prompts for Multi-Agent mode (Text and JSON) with a dedicated reset handler. Features a nested tabbed UI for efficient management of 18 total base prompts. **Selective Filtering**: Prompts are filtered based on the active **Extraction Strategy** (Single vs. Multi-Agent). Supports **Granular Resets** for each specific prompt to factory defaults. Enhanced readability with `rows={12}` text areas.
-- `src/lib/`:
+      *   **Base System Prompts**: Independent sub-section for modifying core backend prompts (Extraction, JSON-LD, QA Validator) and granular field-level prompts for Multi-Agent mode (Text and JSON) with a dedicated reset handler. Features a nested tabbed UI for efficient management of 18 total base prompts. **Selective Filtering**: Prompts are filtered based on the active **Extraction Strategy** (Single vs. Multi-Agent). Supports **Granular Resets** for each specific prompt to factory defaults. Enhanced readability with `rows={12}` text areas. Includes **Focus Persistence Fixes** for smooth real-time typing.
+  - `src/lib/`:
   - `api.ts`: Axios client with typed backend endpoints.
   - `ViewContext.tsx`: Global UI state including **Navigation Guards** for unsaved changes.
   - `SettingsContext.tsx`: Reactive theme and AI status.
@@ -254,7 +254,7 @@ The workspace uses a formalized rule system in `.agents/rules/workspace-role.md`
 - **Micro Git Commits**: Atomic, granular commits for every stable change.
 - **Synchronized Versioning**: Automated SemVer updates across backend and frontend.
 - **Codebase Map Sync**: Mandatory updates to this document to maintain architectural context.
-- Git Tagging: Automated tagging for every version = "0.39.0"
+- Git Tagging: Automated tagging for every version = "0.39.1"
 
 ### 3. State Management (LangGraph)
 The AI assistant uses **LangGraph** to manage conversational state, enabling multi-turn workflows and tool-calling (e.g., querying the database vs. searching documents).

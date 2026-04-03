@@ -24,6 +24,122 @@ type ThemeOption = 'dark' | 'light' | 'system';
 type LlmProvider = 'ollama' | 'openai' | 'anthropic';
 type EmbeddingProvider = 'default' | 'ollama' | 'openai';
 
+// ── Sub-Components ──────────────────────────────────────────────────
+
+const SectionCard = ({ title, icon: Icon, children, subtitle }: {
+  title: string; icon: React.ElementType; children: React.ReactNode; subtitle?: string;
+}) => (
+  <div className="glass rounded-2xl p-6 shadow-lg border border-[var(--border-color)]">
+    <div className="flex items-center gap-3 mb-1">
+      <div className="p-2 rounded-xl bg-violet-500/10 text-violet-400">
+        <Icon className="w-5 h-5" />
+      </div>
+      <div>
+        <h3 className="text-lg font-semibold" style={{ color: 'var(--fg)' }}>{title}</h3>
+        {subtitle && <p className="text-xs" style={{ color: 'var(--fg-subtle)' }}>{subtitle}</p>}
+      </div>
+    </div>
+    <div className="mt-5 space-y-4">{children}</div>
+  </div>
+);
+
+const Label = ({ children, onReset, resetLabel = "Reset to default" }: { 
+  children: React.ReactNode; 
+  onReset?: () => void;
+  resetLabel?: string;
+}) => (
+  <div className="flex items-center justify-between mb-1.5">
+    <label className="block text-sm font-medium" style={{ color: 'var(--fg-muted)' }}>{children}</label>
+    {onReset && (
+      <button
+        type="button"
+        onClick={onReset}
+        title={resetLabel}
+        className="p-1 rounded-md hover:bg-[var(--surface-hover)] text-[var(--fg-subtle)] hover:text-violet-400 transition-all"
+      >
+        <RotateCcw className="w-3.5 h-3.5" />
+      </button>
+    )}
+  </div>
+);
+
+const TextInput = ({ value, onChange, placeholder, type = 'text' }: {
+  value: string; onChange: (v: string) => void; placeholder?: string; type?: string;
+}) => (
+  <input
+    type={type}
+    value={value}
+    onChange={e => onChange(e.target.value)}
+    placeholder={placeholder}
+    className="w-full rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500/40 transition-all"
+    style={{
+      backgroundColor: 'var(--input-bg)',
+      color: 'var(--fg)',
+      border: '1px solid var(--border-color)',
+    }}
+  />
+);
+
+const TextAreaInput = ({ value, onChange, placeholder, rows = 12 }: {
+  value: string; onChange: (v: string) => void; placeholder?: string; rows?: number;
+}) => (
+  <textarea
+    value={value}
+    onChange={e => onChange(e.target.value)}
+    placeholder={placeholder}
+    rows={rows}
+    className="w-full rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500/40 transition-all resize-y custom-scrollbar"
+    style={{
+      backgroundColor: 'var(--input-bg)',
+      color: 'var(--fg)',
+      border: '1px solid var(--border-color)',
+    }}
+  />
+);
+
+const SelectInput = ({ value, onChange, options }: {
+  value: string; onChange: (v: string) => void; options: { value: string; label: string }[];
+}) => (
+  <div className="relative">
+    <select
+      value={value}
+      onChange={e => onChange(e.target.value)}
+      className="w-full appearance-none rounded-lg px-3 py-2.5 pr-10 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500/40 transition-all cursor-pointer"
+      style={{
+        backgroundColor: 'var(--input-bg)',
+        color: 'var(--fg)',
+        border: '1px solid var(--border-color)',
+      }}
+    >
+      {options.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+    </select>
+    <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none" style={{ color: 'var(--fg-subtle)' }} />
+  </div>
+);
+
+const TestButton = ({ onClick, loading, label }: {
+  onClick: () => void; loading: boolean; label: string;
+}) => (
+  <button
+    onClick={onClick}
+    disabled={loading}
+    className="px-4 py-2 rounded-lg text-sm font-medium transition-all border border-violet-500/30 text-violet-400 hover:bg-violet-500/10 disabled:opacity-50 flex items-center gap-2"
+  >
+    {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
+    {label}
+  </button>
+);
+
+const TestResult = ({ result }: { result: { ok: boolean; msg: string } | null }) => {
+  if (!result) return null;
+  return (
+    <div className={`flex items-start gap-2 p-3 rounded-lg text-sm ${result.ok ? 'bg-green-500/10 text-green-400 border border-green-500/20' : 'bg-red-500/10 text-red-400 border border-red-500/20'}`}>
+      {result.ok ? <CheckCircle2 className="w-4 h-4 mt-0.5 shrink-0" /> : <XCircle className="w-4 h-4 mt-0.5 shrink-0" />}
+      <span className="break-all">{result.msg}</span>
+    </div>
+  );
+};
+
 // ── Component ────────────────────────────────────────────────────────
 
 export function SettingsPage() {
@@ -280,121 +396,7 @@ export function SettingsPage() {
     }
   };
 
-  // ── Helpers ────────────────────────────────────────────────────────
-
-  const SectionCard = ({ title, icon: Icon, children, subtitle }: {
-    title: string; icon: React.ElementType; children: React.ReactNode; subtitle?: string;
-  }) => (
-    <div className="glass rounded-2xl p-6 shadow-lg border border-[var(--border-color)]">
-      <div className="flex items-center gap-3 mb-1">
-        <div className="p-2 rounded-xl bg-violet-500/10 text-violet-400">
-          <Icon className="w-5 h-5" />
-        </div>
-        <div>
-          <h3 className="text-lg font-semibold" style={{ color: 'var(--fg)' }}>{title}</h3>
-          {subtitle && <p className="text-xs" style={{ color: 'var(--fg-subtle)' }}>{subtitle}</p>}
-        </div>
-      </div>
-      <div className="mt-5 space-y-4">{children}</div>
-    </div>
-  );
-
-  const Label = ({ children, onReset, resetLabel = "Reset to default" }: { 
-    children: React.ReactNode; 
-    onReset?: () => void;
-    resetLabel?: string;
-  }) => (
-    <div className="flex items-center justify-between mb-1.5">
-      <label className="block text-sm font-medium" style={{ color: 'var(--fg-muted)' }}>{children}</label>
-      {onReset && (
-        <button
-          type="button"
-          onClick={onReset}
-          title={resetLabel}
-          className="p-1 rounded-md hover:bg-[var(--surface-hover)] text-[var(--fg-subtle)] hover:text-violet-400 transition-all"
-        >
-          <RotateCcw className="w-3.5 h-3.5" />
-        </button>
-      )}
-    </div>
-  );
-
-  const TextInput = ({ value, onChange, placeholder, type = 'text' }: {
-    value: string; onChange: (v: string) => void; placeholder?: string; type?: string;
-  }) => (
-    <input
-      type={type}
-      value={value}
-      onChange={e => onChange(e.target.value)}
-      placeholder={placeholder}
-      className="w-full rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500/40 transition-all"
-      style={{
-        backgroundColor: 'var(--input-bg)',
-        color: 'var(--fg)',
-        border: '1px solid var(--border-color)',
-      }}
-    />
-  );
-
-  const TextAreaInput = ({ value, onChange, placeholder, rows = 12 }: {
-    value: string; onChange: (v: string) => void; placeholder?: string; rows?: number;
-  }) => (
-    <textarea
-      value={value}
-      onChange={e => onChange(e.target.value)}
-      placeholder={placeholder}
-      rows={rows}
-      className="w-full rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500/40 transition-all resize-y custom-scrollbar"
-      style={{
-        backgroundColor: 'var(--input-bg)',
-        color: 'var(--fg)',
-        border: '1px solid var(--border-color)',
-      }}
-    />
-  );
-
-  const SelectInput = ({ value, onChange, options }: {
-    value: string; onChange: (v: string) => void; options: { value: string; label: string }[];
-  }) => (
-    <div className="relative">
-      <select
-        value={value}
-        onChange={e => onChange(e.target.value)}
-        className="w-full appearance-none rounded-lg px-3 py-2.5 pr-10 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500/40 transition-all cursor-pointer"
-        style={{
-          backgroundColor: 'var(--input-bg)',
-          color: 'var(--fg)',
-          border: '1px solid var(--border-color)',
-        }}
-      >
-        {options.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
-      </select>
-      <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none" style={{ color: 'var(--fg-subtle)' }} />
-    </div>
-  );
-
-  const TestButton = ({ onClick, loading, label }: {
-    onClick: () => void; loading: boolean; label: string;
-  }) => (
-    <button
-      onClick={onClick}
-      disabled={loading}
-      className="px-4 py-2 rounded-lg text-sm font-medium transition-all border border-violet-500/30 text-violet-400 hover:bg-violet-500/10 disabled:opacity-50 flex items-center gap-2"
-    >
-      {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
-      {label}
-    </button>
-  );
-
-  const TestResult = ({ result }: { result: { ok: boolean; msg: string } | null }) => {
-    if (!result) return null;
-    return (
-      <div className={`flex items-start gap-2 p-3 rounded-lg text-sm ${result.ok ? 'bg-green-500/10 text-green-400 border border-green-500/20' : 'bg-red-500/10 text-red-400 border border-red-500/20'}`}>
-        {result.ok ? <CheckCircle2 className="w-4 h-4 mt-0.5 shrink-0" /> : <XCircle className="w-4 h-4 mt-0.5 shrink-0" />}
-        <span className="break-all">{result.msg}</span>
-      </div>
-    );
-  };
+  // ── Theme cards ────────────────────────────────────────────────────
 
   // ── Theme cards ────────────────────────────────────────────────────
 
