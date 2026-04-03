@@ -11,7 +11,7 @@ import json
 @tool
 def query_database(sql_query: str):
     """
-    Execute a read-only SQL SELECT query against the job tracker database.
+    Execute a read-only SQL SELECT query against the **Lard** database.
     Use this to filter jobs by status (Wishlist, Applied, etc.), company, role, dates, or other structured fields.
     The table name is 'job_applications'.
     Important: Only perform SELECT operations. No updates or deletes.
@@ -90,7 +90,7 @@ When the user asks a question:
 """
 
 def get_assistant_agent():
-    print("DEBUG: CALLING GET_ASSISTANT_AGENT FROM /home/JTS/backend/ai/assistant.py")
+    print("DEBUG: CALLING GET_ASSISTANT_AGENT FROM /home/Lard/backend/ai/assistant.py")
     llm = get_llm()
     tools = [query_database, search_documents]
     # Use prompt instead of messages_modifier/state_modifier for broader compatibility if unsure

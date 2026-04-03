@@ -15,7 +15,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "AI Job Tracker",
+  title: "Lard - Lazy AI Resume Database",
   description: "Your personal AI-powered job application pipeline",
 };
 

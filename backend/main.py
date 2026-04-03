@@ -19,7 +19,7 @@ async def lifespan(app: FastAPI):
     pass
 
 def create_app() -> FastAPI:
-    app = FastAPI(title="Job Tracker API", lifespan=lifespan)
+    app = FastAPI(title="Lard API", lifespan=lifespan)
 
     app.add_middleware(
         CORSMiddleware,

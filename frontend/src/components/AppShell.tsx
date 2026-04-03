@@ -81,7 +81,7 @@ function Sidebar() {
         ) : (
           <h2 className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-violet-400 to-fuchsia-400 flex items-center gap-2">
             <Sparkles className="w-5 h-5 text-violet-400" />
-            Tracker AI
+            Lard
           </h2>
         )}
       </div>
@@ -163,7 +163,7 @@ function MobileHeader() {
     <div className="sm:hidden flex items-center justify-between p-4 border-b border-[var(--border-color)] glass sticky top-0 z-30">
       <h2 className="text-lg font-bold bg-clip-text text-transparent bg-gradient-to-r from-violet-400 to-fuchsia-400 flex items-center gap-2">
         <Sparkles className="w-5 h-5 text-violet-400" />
-        Tracker AI
+        Lard
       </h2>
       <button 
         onClick={() => setIsMobileMenuOpen(true)}
@@ -204,7 +204,7 @@ function MobileDrawer() {
       <aside className="absolute inset-y-0 left-0 w-72 bg-[var(--bg)] border-r border-[var(--border-color)] flex flex-col shadow-2xl animate-slide-right">
         <div className="p-6 flex items-center justify-between border-b border-[var(--border-color)]">
           <h2 className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-violet-400 to-fuchsia-400 flex items-center gap-2">
-            Tracker AI
+            Lard
           </h2>
           <button onClick={() => setIsMobileMenuOpen(false)} className="p-2 hover:bg-[var(--surface-hover)] rounded-full transition-all">
             <X className="w-5 h-5 text-[var(--fg-subtle)]" />
@@ -235,7 +235,7 @@ function MobileDrawer() {
         </nav>
         
         <div className="p-6 border-t border-[var(--border-color)] text-center text-xs text-[var(--fg-subtle)]">
-          &copy; 2026 Tracker AI
+          © 2026 Lard
         </div>
       </aside>
     </div>

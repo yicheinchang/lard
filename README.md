@@ -1,4 +1,4 @@
-# 💼 Job Tracker AI (Monorepo)
+# 🐱 Lard - Lazy AI-powered Resume Database (Monorepo)
 
 An AI-powered, high-performance job application tracking system with automated data extraction, document management, and interview pipeline visualization.
 
@@ -71,4 +71,4 @@ For detailed architecture, API endpoints, and optimization details, refer to:
 
 ---
 Built with ❤️ by Antigravity.
-Current version: v0.22.0
+Current version: v0.40.0

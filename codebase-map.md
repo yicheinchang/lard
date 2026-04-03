@@ -1,4 +1,4 @@
-# Codebase Map: Job Tracker AI
+# Codebase Map: Lard - Lazy AI-powered Resume Database
 
 This document provides a summary of the project's architecture, tech stack, and key logic to give AI coding agents instant context.
 

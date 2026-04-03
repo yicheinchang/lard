@@ -1,11 +1,11 @@
 #!/bin/bash
-# Unified startup script for Job Tracker Backend
+# Unified startup script for Lard Backend
 # Usage: ./run.sh [dev|prod]
 
 MODE=${1:-dev}
 
 if [ "$MODE" = "prod" ]; then
-    echo "🚀 Starting Job Tracker Backend (Production Mode)..."
+    echo "🚀 Starting Lard Backend (Production Mode)..."
     # Production: Multi-worker, no reload, optimized logging
     uv run uvicorn main:app \
       --host 0.0.0.0 \
@@ -14,7 +14,7 @@ if [ "$MODE" = "prod" ]; then
       --log-level info \
       --no-access-log
 else
-    echo "🚀 Starting Job Tracker Backend (Development Mode - Optimized)..."
+    echo "🚀 Starting Lard Backend (Development Mode - Optimized)..."
     # Development: Targeted reloader to bypass large .venv scan, no-sync for speed
     uv run --no-sync uvicorn main:app \
       --host 0.0.0.0 \

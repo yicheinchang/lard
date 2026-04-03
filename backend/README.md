@@ -1,6 +1,6 @@
-# Job Tracker AI - Backend
+# 🐱 Lard - Backend
 
-FastAPI-based backend for the Job Tracker AI application.
+FastAPI-based backend for the **Lard** (Lazy AI-powered Resume Database) application.
 
 ## 🚀 Getting Started
 
