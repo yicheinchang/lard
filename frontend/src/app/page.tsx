@@ -38,6 +38,18 @@ export default function Home() {
     starStatus: 'all',
   };
   const [filterCriteria, setFilterCriteria] = useState<FilterCriteria>(initialFilterCriteria);
+
+  const hasActiveFilters = useMemo(() => {
+    return (
+      filterCriteria.appliedDateStart !== '' ||
+      filterCriteria.appliedDateEnd !== '' ||
+      filterCriteria.showOnlyClosingSoon === true ||
+      filterCriteria.showOnlyStale === true ||
+      filterCriteria.statuses.length > 0 ||
+      (filterCriteria.starStatus !== undefined && filterCriteria.starStatus !== 'all')
+    );
+  }, [filterCriteria]);
+
   
   // Status transition state
   const [showAdvanceToApplied, setShowAdvanceToApplied] = useState(false);
@@ -419,14 +431,14 @@ export default function Home() {
             <button
               onClick={() => setIsFilterOpen(!isFilterOpen)}
               className={`flex items-center gap-2 bg-[var(--surface)] hover:bg-[var(--surface-hover)] border px-3 py-2 rounded-xl text-sm font-medium transition-all shadow-sm ${
-                isFilterOpen || Object.values(filterCriteria).some(v => Array.isArray(v) ? v.length > 0 : (typeof v === 'boolean' ? v : (v === 7 ? false : (v === 14 ? false : !!v)))) 
+                isFilterOpen || hasActiveFilters 
                 ? 'border-violet-500 text-violet-400' 
                 : 'border-[var(--border-color)] text-[var(--fg)]'
               }`}
             >
               <SlidersHorizontal className="w-3.5 h-3.5" />
               <span className="hidden sm:inline">Filters</span>
-              {(filterCriteria.statuses.length > 0 || filterCriteria.showOnlyClosingSoon || filterCriteria.showOnlyStale || filterCriteria.appliedDateStart) && (
+              {hasActiveFilters && (
                 <span className="w-1.5 h-1.5 bg-violet-500 rounded-full" />
               )}
             </button>

@@ -64,7 +64,7 @@ This document provides a summary of the project's architecture, tech stack, and 
       *   **Application Notes**: Dedicated Markdown editor (`MdEditor`) for research and interview prep.
   - `DocumentPreview.tsx`: Overlay for high-fidelity viewing of PDF, Markdown, and plain text documents.
   - `Ticker.tsx`: News-ticker style progress bar for real-time AI extraction status.
-  - `FilterPopover.tsx`: Advanced filtering UI for dashboard header.
+  - `FilterPopover.tsx`: Advanced filtering UI for dashboard header. Features a **Toggle-based Starred Status** filter (Starred/Unstarred icons) and refined active-state logic.
   - `ProcessingOverlay.tsx`: Full-screen overlay for tracking long-running AI tasks with SSE updates. Feature: **Auto-closes 1.5s after success** and theme-aware styling.
   - `AutoSaveIndicator.tsx`: Small, non-blocking status indicator for background AI vectorization during note taking.
   - `AddJobModal.tsx`: Core form for new applications. Includes AI Auto-fill, Potential Hallucination Warning System, and **validation guards for required fields** (Company/Role).

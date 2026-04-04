@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { X, Calendar, Clock, SlidersHorizontal, Trash2, CheckCircle2, Star } from 'lucide-react';
+import { X, Calendar, Clock, SlidersHorizontal, Trash2, CheckCircle2, Star, StarOff } from 'lucide-react';
 
 export interface FilterCriteria {
   appliedDateStart: string;
@@ -230,20 +230,29 @@ export const FilterPopover: React.FC<FilterPopoverProps> = ({
               <Star className="w-4 h-4" />
               Starred Status
             </label>
-            <div className="flex flex-wrap gap-2">
-              {(['all', 'starred', 'unstarred'] as const).map((starOpt) => (
-                <button
-                  key={starOpt}
-                  onClick={() => handleUpdate({ starStatus: starOpt })}
-                  className={`px-3 py-1.5 rounded-full text-[11px] font-semibold transition-all border capitalize ${
-                    (localCriteria.starStatus || 'all') === starOpt
-                      ? 'bg-violet-500 text-white border-violet-500 shadow-lg shadow-violet-500/20'
-                      : 'bg-[var(--surface-hover)] border-[var(--border-color)] text-[var(--fg-muted)] hover:bg-[var(--surface)]'
-                  }`}
-                >
-                  {starOpt}
-                </button>
-              ))}
+            <div className="flex gap-2">
+              <button
+                onClick={() => handleUpdate({ starStatus: localCriteria.starStatus === 'starred' ? 'all' : 'starred' })}
+                className={`flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-xl text-[11px] font-semibold transition-all border ${
+                  localCriteria.starStatus === 'starred'
+                    ? 'bg-violet-500 text-white border-violet-500 shadow-lg shadow-violet-500/20'
+                    : 'bg-[var(--surface-hover)] border-[var(--border-color)] text-[var(--fg-muted)] hover:bg-[var(--surface)]'
+                }`}
+              >
+                <Star className={`w-3.5 h-3.5 ${localCriteria.starStatus === 'starred' ? 'fill-current' : ''}`} />
+                Starred
+              </button>
+              <button
+                onClick={() => handleUpdate({ starStatus: localCriteria.starStatus === 'unstarred' ? 'all' : 'unstarred' })}
+                className={`flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-xl text-[11px] font-semibold transition-all border ${
+                  localCriteria.starStatus === 'unstarred'
+                    ? 'bg-violet-500 text-white border-violet-500 shadow-lg shadow-violet-500/20'
+                    : 'bg-[var(--surface-hover)] border-[var(--border-color)] text-[var(--fg-muted)] hover:bg-[var(--surface)]'
+                }`}
+              >
+                <StarOff className="w-3.5 h-3.5" />
+                Unstarred
+              </button>
             </div>
           </div>
         </div>
