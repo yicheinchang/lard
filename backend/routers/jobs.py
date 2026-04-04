@@ -260,6 +260,32 @@ async def create_job_stream(
 
     return db_job
 
+@router.put("/jobs/{job_id}", response_model=JobResponse)
+def update_job(job_id: int, job_update: JobUpdate, db: Session = Depends(get_db)):
+    """Standard non-streaming update for instant operations like toggling star."""
+    db_job = db.query(JobApplication).filter(JobApplication.id == job_id).first()
+    if not db_job:
+        raise HTTPException(status_code=404, detail="Job not found")
+
+    update_data = job_update.model_dump(exclude_unset=True)
+    
+    is_actually_different = False
+    for key, value in update_data.items():
+        if hasattr(db_job, key):
+            if getattr(db_job, key) != value:
+                is_actually_different = True
+                setattr(db_job, key, value)
+                
+    if update_data.get('company'):
+        company = get_or_create_company(db, update_data['company'])
+        db_job.company_id = company.id
+
+    if is_actually_different:
+        update_job_status(db_job, db, operation="Job Details Updated")
+        
+    db.refresh(db_job)
+    return db_job
+
 @router.put("/jobs/{job_id}/stream")
 async def update_job_stream(job_id: int, job_update: JobUpdate, db: Session = Depends(get_db)):
     """Streaming version of job update to show progress during vectorization."""
