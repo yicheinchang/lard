@@ -75,6 +75,7 @@ class JobBase(BaseModel):
     applied_date: Optional[datetime] = None
     closed_date: Optional[datetime] = None
     last_operation: Optional[str] = None
+    is_starred: Optional[bool] = False
 
 class JobCreate(JobBase):
     pass
@@ -101,6 +102,7 @@ class JobUpdate(BaseModel):
     applied_date: Optional[datetime] = None
     closed_date: Optional[datetime] = None
     last_operation: Optional[str] = None
+    is_starred: Optional[bool] = None
 
 class JobResponse(JobBase):
     id: int

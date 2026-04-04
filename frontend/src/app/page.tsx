@@ -9,7 +9,7 @@ import { JobDetailView } from '@/components/JobDetailView';
 import { SettingsPage } from '@/components/SettingsPage';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
 import { FilterPopover, FilterCriteria } from '@/components/FilterPopover';
-import { Job, getJobs, createJobStream, updateJobStream, uploadJobDocumentStream, addInterviewStep } from '@/lib/api';
+import { Job, getJobs, createJobStream, updateJobStream, uploadJobDocumentStream, addInterviewStep, updateJob } from '@/lib/api';
 import { useView } from '@/lib/ViewContext';
 import { ProcessingOverlay } from '@/components/ProcessingOverlay';
 
@@ -35,6 +35,7 @@ export default function Home() {
     staleDays: 14,
     showOnlyStale: false,
     statuses: [],
+    starStatus: 'all',
   };
   const [filterCriteria, setFilterCriteria] = useState<FilterCriteria>(initialFilterCriteria);
   
@@ -93,12 +94,17 @@ export default function Home() {
 
       // 5. Stale Filter
       if (filterCriteria.showOnlyStale) {
+        if (!job.last_updated) return false;
         const lastUpdated = new Date(job.last_updated);
         const today = new Date();
         const threshold = new Date();
         threshold.setDate(today.getDate() - filterCriteria.staleDays);
         if (lastUpdated > threshold) return false;
       }
+
+      // 6. Star Filter
+      if (filterCriteria.starStatus === 'starred' && !job.is_starred) return false;
+      if (filterCriteria.starStatus === 'unstarred' && job.is_starred) return false;
 
       return true;
     });
@@ -107,28 +113,43 @@ export default function Home() {
       let valA: string | number = '';
       let valB: string | number = '';
 
-      switch (sortKey) {
-        case 'company': valA = (a.company || '').toLowerCase(); valB = (b.company || '').toLowerCase(); break;
-        case 'role': valA = (a.role || '').toLowerCase(); valB = (b.role || '').toLowerCase(); break;
-        case 'status': valA = a.status; valB = b.status; break;
-        case 'location': valA = (a.location || '').toLowerCase(); valB = (b.location || '').toLowerCase(); break;
-        case 'applied_date':
-          valA = a.applied_date ? new Date(a.applied_date).getTime() : 0;
-          valB = b.applied_date ? new Date(b.applied_date).getTime() : 0;
-          break;
-        case 'created_at':
-          valA = a.created_at ? new Date(a.created_at).getTime() : 0;
-          valB = b.created_at ? new Date(b.created_at).getTime() : 0;
-          break;
-        case 'last_updated':
-        default:
-          valA = a.last_updated ? new Date(a.last_updated).getTime() : 0;
-          valB = b.last_updated ? new Date(b.last_updated).getTime() : 0;
-          break;
+      if (sortKey === 'is_starred') {
+        const aStarred = a.is_starred ? 1 : 0;
+        const bStarred = b.is_starred ? 1 : 0;
+        if (aStarred !== bStarred) return sortDir === 'asc' ? aStarred - bStarred : bStarred - aStarred;
+        // Fallback to last_updated
+        valA = a.last_updated ? new Date(a.last_updated).getTime() : 0;
+        valB = b.last_updated ? new Date(b.last_updated).getTime() : 0;
+      } else {
+        switch (sortKey) {
+          case 'company': valA = (a.company || '').toLowerCase(); valB = (b.company || '').toLowerCase(); break;
+          case 'role': valA = (a.role || '').toLowerCase(); valB = (b.role || '').toLowerCase(); break;
+          case 'status': valA = a.status; valB = b.status; break;
+          case 'location': valA = (a.location || '').toLowerCase(); valB = (b.location || '').toLowerCase(); break;
+          case 'applied_date':
+            valA = a.applied_date ? new Date(a.applied_date).getTime() : 0;
+            valB = b.applied_date ? new Date(b.applied_date).getTime() : 0;
+            break;
+          case 'created_at':
+            valA = a.created_at ? new Date(a.created_at).getTime() : 0;
+            valB = b.created_at ? new Date(b.created_at).getTime() : 0;
+            break;
+          case 'last_updated':
+          default:
+            valA = a.last_updated ? new Date(a.last_updated).getTime() : 0;
+            valB = b.last_updated ? new Date(b.last_updated).getTime() : 0;
+            break;
+        }
       }
 
       if (valA < valB) return sortDir === 'asc' ? -1 : 1;
       if (valA > valB) return sortDir === 'asc' ? 1 : -1;
+      
+      // Secondary sort: automatically put starred first within any identical grouping
+      if (a.is_starred !== b.is_starred) {
+        return a.is_starred ? -1 : 1;
+      }
+
       return 0;
     });
 
@@ -166,6 +187,20 @@ export default function Home() {
     setSelectedJob(null);
     setIsModalOpen(false);
   }, [activeView]);
+
+  const handleToggleStar = async (job: Job) => {
+    try {
+      // Optimistic update
+      setJobs(prev => prev.map(j => j.id === job.id ? { ...j, is_starred: !j.is_starred } : j));
+      if (selectedJob?.id === job.id) {
+         setSelectedJob(prev => prev ? { ...prev, is_starred: !prev.is_starred } : null);
+      }
+      await updateJob(job.id!, { is_starred: !job.is_starred });
+    } catch (error) {
+      console.error('Failed to toggle star', error);
+      fetchJobs(); // Revert on failure
+    }
+  };
 
   const handleUpdateStatus = async (id: number, status: string, date?: string, file?: File | null, docType?: string) => {
     const currentJob = jobs.find(j => j.id === id);
@@ -420,7 +455,7 @@ export default function Home() {
               <>
                 <div className="fixed inset-0 z-40" onClick={() => setShowSortMenu(false)} />
                 <div className="absolute right-0 top-full mt-2 w-48 glass backdrop-blur-xl border border-[var(--border-color)] rounded-xl shadow-2xl py-1 z-50 flex flex-col">
-                  {['last_updated', 'company', 'applied_date', 'created_at'].map((opt) => (
+                  {['last_updated', 'company', 'applied_date', 'created_at', 'is_starred'].map((opt) => (
                     <button
                       key={opt}
                       onClick={() => {
@@ -462,12 +497,13 @@ export default function Home() {
             <Briefcase className="w-12 h-12 animate-pulse" />
           </div>
         ) : activeView === 'kanban' ? (
-          <KanbanBoard jobs={filteredAndSortedJobs} onUpdateStatus={handleUpdateStatus} onJobClick={handleJobClick} onAddInterviewStep={handleAddInterviewStep} />
+          <KanbanBoard jobs={filteredAndSortedJobs} onUpdateStatus={handleUpdateStatus} onJobClick={handleJobClick} onAddInterviewStep={handleAddInterviewStep} onToggleStar={handleToggleStar} />
         ) : (
           <TableView 
             jobs={filteredAndSortedJobs} 
             onUpdateStatus={handleUpdateStatus} 
             onJobClick={handleJobClick} 
+            onToggleStar={handleToggleStar}
             globalSortKey={sortKey}
             globalSortDir={sortDir}
             onGlobalSortChange={(key) => {

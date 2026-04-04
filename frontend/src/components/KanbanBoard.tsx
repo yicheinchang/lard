@@ -8,6 +8,7 @@ interface KanbanBoardProps {
   onUpdateStatus: (id: number, status: string, date?: string, file?: File | null, docType?: string) => void;
   onJobClick: (job: Job) => void;
   onAddInterviewStep?: (id: number, stepName: string, date?: string) => void;
+  onToggleStar?: (job: Job) => void;
 }
 
 // Visual columns — "Decision" merges Offered + Rejected + Discontinued
@@ -25,7 +26,7 @@ const columnAccents: Record<string, string> = {
   Decision: 'bg-violet-500/10 border-violet-500/10',
 };
 
-export const KanbanBoard: React.FC<KanbanBoardProps> = ({ jobs, onUpdateStatus, onJobClick, onAddInterviewStep }) => {
+export const KanbanBoard: React.FC<KanbanBoardProps> = ({ jobs, onUpdateStatus, onJobClick, onAddInterviewStep, onToggleStar }) => {
   const [showClosed, setShowClosed] = useState(false);
 
   return (
@@ -68,6 +69,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({ jobs, onUpdateStatus, 
                     job={job}
                     onUpdateStatus={onUpdateStatus}
                     onAddInterviewStep={onAddInterviewStep}
+                    onToggleStar={onToggleStar}
                     onClick={() => onJobClick(job)}
                     columnKey={column.key}
                   />

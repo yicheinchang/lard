@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, DateTime, Text, ForeignKey, JSON
+from sqlalchemy import Column, Integer, String, DateTime, Text, ForeignKey, JSON, Boolean
 from sqlalchemy.orm import relationship
 from datetime import datetime, timezone
 from database.relational import Base
@@ -41,6 +41,7 @@ class JobApplication(Base):
     role = Column(String, nullable=False)
     status = Column(String, default="Applied") 
     url = Column(String, nullable=True)
+    is_starred = Column(Boolean, default=False)
     
     # New detail fields
     job_posted_date = Column(DateTime, nullable=True)

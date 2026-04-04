@@ -5,7 +5,7 @@ import { Job } from '../lib/api';
 import {
   Search, ChevronUp, ChevronDown, ChevronsUpDown,
   Building2, Briefcase, MapPin, Calendar, Clock,
-  Filter, X
+  Filter, X, Star
 } from 'lucide-react';
 
 interface TableViewProps {
@@ -15,6 +15,7 @@ interface TableViewProps {
   globalSortKey: string;
   globalSortDir: 'asc' | 'desc';
   onGlobalSortChange: (key: string) => void;
+  onToggleStar?: (job: Job) => void;
 }
 
 const ALL_STATUSES = ['Wishlist', 'Applied', 'Interviewing', 'Offered', 'Rejected', 'Closed', 'Discontinued'];
@@ -32,7 +33,7 @@ const statusBadgeColors: Record<string, string> = {
 type SortKey = 'company' | 'role' | 'status' | 'location' | 'applied_date' | 'last_updated';
 type SortDir = 'asc' | 'desc';
 
-export const TableView: React.FC<TableViewProps> = ({ jobs, onUpdateStatus, onJobClick, globalSortKey, globalSortDir, onGlobalSortChange }) => {
+export const TableView: React.FC<TableViewProps> = ({ jobs, onUpdateStatus, onJobClick, globalSortKey, globalSortDir, onGlobalSortChange, onToggleStar }) => {
   const [selectedStatuses, setSelectedStatuses] = useState<Set<string>>(new Set(ALL_STATUSES));
   const [showFilters, setShowFilters] = useState(false);
 
@@ -161,9 +162,20 @@ export const TableView: React.FC<TableViewProps> = ({ jobs, onUpdateStatus, onJo
                   className="border-b border-white/5 hover:bg-white/[0.03] cursor-pointer transition-colors group"
                 >
                   <td className="px-4 py-3">
-                    <span className="text-white font-medium group-hover:text-violet-300 transition-colors">
-                      {job.company}
-                    </span>
+                    <div className="flex items-center gap-2">
+                      {onToggleStar && (
+                        <button 
+                          onClick={(e) => { e.stopPropagation(); onToggleStar(job); }}
+                          className={`p-1.5 -ml-1.5 rounded-full hover:bg-[var(--surface-hover)] transition-colors ${job.is_starred ? 'text-yellow-400' : 'text-[var(--fg-subtle)] hover:text-yellow-400/50'}`}
+                          title={job.is_starred ? "Unstar Job" : "Star Job"}
+                        >
+                          <Star className={`w-3.5 h-3.5 ${job.is_starred ? 'fill-current' : ''}`} />
+                        </button>
+                      )}
+                      <span className="text-white font-medium group-hover:text-violet-300 transition-colors">
+                        {job.company}
+                      </span>
+                    </div>
                   </td>
                   <td className="px-4 py-3 text-gray-300">{job.role}</td>
                   <td className="px-4 py-3">

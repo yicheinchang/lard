@@ -52,6 +52,7 @@ export interface Job {
   closed_date?: string;
   last_updated?: string;
   last_operation?: string;
+  is_starred?: boolean;
   steps?: InterviewStep[];
   documents?: DocumentMeta[];
 }

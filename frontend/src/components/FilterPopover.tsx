@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { X, Calendar, Clock, SlidersHorizontal, Trash2, CheckCircle2 } from 'lucide-react';
+import { X, Calendar, Clock, SlidersHorizontal, Trash2, CheckCircle2, Star } from 'lucide-react';
 
 export interface FilterCriteria {
   appliedDateStart: string;
@@ -11,6 +11,7 @@ export interface FilterCriteria {
   staleDays: number;
   showOnlyStale: boolean;
   statuses: string[];
+  starStatus?: 'all' | 'starred' | 'unstarred';
 }
 
 interface FilterPopoverProps {
@@ -218,6 +219,29 @@ export const FilterPopover: React.FC<FilterPopoverProps> = ({
                   }`}
                 >
                   {status}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Star Filter */}
+          <div className="space-y-3">
+            <label className="flex items-center gap-2 text-xs font-semibold text-[var(--fg-muted)] uppercase tracking-wider">
+              <Star className="w-4 h-4" />
+              Starred Status
+            </label>
+            <div className="flex flex-wrap gap-2">
+              {(['all', 'starred', 'unstarred'] as const).map((starOpt) => (
+                <button
+                  key={starOpt}
+                  onClick={() => handleUpdate({ starStatus: starOpt })}
+                  className={`px-3 py-1.5 rounded-full text-[11px] font-semibold transition-all border capitalize ${
+                    (localCriteria.starStatus || 'all') === starOpt
+                      ? 'bg-violet-500 text-white border-violet-500 shadow-lg shadow-violet-500/20'
+                      : 'bg-[var(--surface-hover)] border-[var(--border-color)] text-[var(--fg-muted)] hover:bg-[var(--surface)]'
+                  }`}
+                >
+                  {starOpt}
                 </button>
               ))}
             </div>

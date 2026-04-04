@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from 'react';
-import { Briefcase, Building2, CheckCircle2, Clock, XCircle, Globe, ChevronRight, ThumbsUp, ThumbsDown, Lock, Ban } from 'lucide-react';
+import { Briefcase, Building2, CheckCircle2, Clock, XCircle, Globe, ChevronRight, ThumbsUp, ThumbsDown, Lock, Ban, Star } from 'lucide-react';
 import { Job, getStepTypes, StepType } from '../lib/api';
 import { ConfirmDialog } from './ConfirmDialog';
 
@@ -11,6 +11,7 @@ interface JobCardProps {
   onClick?: () => void;
   columnKey?: string;
   onAddInterviewStep?: (id: number, stepName: string, date?: string) => void;
+  onToggleStar?: (job: Job) => void;
 }
 
 const statusColors: Record<string, string> = {
@@ -40,7 +41,7 @@ const decisionBorders: Record<string, string> = {
   Discontinued: 'border-slate-500/30 hover:border-slate-500/40',
 };
 
-export const JobCard: React.FC<JobCardProps> = ({ job, onUpdateStatus, onClick, columnKey, onAddInterviewStep }) => {
+export const JobCard: React.FC<JobCardProps> = ({ job, onUpdateStatus, onClick, columnKey, onAddInterviewStep, onToggleStar }) => {
   const [confirmState, setConfirmState] = useState<{
     isOpen: boolean;
     nextStatus: string;
@@ -130,18 +131,29 @@ export const JobCard: React.FC<JobCardProps> = ({ job, onUpdateStatus, onClick, 
             </div>
           </div>
           
-          {job.url && (
-            <a
-              href={job.url}
-              target="_blank"
-              rel="noopener noreferrer"
-              onClick={(e) => e.stopPropagation()}
-              className="p-1.5 rounded-full hover:bg-[var(--surface-hover)] text-[var(--fg-subtle)] hover:text-[var(--fg)] transition-colors shrink-0"
-              title="View Job Posting"
-            >
-              <Globe className="w-3.5 h-3.5" />
-            </a>
-          )}
+          <div className="flex items-center gap-1 shrink-0">
+            {onToggleStar && (
+              <button 
+                onClick={(e) => { e.stopPropagation(); onToggleStar(job); }}
+                className={`p-1.5 rounded-full hover:bg-[var(--surface-hover)] transition-colors ${job.is_starred ? 'text-yellow-400' : 'text-[var(--fg-subtle)] hover:text-yellow-400/50'}`}
+                title={job.is_starred ? "Unstar Job" : "Star Job"}
+              >
+                <Star className={`w-3.5 h-3.5 ${job.is_starred ? 'fill-current' : ''}`} />
+              </button>
+            )}
+            {job.url && (
+              <a
+                href={job.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={(e) => e.stopPropagation()}
+                className="p-1.5 rounded-full hover:bg-[var(--surface-hover)] text-[var(--fg-subtle)] hover:text-[var(--fg)] transition-colors"
+                title="View Job Posting"
+              >
+                <Globe className="w-3.5 h-3.5" />
+              </a>
+            )}
+          </div>
         </div>
 
         <div className="flex items-center justify-between border-t border-white/5 pt-2 mt-1 relative">

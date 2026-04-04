@@ -6,7 +6,7 @@ import MdEditor from 'react-markdown-editor-lite';
 import MarkdownIt from 'markdown-it';
 import 'react-markdown-editor-lite/lib/index.css';
 import { Job, getStepTypes, StepType, addInterviewStep, updateInterviewStep, deleteInterviewStep, updateJobStream, updateJob, deleteJobDocument, getCompanies, InterviewStep, uploadJobDocumentStream } from '../lib/api';
-import { X, Calendar, User, Mail, Plus, Circle, FileText, Edit2, Save, Paperclip, Trash2, ExternalLink, Link as LinkIcon, StickyNote, Send, AlertTriangle, CircleDollarSign } from 'lucide-react';
+import { X, Calendar, User, Mail, Plus, Circle, FileText, Edit2, Save, Paperclip, Trash2, ExternalLink, Link as LinkIcon, StickyNote, Send, AlertTriangle, CircleDollarSign, Star } from 'lucide-react';
 import { ConfirmDialog } from './ConfirmDialog';
 import { DocumentPreview } from './DocumentPreview';
 import { ProcessingOverlay } from './ProcessingOverlay';
@@ -597,6 +597,13 @@ export const JobDetailView: React.FC<JobDetailViewProps> = ({ job, onClose, onJo
         <div className="flex justify-between items-center p-4 md:px-8 border-b border-[var(--border-color)] bg-[var(--surface)] backdrop-blur-md shrink-0">
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-3 mb-0.5">
+              <button 
+                onClick={() => updateJob(job.id!, { is_starred: !job.is_starred }).then(() => onJobUpdated())}
+                className={`p-1.5 -ml-1.5 rounded-full hover:bg-[var(--surface-hover)] transition-colors ${job.is_starred ? 'text-yellow-400' : 'text-[var(--fg-subtle)] hover:text-yellow-400/50'}`}
+                title={job.is_starred ? "Unstar Job" : "Star Job"}
+              >
+                <Star className={`w-6 h-6 ${job.is_starred ? 'fill-current' : ''}`} />
+              </button>
               <h2 className="text-2xl font-bold text-[var(--fg)] truncate">
                 {job.company}
               </h2>

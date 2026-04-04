@@ -119,6 +119,7 @@ The central entity representing a job application.
 - `id`: Unique identifier (Integer).
 - `company` & `role`: Brand and position (Strings).
 - `status`: Lifecycle stage (Wishlist ... Discontinued).
+- `is_starred`: Boolean toggle for marking jobs as important.
 - `steps`: Array of `InterviewStep` objects.
 - `documents`: Array of `DocumentMeta` objects (Job Post, Resume, etc.).
 - `description`: Markdown job description (Vectorized).
