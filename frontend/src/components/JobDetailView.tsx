@@ -1094,7 +1094,7 @@ export const JobDetailView: React.FC<JobDetailViewProps> = ({ job, onClose, onJo
                       </div>
                     )}
 
-                    <div className="mt-auto pt-8">
+                    <div className="mt-auto pt-8 pb-4">
                       <button
                         onClick={() => setShowDeleteConfirm(true)}
                         className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-red-500 hover:text-red-400 hover:bg-red-500/10 border border-red-500/20 hover:border-red-500/40 transition-all text-xs font-medium"
