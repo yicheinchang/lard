@@ -1,5 +1,5 @@
 # Codebase Map: Lard - Lazy AI-powered Resume Database
-Last Updated: 2026-04-03T18:14:23Z
+Last Updated: 2026-04-04T01:10:00Z
 
 This document provides a summary of the project's architecture, tech stack, and key logic to give AI coding agents instant context.
 
@@ -58,7 +58,7 @@ This document provides a summary of the project's architecture, tech stack, and 
   - `KanbanBoard.tsx`: Drag-and-drop pipeline visualization. Features a "Rejected" quick-action and inline footer actions.
   - `TableView.tsx`: Density-rich list view of applications. Inherits global sort and search filters from `page.tsx`.
   - `JobCard.tsx`: Individual job item in the Kanban board.
-  - `JobDetailView.tsx`: Core component for job application management. Features a **Resizable Overlay Height** (25% - 85% range). Consists of three tabs:
+  - `JobDetailView.tsx`: Core component for job application management. Features a **Centered Floating Modal** with a backdrop-blur overlay and a **Full-Screen Toggle**. Consists of three tabs:
       *   **Interview Pipeline** (Default): Timeline events with full CRUD and inline editing.
       *   **Job Details**: Metadata management and document attachments.
       *   **Application Notes**: Dedicated Markdown editor (`MdEditor`) for research and interview prep.
@@ -75,14 +75,14 @@ This document provides a summary of the project's architecture, tech stack, and 
       *   **Base System Prompts**: Independent sub-section for modifying core backend prompts (Extraction, JSON-LD, QA Validator) and granular field-level prompts for Multi-Agent mode (Text and JSON) with a dedicated reset handler. Features a nested tabbed UI for efficient management of 18 total base prompts. **Selective Filtering**: Prompts are filtered based on the active **Extraction Strategy** (Single vs. Multi-Agent). Supports **Granular Resets** for each specific prompt to factory defaults. Enhanced readability with `rows={12}` text areas. Includes **Focus Persistence Fixes** and **Persistence Support** in the backend for reliable prompt engineering.
   - `src/lib/`:
   - `api.ts`: Axios client with typed backend endpoints.
-  - `ViewContext.tsx`: Global UI state including **Navigation Guards** for unsaved changes.
+  - `ViewContext.tsx`: Global UI state including **Navigation Guards** for unsaved changes and sidebar state.
   - `SettingsContext.tsx`: Reactive theme and AI status.
 
 ---
 
 ## 🎨 Frontend Architecture & UI Logic
 
-The frontend is a **Single Page Application (SPA)** built with Next.js 16, utilizing a "Master-Detail" pattern with an overlay-based detailing system.
+The frontend is a **Single Page Application (SPA)** built with Next.js 16, utilizing a "Master-Detail" pattern with a centered modal-based detailing system.
 
 ### 1. View Orchestration & Global State
 The `AppShell` provides the persistent UI (sidebar and chat), while `src/app/page.tsx` acts as the main view switcher and global data manager.
@@ -90,7 +90,7 @@ The `AppShell` provides the persistent UI (sidebar and chat), while `src/app/pag
 - Transitioning between Dashboard (Kanban) and Table view is handled via the `ViewContext`, but the dataset filtering and sorting remain unified and preserved across views.
 
 ### 2. Job Detail System
-Instead of separate routes, job details are shown in a reactive overlay (`JobDetailView.tsx`). The component organizes data into three primary tabs:
+Instead of separate routes, job details are shown in a reactive centered modal (`JobDetailView.tsx`). The component organizes data into three primary tabs:
 - **Interview Pipeline**: Supports manual addition, **deletion**, and system events (e.g., virtual "Applied" marker). "Add Step" is disabled for items without an application date.
 - **Job Details**: Editable metadata (Company, Role, Salary, Dates) and Markdown-driven description. Includes document management for Job Posts and Resumes.
 - **Application Notes**: A dedicated Markdown editor for deep-dive research, synchronizing with the RAG system.

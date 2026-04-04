@@ -6,7 +6,7 @@ import MdEditor from 'react-markdown-editor-lite';
 import MarkdownIt from 'markdown-it';
 import 'react-markdown-editor-lite/lib/index.css';
 import { Job, getStepTypes, StepType, addInterviewStep, updateInterviewStep, deleteInterviewStep, updateJobStream, updateJob, deleteJobDocument, getCompanies, InterviewStep, uploadJobDocumentStream } from '../lib/api';
-import { X, Calendar, User, Mail, Plus, Circle, FileText, Edit2, Save, Paperclip, Trash2, ExternalLink, Link as LinkIcon, StickyNote, Send, AlertTriangle, CircleDollarSign, Star } from 'lucide-react';
+import { X, Calendar, User, Mail, Plus, Circle, FileText, Edit2, Save, Paperclip, Trash2, ExternalLink, Link as LinkIcon, StickyNote, Send, AlertTriangle, CircleDollarSign, Star, Maximize2, Minimize2 } from 'lucide-react';
 import { ConfirmDialog } from './ConfirmDialog';
 import { DocumentPreview } from './DocumentPreview';
 import { ProcessingOverlay } from './ProcessingOverlay';
@@ -21,44 +21,11 @@ interface JobDetailViewProps {
 }
 
 export const JobDetailView: React.FC<JobDetailViewProps> = ({ job, onClose, onJobUpdated }) => {
-  const { setDirty, jobDetailHeight, setJobDetailHeight } = useView();
-  const [isResizingHeight, setIsResizingHeight] = useState(false);
+  const { setDirty } = useView();
   const [isAnimationFinished, setIsAnimationFinished] = useState(false);
+  const [isFullScreen, setIsFullScreen] = useState(false);
 
-  const startResizingHeight = (e: React.MouseEvent) => {
-    e.preventDefault();
-    setIsResizingHeight(true);
-  };
-
-  useEffect(() => {
-    const handleMouseMove = (e: MouseEvent) => {
-      if (!isResizingHeight) return;
-
-      const windowHeight = window.innerHeight;
-      const newHeightPercent = ((windowHeight - e.clientY) / windowHeight) * 100;
-
-      // Keep within user-approved 25% - 85% range
-      const clampedHeight = Math.min(Math.max(newHeightPercent, 25), 85);
-      setJobDetailHeight(clampedHeight);
-    };
-
-    const handleMouseUp = () => {
-      setIsResizingHeight(false);
-    };
-
-    if (isResizingHeight) {
-      window.addEventListener('mousemove', handleMouseMove);
-      window.addEventListener('mouseup', handleMouseUp);
-      document.body.style.cursor = 'row-resize';
-    } else {
-      document.body.style.cursor = 'default';
-    }
-
-    return () => {
-      window.removeEventListener('mousemove', handleMouseMove);
-      window.removeEventListener('mouseup', handleMouseUp);
-    };
-  }, [isResizingHeight, setJobDetailHeight]);
+  // Remove resizing logic for modal transition
 
   const [activeTab, setActiveTab] = useState<'info' | 'pipeline' | 'notes'>('pipeline');
   const mdParser = new MarkdownIt();
@@ -271,14 +238,11 @@ export const JobDetailView: React.FC<JobDetailViewProps> = ({ job, onClose, onJo
 
   useEffect(() => {
     if (job) {
-      getStepTypes().then(setStepTypes).catch(console.error);
-      getCompanies().then(setCompanies).catch(console.error);
-      setEditFormData(job);
-      setJobNotes(job.notes || '');
-      // Reset animation state when a specific job is loaded
-      setIsAnimationFinished(false);
+      // Async metadata loading
+      if (stepTypes.length === 0) getStepTypes().then(setStepTypes).catch(console.error);
+      if (companies.length === 0) getCompanies().then(setCompanies).catch(console.error);
     }
-  }, [job?.id]); // Only reset when the job ID changes
+  }, [job?.id, stepTypes.length, companies.length]);
 
   // Debounced notes auto-save
   useEffect(() => {
@@ -583,16 +547,16 @@ export const JobDetailView: React.FC<JobDetailViewProps> = ({ job, onClose, onJo
 
   return (
     <>
-      <div
-        className={`absolute inset-x-0 bottom-0 bg-[var(--bg)] border-t border-[var(--border-color)] shadow-[0_-10px_40px_rgba(0,0,0,0.5)] flex flex-col z-20 ${!isAnimationFinished ? 'animate-slide-up' : ''}`}
-        style={{ top: `${100 - jobDetailHeight}%` }}
-        onAnimationEnd={() => setIsAnimationFinished(true)}
+      <div 
+        className={`fixed inset-0 z-[90] flex items-center justify-center bg-black/60 backdrop-blur-sm transition-all duration-300 ${isFullScreen ? 'p-0' : 'p-4 md:p-8'} ${!isAnimationFinished ? 'animate-fade-in' : ''}`}
+        onClick={(e) => {
+          if (e.target === e.currentTarget) onClose();
+        }}
       >
-        {/* Resize Handle */}
         <div
-          className={`resize-handle-h ${isResizingHeight ? 'dragging' : ''}`}
-          onMouseDown={startResizingHeight}
-        />
+          className={`bg-[var(--bg)] border border-[var(--border-color)] shadow-2xl flex flex-col transition-all duration-300 ease-in-out ${isFullScreen ? 'w-full h-full rounded-none' : 'w-full max-w-6xl h-[90vh] rounded-2xl md:rounded-3xl'} ${!isAnimationFinished ? 'animate-slide-up' : ''}`}
+          onAnimationEnd={() => setIsAnimationFinished(true)}
+        >
         {/* Header */}
         <div className="flex justify-between items-center p-4 md:px-8 border-b border-[var(--border-color)] bg-[var(--surface)] backdrop-blur-md shrink-0">
           <div className="flex-1 min-w-0">
@@ -628,9 +592,18 @@ export const JobDetailView: React.FC<JobDetailViewProps> = ({ job, onClose, onJo
               )}
             </p>
           </div>
-          <button onClick={onClose} className="p-2 hover:bg-[var(--surface-hover)] rounded-full text-[var(--fg-subtle)] hover:text-[var(--fg)] transition">
-            <X className="w-5 h-5" />
-          </button>
+          <div className="flex items-center gap-2">
+            <button 
+              onClick={() => setIsFullScreen(!isFullScreen)} 
+              className="p-2 hover:bg-[var(--surface-hover)] rounded-full text-[var(--fg-subtle)] hover:text-[var(--fg)] transition hidden md:block"
+              title={isFullScreen ? "Exit Full Screen" : "Enter Full Screen"}
+            >
+              {isFullScreen ? <Minimize2 className="w-5 h-5" /> : <Maximize2 className="w-5 h-5" />}
+            </button>
+            <button onClick={onClose} className="p-2 hover:bg-[var(--surface-hover)] rounded-full text-[var(--fg-subtle)] hover:text-[var(--fg)] transition">
+              <X className="w-5 h-5" />
+            </button>
+          </div>
         </div>
 
         {/* Tabs */}
@@ -1170,7 +1143,7 @@ export const JobDetailView: React.FC<JobDetailViewProps> = ({ job, onClose, onJo
       <ConfirmDialog
         isOpen={terminalStatusConfirm.isOpen}
         title="Resume Application Progress?"
-        message={(
+        message={
           <div className="space-y-3">
             <div className="flex items-start gap-3 p-3 bg-violet-500/10 border border-violet-500/20 rounded-xl">
               <AlertTriangle className="w-5 h-5 text-violet-400 shrink-0 mt-0.5" />
@@ -1180,7 +1153,7 @@ export const JobDetailView: React.FC<JobDetailViewProps> = ({ job, onClose, onJo
             </div>
             <p className="text-sm">Would you like to keep it as <span className="font-bold">{job.status}</span> or move it back to <span className="text-violet-400 font-bold">{terminalStatusConfirm.nextStatus}</span>?</p>
           </div>
-        )}
+        }
         onConfirm={terminalStatusConfirm.onConfirm}
         onCancel={() => setTerminalStatusConfirm(prev => ({ ...prev, isOpen: false }))}
         confirmLabel={`Move to ${terminalStatusConfirm.nextStatus}`}
@@ -1233,6 +1206,7 @@ export const JobDetailView: React.FC<JobDetailViewProps> = ({ job, onClose, onJo
         error={uploadError}
         onClose={() => setIsUploadingDoc(false)}
       />
+      </div>
     </>
   );
 };

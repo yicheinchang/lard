@@ -11,8 +11,6 @@ interface ViewContextType {
   setSidebarCollapsed: (collapsed: boolean) => void;
   sidebarWidth: number;
   setSidebarWidth: (width: number) => void;
-  jobDetailHeight: number;
-  setJobDetailHeight: (height: number) => void;
   isMobileMenuOpen: boolean;
   setIsMobileMenuOpen: (open: boolean) => void;
   
@@ -34,17 +32,13 @@ export function ViewProvider({ children }: { children: ReactNode }) {
   const [activeView, setActiveView] = useState<ActiveView>('kanban');
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [sidebarWidth, setSidebarWidth] = useState(160);
-  const [jobDetailHeight, setJobDetailHeight] = useState(45); // in percentage
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   
   // Persistence
   useEffect(() => {
     const savedWidth = localStorage.getItem('sidebarWidth');
-    const savedHeight = localStorage.getItem('jobDetailHeight');
     const savedCollapsed = localStorage.getItem('sidebarCollapsed');
-    
     if (savedWidth) setSidebarWidth(parseInt(savedWidth, 10));
-    if (savedHeight) setJobDetailHeight(parseInt(savedHeight, 10));
     if (savedCollapsed) setSidebarCollapsed(savedCollapsed === 'true');
   }, []);
 
@@ -52,9 +46,6 @@ export function ViewProvider({ children }: { children: ReactNode }) {
     localStorage.setItem('sidebarWidth', sidebarWidth.toString());
   }, [sidebarWidth]);
 
-  useEffect(() => {
-    localStorage.setItem('jobDetailHeight', jobDetailHeight.toString());
-  }, [jobDetailHeight]);
 
   useEffect(() => {
     localStorage.setItem('sidebarCollapsed', sidebarCollapsed.toString());
@@ -105,8 +96,6 @@ export function ViewProvider({ children }: { children: ReactNode }) {
       setSidebarCollapsed,
       sidebarWidth,
       setSidebarWidth,
-      jobDetailHeight,
-      setJobDetailHeight,
       isMobileMenuOpen,
       setIsMobileMenuOpen,
       isDirty,
