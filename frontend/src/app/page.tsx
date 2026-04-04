@@ -392,7 +392,7 @@ export default function Home() {
   }
 
   return (
-    <div className="flex flex-col h-full w-full p-4 md:p-6 lg:p-8 pt-6 transition-all duration-300">
+    <div className="flex flex-col h-full w-full overflow-hidden p-4 md:p-6 lg:p-8 pt-6 transition-all duration-300">
       <header className="flex flex-col xl:flex-row justify-between items-start xl:items-center mb-6 gap-4 shrink-0">
         <div>
           <h1 className="text-2xl lg:text-3xl font-bold tracking-tight" style={{ color: 'var(--fg)' }}>

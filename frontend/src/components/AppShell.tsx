@@ -248,7 +248,7 @@ function MainContent({ children }: { children: React.ReactNode }) {
   const { showDiscardDialog, dirtyMessage, confirmDiscard, cancelDiscard } = useView();
 
   return (
-    <main className="flex-1 flex flex-col relative w-full pb-0 min-w-0" style={{ background: `linear-gradient(to bottom, var(--bg), var(--bg))` }}>
+    <main className="flex-1 flex flex-col relative w-full h-screen overflow-hidden pb-0 min-w-0" style={{ background: `linear-gradient(to bottom, var(--bg), var(--bg))` }}>
       <MobileHeader />
       <MobileDrawer />
       

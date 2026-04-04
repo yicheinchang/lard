@@ -30,7 +30,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({ jobs, onUpdateStatus, 
   const [showClosed, setShowClosed] = useState(false);
 
   return (
-    <div className="kanban-grid gap-4 pb-8 h-full">
+    <div className="kanban-grid gap-4 pb-4 h-full min-h-0 overflow-x-auto custom-scrollbar">
       {COLUMNS.map((column) => {
         let columnJobs = jobs.filter((job) => column.statuses.includes(job.status));
         
@@ -40,8 +40,8 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({ jobs, onUpdateStatus, 
         }
 
         return (
-          <div key={column.key} className="flex flex-col gap-3 min-w-0">
-            <div className="flex items-center justify-between px-2">
+          <div key={column.key} className="flex flex-col gap-3 min-w-0 max-h-full">
+            <div className="flex items-center justify-between px-2 shrink-0">
               <div className="flex items-center gap-2">
                 <h2 className="text-sm font-semibold text-[var(--fg)] opacity-80 uppercase tracking-wider">{column.label}</h2>
                 {column.key === 'Wishlist' && (
@@ -57,7 +57,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({ jobs, onUpdateStatus, 
               <span className="bg-[var(--surface-hover)] text-[var(--fg-subtle)] text-xs px-2 py-0.5 rounded-full font-medium">{columnJobs.length}</span>
             </div>
             
-            <div className={`flex flex-col gap-2 min-h-[400px] p-2 rounded-2xl border ${columnAccents[column.key] || 'bg-[var(--surface)] border-[var(--border-color)]'}`}>
+            <div className={`flex flex-col gap-2 p-2 pr-2 rounded-2xl border flex-1 min-h-0 overflow-y-auto overflow-x-hidden custom-scrollbar ${columnAccents[column.key] || 'bg-[var(--surface)] border-[var(--border-color)]'}`}>
               {columnJobs.length === 0 ? (
                 <div className="h-full flex items-center justify-center text-sm text-[var(--fg-subtle)] opacity-40 italic py-10">
                   No jobs here
