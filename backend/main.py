@@ -7,6 +7,8 @@ import warnings
 
 # Suppress Pydantic V1/Python 3.14 compatibility warning from LangChain
 warnings.filterwarnings("ignore", message="Core Pydantic V1 functionality isn't compatible with Python 3.14 or greater.")
+# Suppress harmless resource tracker warnings at shutdown caused by AI libraries
+warnings.filterwarnings("ignore", message="resource_tracker: There appear to be .* leaked semaphore objects")
 
 import threading
 
