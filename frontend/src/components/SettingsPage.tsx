@@ -248,7 +248,7 @@ export function SettingsPage() {
       JSON.stringify(customPrompts) !== JSON.stringify(settings.custom_prompts) ||
       JSON.stringify(systemPrompts) !== JSON.stringify(settings.system_prompts)
     );
-  }, [theme, aiEnabled, llmProvider, llmConfig, extractionMode, embeddingProvider, embeddingConfig, customPrompts, systemPrompts, settings]);
+  }, [theme, aiEnabled, llmProvider, llmConfig, extractionMode, maxConcurrency, embeddingProvider, embeddingConfig, customPrompts, systemPrompts, settings]);
 
   // Update global navigation guard
   useEffect(() => {
