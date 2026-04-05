@@ -26,10 +26,20 @@ def _clean_html(html: str) -> tuple[str, dict | None]:
     structured_data = None
     for ld_script in soup.find_all("script", type="application/ld+json"):
         try:
-            content = ld_script.get_text()
-            data = json.loads(content or "")
-            # Handle both single objects and lists
-            items = data if isinstance(data, list) else [data]
+            content = ld_script.get_text().strip()
+            if not content:
+                continue
+            data = json.loads(content)
+            
+            # Handle both single objects, lists, and @graph structures
+            items = []
+            if isinstance(data, list):
+                items.extend(data)
+            elif isinstance(data, dict):
+                items.append(data)
+                if "@graph" in data and isinstance(data["@graph"], list):
+                    items.extend(data["@graph"])
+            
             for item in items:
                 # Some sites use @type: ["JobPosting", "something_else"]
                 types = item.get("@type", "")
