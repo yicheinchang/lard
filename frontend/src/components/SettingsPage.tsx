@@ -155,6 +155,7 @@ export function SettingsPage() {
     ollama_base_url: '', ollama_model: '',
     openai_api_key: '', openai_model: '',
     anthropic_api_key: '', anthropic_model: '',
+    num_ctx: 8192,
   });
   const [extractionMode, setExtractionMode] = useState<'single' | 'multi'>('single');
   const [maxConcurrency, setMaxConcurrency] = useState(2);
@@ -691,6 +692,8 @@ export function SettingsPage() {
                   </div>
                 </div>
 
+                </div>
+                
                 {/* Max Concurrency AI Agents */}
                 <div className="animate-fade-in group">
                   <div className="flex items-center justify-between mb-2">
@@ -730,6 +733,56 @@ export function SettingsPage() {
                   <p className="text-[10px] mt-2 leading-relaxed" style={{ color: 'var(--fg-subtle)' }}>
                     Recommended: <strong>2-3</strong> for local LLMs, <strong>5+</strong> for Cloud APIs. 
                     <span className="text-amber-500 ml-1 opacity-80 italic">Overloading local servers may cause timeouts.</span>
+                  </p>
+                </div>
+
+                {/* LLM Context Window (num_ctx) */}
+                <div className="animate-fade-in group pb-2">
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center gap-2">
+                      <Label>LLM Context Window (num_ctx)</Label>
+                      <div className="p-1 rounded-full bg-violet-500/10 text-violet-400 opacity-0 group-hover:opacity-100 transition-opacity cursor-help" title="The total amount of text (in tokens) the model can remember at once. Higher values allow larger job descriptions but use more memory.">
+                        <Database className="w-3 h-3" />
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="number"
+                        value={llmConfig.num_ctx}
+                        onChange={(e) => {
+                          const v = parseInt(e.target.value) || 0;
+                          setLlmConfig(p => ({ ...p, num_ctx: v }));
+                        }}
+                        className="w-20 px-2 py-0.5 rounded border border-violet-500/20 bg-violet-500/5 text-violet-400 text-xs font-bold text-center focus:outline-none focus:ring-1 focus:ring-violet-500/40"
+                      />
+                      <span className="text-[10px] font-bold text-[var(--fg-subtle)] uppercase">Tokens</span>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-4">
+                    <input
+                      type="range"
+                      min="1024"
+                      max="32768"
+                      step="1024"
+                      value={llmConfig.num_ctx}
+                      onChange={(e) => setLlmConfig(p => ({ ...p, num_ctx: parseInt(e.target.value) }))}
+                      className="flex-1 accent-violet-500 cursor-pointer h-1.5 rounded-lg appearance-none bg-[var(--border-color)]"
+                    />
+                    <div className="flex gap-1">
+                      {[1024, 4096, 8192, 16384, 32768].map(v => (
+                        <button
+                          key={v}
+                          type="button"
+                          onClick={() => setLlmConfig(p => ({ ...p, num_ctx: v }))}
+                          className={`text-[9px] font-bold px-1.5 py-0.5 rounded border transition-all ${llmConfig.num_ctx === v ? 'bg-violet-500 border-violet-500 text-white' : 'border-[var(--border-color)] text-[var(--fg-subtle)] hover:border-violet-500/40'}`}
+                        >
+                          {v >= 1024 ? `${v/1024}k` : v}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  <p className="text-[10px] mt-2 leading-relaxed" style={{ color: 'var(--fg-subtle)' }}>
+                    Standard: <strong>8192</strong> (8k). Cloud models (OpenAI/Anthropic) usually support 128k+, but local models are often limited to 8k-32k.
                   </p>
                 </div>
               </div>

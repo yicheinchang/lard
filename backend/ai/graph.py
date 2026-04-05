@@ -29,9 +29,8 @@ async def _run_field_extraction(field, schema, prompt, text, url, request, semap
             # Emit "Extracting..." status
             await progress_cb({"event": "extracting", "field": field, "msg": f"AI: Extracting {field.replace('_', ' ')}..."})
 
-        # --- Fixed Context Strategy (8190 tokens) ---
-        # Using a stable, fixed context window for local LLM performance as requested
-        num_ctx = 8190 
+        settings = load_app_settings()
+        num_ctx = settings["llm_config"].get("num_ctx")
         llm = get_llm(num_ctx=num_ctx)
 
         # Log calling
@@ -188,7 +187,8 @@ async def _run_field_json_extraction(field, schema, prompt, text, fragment, requ
         if progress_cb:
             await progress_cb({"event": "extracting", "field": field, "msg": f"AI: Parsing {field} from JSON..."})
 
-        num_ctx = 8190
+        settings = load_app_settings()
+        num_ctx = settings["llm_config"].get("num_ctx")
         llm = get_llm(num_ctx=num_ctx)
 
         # Log calling
@@ -335,7 +335,7 @@ async def check_job_post_node(state: AgentState):
         await progress_cb({"event": "progress", "msg": "AI: Verifying content (Job Post Confirmation)..."})
 
     from ai.chains import get_job_post_check_prompt, JobPostCheck
-    llm = get_llm(num_ctx=4096)
+    llm = get_llm(num_ctx=settings["llm_config"].get("num_ctx"))
     checker = get_job_post_check_prompt(settings) | llm.with_structured_output(JobPostCheck)
 
     # Log calling
@@ -400,7 +400,7 @@ async def extract_node(state: AgentState):
                     _, desc_val = await _run_field_extraction("description", JobDescription, description_extraction_prompt, text_with_feedback, url, request, sema, progress_cb, state=state)
                 results["description"] = desc_val.get("description") if desc_val else None
             else:
-                llm = get_llm(num_ctx=8190)
+                llm = get_llm(num_ctx=settings["llm_config"].get("num_ctx"))
                 extractor = get_extraction_prompt(settings) | llm.with_structured_output(JobDetails)
                 
                 cg = settings.get("custom_prompts", {}).get("single_agent", "")
@@ -430,7 +430,7 @@ async def extract_node(state: AgentState):
                     await progress_cb({"event": "progress", "msg": "AI: JSON-LD found! Validating and converting description..."})
                 
                 # Use Single-Agent logic with the validation prompt
-                llm = get_llm(num_ctx=8190)
+                llm = get_llm(num_ctx=settings["llm_config"].get("num_ctx"))
                 chain = structured_data_validation_prompt | llm.with_structured_output(JobDetails)
                 
                 inputs = {
@@ -456,8 +456,8 @@ async def extract_node(state: AgentState):
                 results = await _run_multi_agent_extraction(text, url, request, progress_cb, state=state)
             return {"extracted_data": results, "error": None}
         else:
-            # Single-Agent (Default) using fixed 8190 context
-            llm = get_llm(num_ctx=8190)
+            # Single-Agent (Default) using universal context
+            llm = get_llm(num_ctx=settings["llm_config"].get("num_ctx"))
 
             # Log LLM Info if not already logged (Single mode entry)
             if not state.get("llm_logged"):
@@ -539,8 +539,8 @@ async def description_validator_node(state: AgentState):
     if progress_cb:
          await progress_cb({"event": "progress", "msg": "AI: Validating Description format (AI Hallucination check)..."})
 
-    llm = get_llm(num_ctx=8190)
     settings = load_app_settings()
+    llm = get_llm(num_ctx=settings["llm_config"].get("num_ctx"))
     validator = get_validation_prompt(settings) | llm.with_structured_output(DescriptionValidation)
     
     # Log calling

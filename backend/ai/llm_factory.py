@@ -32,7 +32,9 @@ def get_llm(provider: str = None, cfg: dict = None, num_ctx: int = None) -> Base
         "temperature": 0.0,
     }
     
-    if num_ctx:
-        ollama_kwargs["num_ctx"] = num_ctx
+    # Priority: explicit arg > config > default (none/ollama default)
+    context_window = num_ctx or cfg.get("num_ctx")
+    if context_window:
+        ollama_kwargs["num_ctx"] = int(context_window)
         
     return ChatOllama(**ollama_kwargs)

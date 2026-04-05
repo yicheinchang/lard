@@ -66,6 +66,7 @@ export interface LlmConfig {
   openai_model: string;
   anthropic_api_key: string;
   anthropic_model: string;
+  num_ctx: number;
 }
 
 export interface EmbeddingConfig {

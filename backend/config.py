@@ -32,6 +32,7 @@ DEFAULT_APP_SETTINGS = {
         "openai_model": "gpt-4o-mini",
         "anthropic_api_key": settings.ANTHROPIC_API_KEY or "",
         "anthropic_model": "claude-3-haiku-20240307",
+        "num_ctx": 8192,
     },
     "embedding_provider": "default",  # "default" | "ollama" | "openai"
     "embedding_config": {
