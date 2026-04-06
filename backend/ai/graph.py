@@ -401,8 +401,10 @@ async def extract_node(state: AgentState):
         description_extraction_prompt = _create_description_prompt(settings)
         structured_data_validation_prompt = get_json_ld_prompt(settings)
 
-        # RETRY MODE: Triggered by description QA validator
-        if state.get("extracted_data"):
+        # RETRY MODE: Triggered by description QA validator (stays on current source)
+        is_fallback_transition = vf.startswith("FALLBACK_PHASE:") if vf else False
+        
+        if state.get("extracted_data") and not is_fallback_transition:
             results = state["extracted_data"].copy()
             if progress_cb:
                 await progress_cb({"event": "progress", "msg": f"AI: Regenerating Description (QA Retry {state.get('retries', 0)}/3)..."})
@@ -596,24 +598,44 @@ async def description_validator_node(state: AgentState):
         extracted["hallucination_reasons"] = state.get("validation_feedback", "Maximum validation attempts reached without passing QA.")
         return {"extracted_data": extracted}
 
-    # --- SEQUENTIAL FALLBACK DETECTION ---
-    # If we just finished Attempt 0 (JSON) and fields are missing, trigger Fallback (Attempt 1)
+    # --- SEQUENTIAL FALLBACK & HEURISTIC DETECTION ---
     use_text_fallback = state.get("use_text_fallback", False)
     is_json_ld = state.get("structured_data") is not None
     
     if not use_text_fallback and is_json_ld:
-        important_fields = ["company", "role", "location", "salary_range", "company_job_id", "job_posted_date", "application_deadline", "description"]
-        missing = [f for f in important_fields if not extracted.get(f)]
+        important_fields = {
+            "company": "Company Name",
+            "role": "Job Role",
+            "location": "Location",
+            "salary_range": "Salary Range",
+            "company_job_id": "Job ID",
+            "job_posted_date": "Posted Date",
+            "application_deadline": "Application Deadline",
+            "description": "Job Description"
+        }
         
-        if missing:
-            agnt_log("Validator", task="FALLBACK_TRIGGERED", result=f"Missing {len(missing)} fields. Switching to TEXT mode.")
+        placeholders = ["n/a", "unknown", "not provided", "[company name]", "null", "undefined", "tbd", "tbc"]
+        missing_reasons = []
+        
+        for key, label in important_fields.items():
+            val = extracted.get(key)
+            if not val:
+                missing_reasons.append(f"  - {key} (Missing from JSON)")
+            elif isinstance(val, str) and val.lower().strip() in placeholders:
+                missing_reasons.append(f"  - {key} (Placeholder '{val}' detected)")
+            elif isinstance(val, str) and len(val.strip()) < 2:
+                missing_reasons.append(f"  - {key} (Value too short: '{val}')")
+
+        if missing_reasons:
+            reasons_str = "\n".join(missing_reasons)
+            agnt_log("Validator", task="FALLBACK_TRIGGERED", result=f"Missing/Invalid {len(missing_reasons)} fields (Sequential Fallback):\n{reasons_str}\nSwitching to TEXT mode.")
             # We trigger a retry by providing "fake" feedback so should_retry loops back,
             # but we also set the fallback flag.
             return {
                 "use_text_fallback": True, 
                 "previous_json_results": extracted,
-                "validation_feedback": f"Fallback to text mode due to missing fields: {', '.join(missing)}",
-                "retries": 1 # Count the transition as an attempt to ensure termination
+                "validation_feedback": f"FALLBACK_PHASE: Missing/Invalid fields: {', '.join([r.split('(')[0].strip('- ').strip() for r in missing_reasons])}",
+                "retries": 1 # Count the transition
             }
 
     from ai.chains import get_validation_prompt, DescriptionValidation
@@ -663,11 +685,12 @@ async def description_validator_node(state: AgentState):
             timeout=180
         )
         
-        failed = not result.is_valid or not result.is_complete
-        if failed:
-            reason = result.failure_reason or "Unknown validation error"
-            print(f"\n[AI VALIDATOR] Validation Failed ({source_type} Mode) (Attempt {retries + 1}/3):")
-            print(f" > WHY: {reason}")
+    failed = not result.is_valid or not result.is_complete
+    if failed:
+        reason = result.failure_reason or "Unknown validation error"
+        agnt_log("Validator", task="QA_FAILURE", result=f"REJECTED: {reason}")
+        print(f"\n[AI VALIDATOR] Validation Failed ({source_type} Mode) (Attempt {retries + 1}/3):")
+        print(f" > WHY: {reason}")
             
             if retries >= 2:
                 # Final attempt failed
