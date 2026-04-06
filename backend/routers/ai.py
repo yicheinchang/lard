@@ -49,7 +49,11 @@ def _clean_html(html: str) -> tuple[str, dict | None]:
                     is_job = types == "JobPosting" or "JobPosting" in str(types)
                 
                 if is_job:
-                    structured_data = item
+                    # If it's a @graph structure, return the whole thing so AI has context for references
+                    if isinstance(data, dict) and "@graph" in data:
+                         structured_data = data
+                    else:
+                         structured_data = item
                     break
             if structured_data: break
         except Exception as e:

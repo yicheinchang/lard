@@ -328,6 +328,7 @@ async def check_job_post_node(state: AgentState):
     
     # Requirement: In single-agent strategy, this feature is embedded in the agent prompt.
     if mode == "single":
+        agnt_log("Verifier", task="Job Post Verification", result="SKIP: Embedded in Single-Agent Extractor")
         return {"error": None}
 
     progress_cb = state.get("progress_callback")
@@ -429,6 +430,14 @@ async def extract_node(state: AgentState):
                 if progress_cb:
                     await progress_cb({"event": "progress", "msg": "AI: JSON-LD found! Validating and converting description..."})
                 
+                # Log LLM info if not already logged
+                if not state.get("llm_logged"):
+                    log_llm_info()
+                    state["llm_logged"] = True
+
+                # Log calling
+                agnt_log("Extractor (JSON-LD)", task="Mapping Fields", input_data=json.dumps(structured_data)[:50])
+
                 # Use Single-Agent logic with the validation prompt
                 llm = get_llm(num_ctx=settings["llm_config"].get("num_ctx"))
                 chain = structured_data_validation_prompt | llm.with_structured_output(JobDetails)
@@ -447,7 +456,11 @@ async def extract_node(state: AgentState):
                     chain.ainvoke(inputs),
                     timeout=600
                 )
-                return {"extracted_data": result.model_dump(), "error": None}
+                data = result.model_dump()
+                
+                # Log success
+                agnt_log("Extractor (JSON-LD)", result="SUCCESS: Data extracted.")
+                return {"extracted_data": data, "error": None}
 
         if mode == "multi":
             if is_json_ld:
@@ -549,7 +562,28 @@ async def description_validator_node(state: AgentState):
     try:
         is_json_ld = state.get("structured_data") is not None
         source_type = "JSON-LD" if is_json_ld else "TEXT"
-        raw_source = state.get("structured_data", {}).get("description", "") if is_json_ld else state["text"]
+        
+        # Robustly extract raw description for validation comparison
+        raw_source = ""
+        if is_json_ld:
+            # Check for @graph or single node
+            sd = state["structured_data"]
+            if isinstance(sd, dict):
+                if "@graph" in sd:
+                    # Find the JobPosting node in the graph
+                    for item in sd["@graph"]:
+                        if item.get("@type") == "JobPosting":
+                            raw_source = item.get("description", "")
+                            break
+                else:
+                    raw_source = sd.get("description", "")
+            elif isinstance(sd, list):
+                for item in sd:
+                    if item.get("@type") == "JobPosting":
+                        raw_source = item.get("description", "")
+                        break
+        else:
+            raw_source = state["text"]
         
         cg = settings.get("custom_prompts", {}).get("single_agent", "") # Use single agent guidance as fallback for QA
         result = await asyncio.wait_for(

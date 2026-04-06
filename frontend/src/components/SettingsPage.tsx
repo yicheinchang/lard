@@ -692,8 +692,6 @@ export function SettingsPage() {
                   </div>
                 </div>
 
-                </div>
-                
                 {/* Max Concurrency AI Agents */}
                 <div className="animate-fade-in group">
                   <div className="flex items-center justify-between mb-2">
