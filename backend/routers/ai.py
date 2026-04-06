@@ -7,6 +7,7 @@ import asyncio
 import os
 import shutil
 from config import load_app_settings
+from ai.logger import agnt_log
 
 router = APIRouter(prefix="/api/ai", tags=["AI"])
 
@@ -205,6 +206,7 @@ async def _extract_stream_generator(request: Request, url: str = None, text: str
     async def run_ai():
         from ai.graph import get_agent_app
         try:
+            agnt_log("Router", task="Extraction", result="Starting fresh AI Graph run...")
             result = await get_agent_app().ainvoke({
                 "text": text, 
                 "url": url, 
@@ -214,7 +216,9 @@ async def _extract_stream_generator(request: Request, url: str = None, text: str
                 "extracted_data": None,
                 "error": None,
                 "retries": 0,
-                "validation_feedback": None
+                "validation_feedback": None,
+                "use_text_fallback": False,
+                "previous_json_results": None
             })
             await q.put(f"data: {json.dumps({'event': 'final_result', 'extracted': result.get('extracted_data'), 'error': result.get('error')})}\n\n")
         except Exception as e:

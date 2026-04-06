@@ -1,5 +1,5 @@
 # Codebase Map: Lard - Lazy AI-powered Resume Database
-Last Updated: 2026-04-06T16:27:14Z
+Last Updated: 2026-04-06T23:13:00Z
 
 This document provides a summary of the project's architecture, tech stack, and key logic to give AI coding agents instant context.
 
@@ -299,6 +299,7 @@ The system uses a multi-stage pipeline to extract job details from URLs, PDFs, a
 - **Cancellation & Safety**: Explicit support for `AbortController`. If a user cancels in the UI, the backend immediately terminates the background AI processing.
 - **Selective Pass Logic**: Skips structured JSON extraction for the description field, using a direct verbatim retrieval prompt for speed and reliability, and defaults to generous 600s timeouts on hardware-limited setups.
 - **Resilient Network Client**: Uses browser-standard headers to bypass anti-bot measures.
+- **Sequential Fallback Strategy**: Implements a two-phase extraction pipeline. Attempt 1 (JSON-LD) targets structured data for speed and precision. If metadata fields (Company, Role, etc.) are missing, Attempt 2 (Full Text) is triggered. Results are merged, treating JSON-LD as the primary source of truth and only "filling gaps" from the text-based extraction. This applies to both Single and Multi-Agent strategies.
 
 ### 6. Document Ingestion
 Supports PDF and plain text. PDFs are parsed using `pypdf` and split into chunks before vectorization.
