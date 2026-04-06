@@ -460,7 +460,7 @@ async def extract_node(state: AgentState):
                 data = result.model_dump()
                 
                 # Log success
-                agnt_log("Extractor (JSON-LD)", result="SUCCESS: Data extracted.")
+                agnt_log("Extractor (JSON-LD)", result=f"SUCCESS: Data extracted. [Company: {data.get('company')}, Role: {data.get('role')}]")
                 return {"extracted_data": data, "error": None}
 
         if mode == "multi":
@@ -510,7 +510,7 @@ async def extract_node(state: AgentState):
                 return {"extracted_data": None, "error": f"NOT_A_JOB_POST: This document looks like a {category}. This content does not appear to be a job posting."}
 
             # Log success
-            agnt_log("Extractor", result="SUCCESS: Data extracted.")
+            agnt_log("Extractor", result=f"SUCCESS: Data extracted. [Company: {data.get('company')}, Role: {data.get('role')}]")
             return {"extracted_data": data, "error": None}
     except asyncio.TimeoutError:
         return {"extracted_data": None, "error": "Extraction timed out after 5 minutes. Try smaller snippets or Multi-Agent mode."}

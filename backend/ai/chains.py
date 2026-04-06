@@ -99,7 +99,7 @@ def get_extraction_prompt(settings: dict | None = None):
 def get_json_ld_prompt(settings: dict | None = None):
     return ChatPromptTemplate.from_messages([
         ("system", get_base_prompt("json_ld", settings) + "{validation_feedback}{custom_guidance}"),
-        ("user", "RAW JSON-LD DATA:\n{json_ld_data}")
+        ("user", "RAW JSON-LD DATA:\n{json_ld_data}\n\nRAW PAGE TEXT:\n{raw_text}")
     ])
 
 # Helper to create QA validation prompt

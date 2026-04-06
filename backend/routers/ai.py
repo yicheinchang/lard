@@ -17,6 +17,49 @@ def _check_ai_enabled():
     if not s.get("ai_enabled", True):
         raise HTTPException(status_code=403, detail="AI assistant is disabled. Enable it in Settings.")
 
+def _resolve_json_ld_references(all_data):
+    """
+    Traverses list of JSON-LD objects to build an ID map and resolve cross-references.
+    This helps the AI extract fields from complex @graph structures like Novartis.
+    """
+    id_map = {}
+    
+    def collect_ids(obj):
+        if isinstance(obj, dict):
+            node_id = obj.get("@id")
+            node_type = obj.get("@type")
+            if node_id:
+                if node_id not in id_map or node_type:
+                    id_map[node_id] = obj
+            for val in obj.values():
+                collect_ids(val)
+        elif isinstance(obj, list):
+            for item in obj:
+                collect_ids(item)
+
+    collect_ids(all_data)
+    
+    def expand_references(obj, visited=None):
+        if visited is None: visited = set()
+        obj_id = id(obj)
+        if obj_id in visited: return obj
+        visited.add(obj_id)
+
+        if isinstance(obj, dict):
+            # If it's a reference only link: {"@id": "some_id"}
+            if len(obj) == 1 and "@id" in obj:
+                ref_id = obj["@id"]
+                if ref_id in id_map:
+                    resolved = id_map[ref_id]
+                    if resolved is not obj:
+                        return resolved
+            return {k: expand_references(v, visited) for k, v in obj.items()}
+        elif isinstance(obj, list):
+            return [expand_references(item, visited) for item in obj]
+        return obj
+
+    return expand_references(all_data)
+
 def _clean_html(html: str) -> tuple[str, dict | None]:
     """Generic HTML cleaning to extract main content while removing noise, with JSON-LD support."""
     from bs4 import BeautifulSoup
@@ -24,7 +67,6 @@ def _clean_html(html: str) -> tuple[str, dict | None]:
 
     # 1. Look for application/ld+json (Schema.org JobPosting)
     json_ld_blocks = []
-    job_posting_block = None
     for ld_script in soup.find_all("script", type="application/ld+json"):
         try:
             content = ld_script.get_text().strip()
@@ -32,39 +74,32 @@ def _clean_html(html: str) -> tuple[str, dict | None]:
                 continue
             data = json.loads(content)
             json_ld_blocks.append(data)
-            
-            # Check if this block contains a JobPosting
-            items = []
-            if isinstance(data, list):
-                items.extend(data)
-            elif isinstance(data, dict):
-                items.append(data)
-                if "@graph" in data and isinstance(data["@graph"], list):
-                    items.extend(data["@graph"])
-            
-            for item in items:
-                types = item.get("@type", "")
-                is_job = "JobPosting" in (types if isinstance(types, list) else [str(types)])
-                if is_job:
-                    job_posting_block = data
-                    break
         except Exception as e:
             print(f"Error parsing JSON-LD: {e}")
 
-    # If we found at least one JSON-LD block, we provide it to the LLM.
-    # If we found a block containing a JobPosting, we prioritize that, 
-    # but we also include other blocks to resolve external references.
+    # 2. Resolve references across all JSON-LD blocks and find the JobPosting
     structured_data = None
-    if job_posting_block:
-        # If there are other blocks, combine them into an array so AI sees everything
-        if len(json_ld_blocks) > 1:
-            structured_data = {"all_json_ld": json_ld_blocks}
-        else:
-            structured_data = job_posting_block
-    elif json_ld_blocks:
-        # If no explicit JobPosting found but JSON-LD exists, 
-        # provide it all anyway — the AI might find it more robustly
-        structured_data = json_ld_blocks[0] if len(json_ld_blocks) == 1 else {"all_json_ld": json_ld_blocks}
+    if json_ld_blocks:
+        resolved_all = _resolve_json_ld_references(json_ld_blocks)
+        
+        # Flatten: Search for the (now resolved) JobPosting node
+        def find_job_posting(data):
+            if isinstance(data, dict):
+                types = data.get("@type", "")
+                is_job = "JobPosting" in (types if isinstance(types, list) else [str(types)])
+                if is_job: 
+                    return data
+                # Recurse into dict values (like @graph)
+                for v in data.values():
+                    res = find_job_posting(v)
+                    if res: return res
+            elif isinstance(data, list):
+                for item in data:
+                    res = find_job_posting(item)
+                    if res: return res
+            return None
+            
+        structured_data = find_job_posting(resolved_all)
 
     # 2. Decompose generic noise (scripts, styles, etc.)
     for tag in soup(["script", "style", "nav", "footer", "header", "aside", "form"]):
