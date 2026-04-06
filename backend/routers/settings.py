@@ -16,6 +16,13 @@ def get_settings():
     return safe
 
 
+@router.get("/default-prompts")
+def get_default_prompts():
+    """Return the hardcoded factory default system prompts."""
+    from ai.prompts import DEFAULT_SYSTEM_PROMPTS
+    return DEFAULT_SYSTEM_PROMPTS
+
+
 class SettingsUpdate(BaseModel):
     theme: Optional[str] = None
     ai_enabled: Optional[bool] = None

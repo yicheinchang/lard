@@ -133,6 +133,11 @@ export const updateSettings = async (data: Partial<AppSettings>): Promise<AppSet
   return response.data;
 };
 
+export const getDefaultPrompts = async (): Promise<AppSettings['system_prompts']> => {
+  const response = await api.get('/settings/default-prompts');
+  return response.data;
+};
+
 export const rebuildVectors = async () => {
   const response = await api.post('/settings/rebuild-vectors');
   return response.data;

@@ -13,6 +13,7 @@ import {
   rebuildVectors,
   updateSettings as apiUpdateSettings,
   getOllamaModels,
+  getDefaultPrompts,
   type AppSettings,
   type LlmConfig,
   type EmbeddingConfig,
@@ -203,6 +204,7 @@ export function SettingsPage() {
     json_description: '',
     job_post_check: '',
   });
+  const [factoryPrompts, setFactoryPrompts] = useState<AppSettings['system_prompts']>(DEFAULT_SYSTEM_PROMPTS);
 
   // UI states
   const [saving, setSaving] = useState(false);
@@ -288,6 +290,11 @@ export function SettingsPage() {
 
   // Sync from server settings
   useEffect(() => {
+    // Fetch latest factory defaults from backend to ensure Reset works correctly
+    getDefaultPrompts().then(setFactoryPrompts).catch(err => {
+      console.warn("Failed to fetch backend prompt defaults, using frontend constants fallback:", err);
+    });
+
     if (!settings) return;
     setTheme(settings.theme);
     setAiEnabled(settings.ai_enabled);
@@ -924,7 +931,7 @@ export function SettingsPage() {
                           These are the core instructions defined in the backend. Modifying them can drastically alter extraction accuracy.
                         </p>
                         <button
-                          onClick={() => setSystemPrompts({ ...DEFAULT_SYSTEM_PROMPTS })}
+                          onClick={() => setSystemPrompts({ ...factoryPrompts })}
                           className="mt-3 px-3 py-1.5 rounded-lg text-[10px] font-bold bg-[var(--surface)] border border-amber-500/20 hover:bg-amber-500/10 transition-all text-amber-300 uppercase tracking-tight"
                         >
                           Reset system prompts
@@ -1033,7 +1040,7 @@ export function SettingsPage() {
                         <Label 
                           onReset={() => setSystemPrompts(p => ({
                             ...p,
-                            [activeSystemPrompt]: DEFAULT_SYSTEM_PROMPTS[activeSystemPrompt as keyof typeof DEFAULT_SYSTEM_PROMPTS] || ''
+                            [activeSystemPrompt]: factoryPrompts[activeSystemPrompt as keyof typeof factoryPrompts] || ''
                           }))}
                           resetLabel={`Restore default ${activeSystemPrompt.replace(/^(field_|json_)/, '').replace(/_/g, ' ')} prompt`}
                         >
