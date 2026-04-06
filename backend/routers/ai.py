@@ -23,15 +23,17 @@ def _clean_html(html: str) -> tuple[str, dict | None]:
     soup = BeautifulSoup(html, 'html.parser')
 
     # 1. Look for application/ld+json (Schema.org JobPosting)
-    structured_data = None
+    json_ld_blocks = []
+    job_posting_block = None
     for ld_script in soup.find_all("script", type="application/ld+json"):
         try:
             content = ld_script.get_text().strip()
             if not content:
                 continue
             data = json.loads(content)
+            json_ld_blocks.append(data)
             
-            # Handle both single objects, lists, and @graph structures
+            # Check if this block contains a JobPosting
             items = []
             if isinstance(data, list):
                 items.extend(data)
@@ -41,23 +43,28 @@ def _clean_html(html: str) -> tuple[str, dict | None]:
                     items.extend(data["@graph"])
             
             for item in items:
-                # Some sites use @type: ["JobPosting", "something_else"]
                 types = item.get("@type", "")
-                if isinstance(types, list):
-                    is_job = "JobPosting" in types
-                else:
-                    is_job = types == "JobPosting" or "JobPosting" in str(types)
-                
+                is_job = "JobPosting" in (types if isinstance(types, list) else [str(types)])
                 if is_job:
-                    # If it's a @graph structure, return the whole thing so AI has context for references
-                    if isinstance(data, dict) and "@graph" in data:
-                         structured_data = data
-                    else:
-                         structured_data = item
+                    job_posting_block = data
                     break
-            if structured_data: break
         except Exception as e:
             print(f"Error parsing JSON-LD: {e}")
+
+    # If we found at least one JSON-LD block, we provide it to the LLM.
+    # If we found a block containing a JobPosting, we prioritize that, 
+    # but we also include other blocks to resolve external references.
+    structured_data = None
+    if job_posting_block:
+        # If there are other blocks, combine them into an array so AI sees everything
+        if len(json_ld_blocks) > 1:
+            structured_data = {"all_json_ld": json_ld_blocks}
+        else:
+            structured_data = job_posting_block
+    elif json_ld_blocks:
+        # If no explicit JobPosting found but JSON-LD exists, 
+        # provide it all anyway — the AI might find it more robustly
+        structured_data = json_ld_blocks[0] if len(json_ld_blocks) == 1 else {"all_json_ld": json_ld_blocks}
 
     # 2. Decompose generic noise (scripts, styles, etc.)
     for tag in soup(["script", "style", "nav", "footer", "header", "aside", "form"]):

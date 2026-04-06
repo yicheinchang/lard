@@ -444,6 +444,7 @@ async def extract_node(state: AgentState):
                 
                 inputs = {
                     "json_ld_data": json.dumps(structured_data, indent=2),
+                    "raw_text": state.get("text", ""),
                     "custom_guidance": "",
                     "validation_feedback": ""
                 }
@@ -568,20 +569,23 @@ async def description_validator_node(state: AgentState):
         if is_json_ld:
             # Check for @graph or single node
             sd = state["structured_data"]
-            if isinstance(sd, dict):
-                if "@graph" in sd:
-                    # Find the JobPosting node in the graph
-                    for item in sd["@graph"]:
-                        if item.get("@type") == "JobPosting":
-                            raw_source = item.get("description", "")
-                            break
-                else:
-                    raw_source = sd.get("description", "")
-            elif isinstance(sd, list):
-                for item in sd:
-                    if item.get("@type") == "JobPosting":
-                        raw_source = item.get("description", "")
-                        break
+            
+            # Sub-function to find JobPosting in an object or list
+            def find_description(data):
+                if isinstance(data, dict):
+                    if "@graph" in data:
+                        return find_description(data["@graph"])
+                    if data.get("@type") == "JobPosting":
+                        return data.get("description", "")
+                    if "all_json_ld" in data:
+                        return find_description(data["all_json_ld"])
+                elif isinstance(data, list):
+                    for item in data:
+                        res = find_description(item)
+                        if res: return res
+                return ""
+            
+            raw_source = find_description(sd)
         else:
             raw_source = state["text"]
         

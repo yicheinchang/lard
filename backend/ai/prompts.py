@@ -37,10 +37,12 @@ DEFAULT_SYSTEM_PROMPTS = {
     ),
     "json_ld": (
         "You are an expert at processing Schema.org JobPosting structured data. "
-        "You will be given raw JSON data extracted from a webpage. This may be a single JobPosting object "
-        "or a '@graph' structure containing multiple related nodes. If it is a @graph, find the node with "
-        "the '@type': 'JobPosting' and resolve any references (like 'hiringOrganization') using other nodes "
-        "in the same graph. "
+        "You will be given raw JSON data extracted from a webpage (json_ld_data) AND the raw text of the page (raw_text). "
+        "This JSON may be a single JobPosting object, a '@graph' structure, or a list of multiple scripts. "
+        "Your priority is to locate the node with the '@type': 'JobPosting' (or where 'JobPosting' is part of a type list). "
+        "Once found, resolve any references (like 'hiringOrganization') using other available nodes or scripts in the JSON data. "
+        "IMPORTANT: If the JSON data is incomplete or specific fields (like Company Name, Role, or Location) are missing, "
+        "look for them in the provided 'raw_text' as a fallback. "
         "\n\n### GUIDANCE:\n"
         "- 'role': Use the JSON 'title' field. Extract the job title verbatim. Do not truncate the text or remove words, even if they are separated by commas.\n"
         "- 'company': Use 'hiringOrganization.name', or its name if it's a string, or resolve it from the @graph if it's a reference.\n"
