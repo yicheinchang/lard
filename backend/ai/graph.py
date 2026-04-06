@@ -4,6 +4,12 @@ from typing import TypedDict, Any, Callable
 from ai.llm_factory import get_llm
 from ai.logger import agnt_log, log_llm_info
 from config import load_app_settings
+from ai.chains import (
+    get_job_post_check_prompt, 
+    get_extraction_prompt, 
+    _create_description_prompt, 
+    get_json_ld_prompt
+)
 
 class AgentState(TypedDict):
     text: str
@@ -620,8 +626,9 @@ async def description_validator_node(state: AgentState):
         agnt_log("Validator", result="PASS: Description is valid.")
         return {"extracted_data": extracted, "validation_feedback": None}
     except Exception as e:
-        print(f"Validation failed temporarily: {e}")
-        return state
+        print(f"Validation step failed: {e}")
+        # Terminate loop to avoid infinite retry on persistent LLM errors
+        return {"retries": retries + 1, "validation_feedback": f"Validation failed due to internal error: {e}"}
 
 def should_continue_after_check(state: AgentState):
     if state.get("error"):
@@ -631,32 +638,46 @@ def should_continue_after_check(state: AgentState):
 def should_retry(state: AgentState):
     if state.get("error") is not None:
         return "end"
-    if state.get("validation_feedback") is not None and state.get("retries", 0) < 3:
+    
+    retries = state.get("retries", 0)
+    feedback = state.get("validation_feedback")
+    
+    if feedback is not None and retries < 3:
+        agnt_log("Graph", task="RETRY", result=f"Looping back to extraction (Attempt {retries}/3)...")
         return "retry"
+    
+    if retries >= 3:
+        agnt_log("Graph", task="CIRCUIT_BREAKER", result="Max retries reached. Termination.")
+        
     return "end"
 
-_agent_app_instance = None
-
 def get_agent_app():
-    global _agent_app_instance
-    if _agent_app_instance is None:
-        from langgraph.graph import StateGraph, END
-        workflow = StateGraph(AgentState)
-        workflow.add_node("check", check_job_post_node)
-        workflow.add_node("extract", extract_node)
-        workflow.add_node("validate", description_validator_node)
-        
-        workflow.set_entry_point("check")
-        
-        workflow.add_conditional_edges("check", should_continue_after_check, {
-            "extract": "extract",
-            "end": END
-        })
-        
-        workflow.add_edge("extract", "validate")
-        workflow.add_conditional_edges("validate", should_retry, {
-            "retry": "extract",
-            "end": END
-        })
-        _agent_app_instance = workflow.compile()
-    return _agent_app_instance
+    from langgraph.graph import StateGraph, END
+    
+    settings = load_app_settings()
+    workflow = StateGraph(AgentState)
+    
+    # These prompts are now generated with the LATEST settings on every call
+    check_job_post_prompt = get_job_post_check_prompt(settings)
+    extraction_prompt = get_extraction_prompt(settings)
+    description_extraction_prompt = _create_description_prompt(settings)
+    structured_data_validation_prompt = get_json_ld_prompt(settings)
+    
+    workflow.add_node("check", check_job_post_node)
+    workflow.add_node("extract", extract_node)
+    workflow.add_node("validate", description_validator_node)
+    
+    workflow.set_entry_point("check")
+    
+    workflow.add_conditional_edges("check", should_continue_after_check, {
+        "extract": "extract",
+        "end": END
+    })
+    
+    workflow.add_edge("extract", "validate")
+    workflow.add_conditional_edges("validate", should_retry, {
+        "retry": "extract",
+        "end": END
+    })
+    
+    return workflow.compile()
