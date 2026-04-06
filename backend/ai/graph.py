@@ -446,6 +446,9 @@ async def extract_node(state: AgentState):
 
             return {"extracted_data": results, "error": None}
 
+        if request and await request.is_disconnected():
+            return {"extracted_data": None, "error": "Cancelled"}
+            
         # FRESH EXTRACTION MODE
         if active_source == "JSON-LD":
             # --- PATH A: JSON-LD Phase ---
@@ -545,6 +548,9 @@ async def extract_node(state: AgentState):
                         agnt_log("Extractor (Text)", result=f"FAIL: Not a job post ({category})")
                         return {"extracted_data": None, "error": f"NOT_A_JOB_POST: This document looks like a {category}."}
 
+                if request and await request.is_disconnected():
+                    return {"extracted_data": None, "error": "Cancelled"}
+
                 # MERGE LOGIC (Single-Agent): Prioritize previous JSON results
                 final_results = data
                 if previous_json:
@@ -562,11 +568,12 @@ async def extract_node(state: AgentState):
 async def description_validator_node(state: AgentState):
     request = state.get("request")
     if request and await request.is_disconnected():
-        return state
+        return {"validation_feedback": None, "error": "Cancelled"}
         
     extracted = state.get("extracted_data")
     if not extracted or not extracted.get("description"):
-        return state
+        # If extraction was empty, do not try to validate (prevents loop if feedback exists)
+        return {"validation_feedback": None}
         
     description = extracted["description"]
     
@@ -606,7 +613,7 @@ async def description_validator_node(state: AgentState):
                 "use_text_fallback": True, 
                 "previous_json_results": extracted,
                 "validation_feedback": f"Fallback to text mode due to missing fields: {', '.join(missing)}",
-                "retries": 0 # Reset retries for the new phase
+                "retries": 1 # Count the transition as an attempt to ensure termination
             }
 
     from ai.chains import get_validation_prompt, DescriptionValidation
