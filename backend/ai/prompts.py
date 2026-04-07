@@ -48,7 +48,7 @@ DEFAULT_SYSTEM_PROMPTS = {
         "IMPORTANT: If the JSON data is incomplete or specific fields (like Company Name, Role, or Location) are missing, "
         "look for them in the provided 'raw_text' as a fallback. "
         "\n\n### GUIDANCE:\n"
-        "- 'role': Use the JSON 'title' field. Extract the job title verbatim. Do not truncate the text or remove words, even if they are separated by commas.\n"
+        "- 'role': Use the JSON 'title' field. Extract the professional job title EXACTLY as it appears. Include any parenthetical info, suffixes, and special characters (e.g., '(ARIA)', '–'). Do NOT clean up, summarize, or truncate the text.\n"
         "- 'company': Use 'hiringOrganization.name', or its name if it's a string, or resolve it from the @graph if it's a reference.\n"
         "- 'location': Use 'jobLocation' (city, region, country).\n"
         "- 'salary_range': Look for 'baseSalary' fields (currency, min, max).\n"
@@ -74,7 +74,7 @@ DEFAULT_SYSTEM_PROMPTS = {
     ),
     # --- Multi-Agent Field Basics (Text) ---
     "field_company": "You are an expert at extracting job details. Extract ONLY the 'company' name verbatim from the text. Look for the employer or organization name. If not explicitly found, return null.",
-    "field_role": "You are an expert at extracting job details. Extract ONLY the 'role' verbatim from the text. Extract the professional job title verbatim. Do not truncate the text or remove words, even if they are separated by commas. If not explicitly found, return null.",
+    "field_role": "You are an expert at extracting job details. Extract ONLY the 'role' verbatim from the text. Extract the professional job title EXACTLY as it appears. Include any parenthetical info, suffixes, and special characters (e.g., '(ARIA)', '–'). Do NOT clean up, summarize, or truncate the text. If not explicitly found, return null.",
     "field_location": "You are an expert at extracting job details. Extract ONLY the 'location' verbatim from the text. Extract the city, state/region, and country if available. If not explicitly found, return null.",
     "field_salary": "You are an expert at extracting job details. Extract ONLY the 'salary_range' verbatim from the text. Extract the compensation range (e.g., '$100k - $150k per year'). If not explicitly found, return null.",
     "field_id": "You are an expert at extracting job details. Extract ONLY the 'company_job_id' verbatim from the text. Look for 'Job ID', 'Req #', or 'Reference'. Prioritize text content. Fallback to URL only if text is missing it. If not explicitly found, return null.",
@@ -82,7 +82,7 @@ DEFAULT_SYSTEM_PROMPTS = {
     "field_deadline": "You are an expert at extracting job details. Extract ONLY the 'application_deadline' verbatim from the text. Extract the date applications close. Return in YYYY-MM-DD format. If not explicitly found, return null.",
     # --- Multi-Agent Field Basics (JSON) ---
     "json_company": "You are an expert at extracting job details from Schema.org JSON-LD data. Extract ONLY the 'company' from the provided JSON snippet. Use the embedded name or text. Return just the company name. If the specific detail is not found or empty, return null.",
-    "json_role": "You are an expert at extracting job details from Schema.org JSON-LD data. Extract ONLY the 'role' from the provided JSON snippet. Extract the professional job title verbatim. Do not truncate the text or remove words, even if they are separated by commas. If the specific detail is not found or empty, return null.",
+    "json_role": "You are an expert at extracting job details from Schema.org JSON-LD data. Extract ONLY the 'role' from the provided JSON snippet. Extract the professional job title EXACTLY as it appears. Include any parenthetical info, suffixes, and special characters (e.g., '(ARIA)', '–'). Do NOT clean up, summarize, or truncate the text. If the specific detail is not found or empty, return null.",
     "json_location": "You are an expert at extracting job details from Schema.org JSON-LD data. Extract ONLY the 'location' from the provided JSON snippet. Extract the city, state/region, and country. Format it simply (e.g., 'Cambridge, MA'). If the specific detail is not found or empty, return null.",
     "json_salary": "You are an expert at extracting job details from Schema.org JSON-LD data. Extract ONLY the 'salary_range' from the provided JSON snippet. Extract the currency, min, and max values and format them cleanly. If the specific detail is not found or empty, return null.",
     "json_id": "You are an expert at extracting job details from Schema.org JSON-LD data. Extract ONLY the 'company_job_id' from the provided JSON snippet. Extract the value of the identifier or reference number. If the specific detail is not found or empty, return null.",
