@@ -64,8 +64,9 @@ Ideal for frontier models (GPT-4o, Claude 3).
 Optimized for local models (Gemma, Llama) through task decomposition.
 - **Verification Node**: A dedicated `check_job_post_node` runs as the first step to halt execution immediately on non-job content.
 - **Parallel Fields**: Extracts Company, Role, Location, Salary, ID, Posted, Deadline, and Description concurrently using `asyncio.Semaphore`.
-- **JSON Fragment Routing**: The system slices JSON-LD and only sends relevant snippets to specific agents (e.g., `baseSalary` goes only to the Salary agent). Fields missing in JSON-LD bypass the LLM phase for that attempt.
-- **Raw-Pass Description**: The description field is extracted without a strict JSON schema to prevent truncation.
+- **JSON Fragment Routing**: To save tokens and stay within context limits, the system slices JSON-LD and only sends relevant snippets to specific agents (e.g., `baseSalary` goes only to the Salary agent).
+- **Comprehensive Text Context**: In Full Text mode (or fallback), the system provides the **complete cleaned text** of the job post to each specialized agent. This ensures that even buried details (like a Salary range in a footer) are captured.
+- **Raw-Pass Description**: The description field is extracted without a strict JSON schema to prevent truncation and hangs.
 
 ---
 
@@ -117,16 +118,17 @@ graph TD
     Source["Job Source Content"] --> Router{"Input Type?"}
     
     Router -- "JSON-LD Found" --> Slicer["JSON Slicer<br/>(Extracts Fragments)"]
-    Router -- "Raw Text / PDF" --> Chunker["Text Chunker<br/>(Semantic Context)"]
     
     Slicer --> JPool[["Job Agent Pool<br/>(Parallel Fields)"]]
-    Chunker --> JPool
     
     JPool --> Heuristic{"Heuristic Check?<br/>(Fields Missing?)"}
     
-    Heuristic -- "JSON Fail: Fallback to Text" --> Chunker
-    
     Heuristic -- "All Fields Valid" --> Merger["Result Merger"]
+    Heuristic -- "JSON Fail: Fallback to Text" --> TextSource["Processed Full Text<br/>(Semantic Context)"]
+    Router -- "Raw Text / PDF" --> TextSource
+    
+    TextSource --> JPool
+    
     Merger --> Final["Finalize & Save"]
 ```
 
