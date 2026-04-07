@@ -93,39 +93,40 @@ Each extraction is validated by a dedicated **QA Node** with a 3-retry limit:
 ### AI Extraction Lifecycle
 ```mermaid
 graph TD
-    A["Start: URL/Text/File"] --> B{"Strategy?"}
-    B -- "Single Agent" --> C["Monolithic Extractor<br/>(Embedded Verifier)"]
-    B -- "Multi Agent" --> D["Job Post Verifier Node"]
+    A["Start: URL/Text/File"] --> B{"Input Mode?"}
     
-    D -- "Pass" --> E["Parallel Field Agents<br/>(8+ Specialized Nodes)"]
-    D -- "Fail" --> END["End: Error"]
+    B -- "JSON-LD Metadata Found" --> C["Initial Extraction<br/>(Priority A: Strict Map)"]
+    B -- "Raw Text / PDF / No JSON" --> D["Full Text Extraction<br/>(Priority B: Semantic)"]
     
-    C --> F{"Sequential Fallback?"}
-    E --> F
+    C --> E{"Heuristic Check?<br/>(Any 'N/A' or Missing Fields?)"}
     
-    F -- "Missing / Invalid<br/>Schema Fields" --> G["Full Text Semantic Fallback"]
-    F -- "Complete" --> H["QA Validation Node"]
-    G --> H
+    E -- "Field(s) Fail" --> F["Targeted Fallback<br/>(Extracts ONLY failed fields from Text)"]
+    E -- "All Fields Pass" --> G["QA Validation Node<br/>(Description QA)"]
     
-    H -- "QA Fail < 3 Retries" --> I["Inject Feedback & Retry"]
-    I --> F
-    H -- "Pass / Max Retries" --> J["Finalize & Save"]
+    F --> G
+    D --> G
+    
+    G -- "QA Fail < 3 Retries" --> H["Inject Feedback & Retry<br/>(Targeted Field Regeneration)"]
+    H --> G
+    
+    G -- "Pass / Max Retries" --> I["Finalize & Save"]
 ```
 
-### Multi-Agent JSON Routing (Parallel)
+### Multi-Agent Extraction (Parallel)
 ```mermaid
-graph LR
-    LD["Raw JSON-LD"] --> S["Slicer"]
-    S -- "hiringOrganization" --> C["Company Agent"]
-    S -- "title" --> R["Role Agent"]
-    S -- "jobLocation" --> L["Location Agent"]
-    S -- "baseSalary" --> Sal["Salary Agent"]
-    S -- "identifier" --> ID["Job ID Agent"]
-    S -- "datePosted" --> P["Posted Agent"]
-    S -- "validThrough" --> DL["Deadline Agent"]
-    S -- "description" --> Desc["Raw-Pass Agent"]
+graph TD
+    Source["Job Source Content"] --> Mode{"Extraction Mode?"}
     
-    C & R & L & Sal & ID & P & DL & Desc --> M["Result Merger"]
+    Mode -- "JSON-LD Data" --> Slicer["JSON Slicer<br/>(Filters Relevant Fragments)"]
+    Mode -- "Full Text" --> Chunker["Text Chunker<br/>(Top-of-Page Context)"]
+    
+    Slicer --> AgentPool[["Job Agent Pool<br/>(Company, Role, Salary, IDs, etc.)"]]
+    Chunker --> AgentPool
+    
+    AgentPool --> Merger["Result Merger<br/>(Priority: JSON Ground Truth > Text Fallback)"]
+    Merger --> Validation["Per-Field Verification Node"]
+    Validation -- "Fail" --> Fallback["Targeted Re-Extraction"]
+    Validation -- "Pass" --> Final["Finalize & Save"]
 ```
 
 ---
