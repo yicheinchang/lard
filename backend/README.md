@@ -100,38 +100,33 @@ graph TD
     
     C --> E{"Heuristic Check?<br/>(Any 'N/A' or Missing Fields?)"}
     
-    E -- "Field(s) Fail" --> F["Targeted Fallback<br/>(Extracts ONLY failed fields from Text)"]
+    E -- "Field(s) Fail" --> D
     E -- "All Fields Pass" --> G["QA Validation Node<br/>(Description QA)"]
     
-    F --> G
     D --> G
     
     G -- "QA Fail < 3 Retries" --> H["Inject Feedback & Retry<br/>(Targeted Field Regeneration)"]
-    H --> G
+    H --> D
     
     G -- "Pass / Max Retries" --> I["Finalize & Save"]
 ```
 
 ### Multi-Agent Extraction (Parallel)
 ```mermaid
-graph LR
-    Source["Job Content"] --> Router{"Route By Type"}
+graph TD
+    Source["Job Source Content"] --> Router{"Input Type?"}
     
-    subgraph JSON_LD_Pipeline [JSON-LD Path]
-        Router --> Slicer["Fragment Slicer"]
-        Slicer --> Agents["Parallel Agent Pool"]
-        Agents --> Heuristic{"Validation"}
-        Heuristic -- "Missing Fields" --> Fallback["Targeted Text Extraction"]
-        Fallback --> Agents
-    end
+    Router -- "JSON-LD Found" --> Slicer["JSON Slicer<br/>(Extracts Fragments)"]
+    Router -- "Raw Text / PDF" --> Chunker["Text Chunker<br/>(Semantic Context)"]
     
-    subgraph Text_Pipeline [Raw Text Path]
-        Router --> Chunker["Semantic Chunker"]
-        Chunker --> TAgents["Parallel Agent Pool"]
-    end
+    Slicer --> JPool[["Job Agent Pool<br/>(Parallel Fields)"]]
+    Chunker --> JPool
     
-    Heuristic -- "Complete" --> Merger["Result Merger"]
-    TAgents --> Merger
+    JPool --> Heuristic{"Heuristic Check?<br/>(Fields Missing?)"}
+    
+    Heuristic -- "JSON Fail: Fallback to Text" --> Chunker
+    
+    Heuristic -- "All Fields Valid" --> Merger["Result Merger"]
     Merger --> Final["Finalize & Save"]
 ```
 
