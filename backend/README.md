@@ -60,6 +60,27 @@ Ideal for frontier models (GPT-4o, Claude 3).
 - **Embedded Verification**: In Text mode, the prompt includes an internal verification block to confirm "is_job_post" and "detected_category" without a separate node call.
 - **Strict Mapping**: Directly converts structured JSON-LD into the application's schema.
 
+### Single-Agent Extraction (High-Performance)
+```mermaid
+graph TD
+    Source["Job Source Content"] --> Mode{"Initial Path?"}
+    
+    Mode -- "JSON-LD Found" --> Mapper["Monolithic JSON-LD Mapper<br/>(Priority A: Strict Mapping)"]
+    Mode -- "Raw Text / PDF" --> Extractor["Monolithic Text Extractor<br/>(Priority B: Semantic)"]
+    
+    Mapper --> Heuristic{"Heuristic Check?<br/>(Any 'N/A' or Missing?)"}
+    
+    Heuristic -- "JSON Fail: Fallback to Text" --> Extractor
+    Heuristic -- "All Fields Pass" --> QA["QA Validation Node<br/>(Description QA)"]
+    
+    Extractor --> QA
+    
+    QA -- "QA Fail < 3 Retries" --> Retry["Inject Feedback & Retry<br/>(Monolithic Regeneration)"]
+    Retry --> Extractor
+    
+    QA -- "Pass / Max Retries" --> Final["Finalize & Save"]
+```
+
 ### 🎭 Strategy 2: Multi-Agent (Small-Model/Parallel)
 Optimized for local models (Gemma, Llama) through task decomposition.
 - **Verification Node**: A dedicated `check_job_post_node` runs as the first step to halt execution immediately on non-job content.
