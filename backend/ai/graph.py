@@ -637,13 +637,12 @@ async def description_validator_node(state: AgentState):
         if missing_reasons:
             reasons_str = "\n".join(missing_reasons)
             agnt_log("Validator", task="FALLBACK_TRIGGERED", result=f"Missing/Invalid {len(missing_reasons)} fields (Sequential Fallback):\n{reasons_str}\nSwitching to TEXT mode.")
-            # We trigger a retry by providing "fake" feedback so should_retry loops back,
-            # but we also set the fallback flag.
+            # Reset retry counter for the new source
             return {
                 "use_text_fallback": True, 
                 "previous_json_results": extracted,
                 "validation_feedback": f"FALLBACK_PHASE: Missing/Invalid fields: {', '.join([r.split('(')[0].strip('- ').strip() for r in missing_reasons])}",
-                "retries": 1 # Count the transition
+                "retries": -retries # Reset to 0
             }
 
     from ai.chains import get_validation_prompt, DescriptionValidation
@@ -731,8 +730,10 @@ def should_retry(state: AgentState):
     retries = state.get("retries", 0)
     feedback = state.get("validation_feedback")
     
+    source = "TEXT" if state.get("use_text_fallback") else "JSON"
+    
     if feedback is not None and retries < 3:
-        agnt_log("Graph", task="RETRY", result=f"Looping back to extraction (Attempt {retries + 1}/3)...")
+        agnt_log("Graph", task="RETRY", result=f"Looping back to extraction (Attempt {retries + 1}/3) ({source} Mode)...")
         return "retry"
     
     if retries >= 3:
