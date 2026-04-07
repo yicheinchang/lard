@@ -48,7 +48,7 @@ export const JobDetailView: React.FC<JobDetailViewProps> = ({ job, onClose, onJo
   });
 
   // Job-level Notes state
-  const [jobNotes, setJobNotes] = useState<string>('');
+  const [jobNotes, setJobNotes] = useState<string>(job?.notes || '');
   const [isSavingNotes, setIsSavingNotes] = useState(false);
   const [isEditingJobNotes, setIsEditingJobNotes] = useState(false);
 
@@ -241,8 +241,12 @@ export const JobDetailView: React.FC<JobDetailViewProps> = ({ job, onClose, onJo
       // Async metadata loading
       if (stepTypes.length === 0) getStepTypes().then(setStepTypes).catch(console.error);
       if (companies.length === 0) getCompanies().then(setCompanies).catch(console.error);
+      
+      // Initialize state for editing
+      setJobNotes(job.notes || '');
+      if (!isEditingInfo) setEditFormData(job);
     }
-  }, [job?.id, stepTypes.length, companies.length]);
+  }, [job?.id, stepTypes.length, companies.length, job?.notes, isEditingInfo]);
 
   // Debounced notes auto-save
   useEffect(() => {
@@ -792,7 +796,7 @@ export const JobDetailView: React.FC<JobDetailViewProps> = ({ job, onClose, onJo
                 <div className="flex items-center justify-between border-b border-[var(--border-color)] pb-2">
                   <h3 className="text-lg font-semibold text-[var(--fg)] opacity-90">Description</h3>
                   {!isEditingInfo && (
-                    <button onClick={() => setIsEditingInfo(true)} className="text-violet-500 flex items-center gap-1.5 text-sm hover:text-violet-400 transition-colors">
+                    <button onClick={() => { setEditFormData(job); setIsEditingInfo(true); }} className="text-violet-500 flex items-center gap-1.5 text-sm hover:text-violet-400 transition-colors">
                       <Edit2 className="w-4 h-4" /> Edit
                     </button>
                   )}

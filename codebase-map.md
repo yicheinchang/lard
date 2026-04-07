@@ -1,5 +1,5 @@
 # Codebase Map: Lard - Lazy AI-powered Resume Database
-Last Updated: 2026-04-07T03:23:00Z
+Last Updated: 2026-04-07T03:58:00Z
 
 This document provides a summary of the project's architecture, tech stack, and key logic to give AI coding agents instant context.
 
