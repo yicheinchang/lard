@@ -665,7 +665,7 @@ async def description_validator_node(state: AgentState):
 
     try:
         # Source selection for validation comparison
-        if use_text_fallback:
+        if use_text_fallback or not is_json_ld:
             source_type = "TEXT"
             raw_source = state["text"]
         else:

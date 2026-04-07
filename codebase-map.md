@@ -1,5 +1,5 @@
 # Codebase Map: Lard - Lazy AI-powered Resume Database
-Last Updated: 2026-04-07T03:58:00Z
+Last Updated: 2026-04-07T12:47:00Z
 
 This document provides a summary of the project's architecture, tech stack, and key logic to give AI coding agents instant context.
 
@@ -284,7 +284,7 @@ The system uses a multi-stage pipeline to extract job details from URLs, PDFs, a
 - **JSON-LD First Strategy**: Prioritizes `application/ld+json` script tags (Schema.org `JobPosting`) for metadata extraction to ensure maximum accuracy on enterprise portals.
 - **Optimized JSON-LD Multi-Agent Routing**: If JSON-LD is found and multi-agent mode is enabled, the system bypasses massive payload overhead by slicing the JSON and distributing specific fragments (e.g., `baseSalary`) only to the relevant agents. Missing fragments bypass the LLM completely, optimizing speed and reducing token limits.
 - **Streaming & Progress UI**: Extraction tasks use Server-Sent Events (SSE). The frontend `Ticker.tsx` displays real-time status updates (e.g., "Extracting Salary Range...", "Finalizing Description...").
-- **AI Validation & Completeness**: Uses a LangGraph-based `description_validator_node` that runs a 3-retry loop to ensure extracted descriptions are clean Markdown, verbatim, and **COMPLETE**.
+- **AI Validation & Completeness**: Uses a LangGraph-based `description_validator_node` that runs a 3-retry loop to ensure extracted descriptions are clean Markdown, verbatim, and **COMPLETE**. Robustly determines source type (JSON-LD vs. TEXT) based on available data to prevent validation errors on PDFs or non-structured URLs.
 - **Guided AI Retries**: If validation fails, the specific feedback from the QA validator is injected into the next extraction prompt (Attempts 2 and 3), guiding the LLM to fix specifically identified issues like truncation or hallucinations. Features **robust variable injection** for `validation_feedback` and `custom_guidance` to support user-defined prompt overrides.
 - **Fail-Safe UI Warning**: If validation still fails after 3 retries, the system preserves the output but sets `hallucination_detected: True` and `hallucination_reasons` (using the final QA block), which triggers a warning banner in the frontend `AddJobModal.tsx`.
 - **Cancellation & Safety**: Explicit support for `AbortController`. If a user cancels in the UI, the backend immediately terminates the background AI processing.
