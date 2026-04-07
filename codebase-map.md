@@ -1,5 +1,5 @@
 # Codebase Map: Lard - Lazy AI-powered Resume Database
-Last Updated: 2026-04-07T12:47:00Z
+Last Updated: 2026-04-07T13:28:00Z
 
 This document provides a summary of the project's architecture, tech stack, and key logic to give AI coding agents instant context.
 
@@ -49,6 +49,7 @@ This document provides a summary of the project's architecture, tech stack, and 
   - `graph.py`: LangGraph state machine definitions. Uses a `get_agent_app()` lazy loader to defer graph compilation and heavy library imports.
   - `logger.py`: Standardized AI agent console logging for troubleshooting (AGNT prefix, 80-char limit). Provides provider/model info and per-agent task/result monitoring.
 - `uploads/`: Local storage for uploaded job documents.
+- `tests/`: Separate test scripts for backend API and logic verification.
 - `run.sh`: Unified startup script. Development mode uses a targeted `uvicorn` reloader that excludes large directories (like `.venv`) to minimize file system scanning and CPU usage.
 
 ### Frontend (`/frontend`)
@@ -258,6 +259,9 @@ The system is designed to be model-agnostic. Through `llm_factory.py`, it can sw
 
 ### 4. Agent Operational Rules
 The workspace uses a formalized rule system in `.agents/rules/workspace-role.md` to ensure:
+- **No Browser Control**: Assistant has no ability to open, read, or control a Chrome browser. Frontend changes require manual user verification.
+- **Backend Testing**: Verification scripts are maintained in `backend/tests/`.
+- **Implementation Plans**: Mandatory for complex tasks before execution.
 - **Micro Git Commits**: Atomic, granular commits for every stable change.
 - **Synchronized Versioning**: Automated SemVer updates across backend and frontend.
 - **Codebase Map Sync**: Mandatory updates to this document to maintain architectural context.

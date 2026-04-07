@@ -2,6 +2,18 @@
 
 Next.js-based frontend for the **Lard** (Lazy AI-powered Resume Database) application.
 
+## 🧪 Verified Development
+
+> [!IMPORTANT]
+> Because the AI assistant does not have access to a live browser, all frontend changes **must be manually verified** by the developer. Ensure that theme consistency (Light/Dark mode) and responsive layouts (Mobile/Desktop) are checked before marking a feature as stable.
+
+## Manual Verification
+
+To ensure the quality of the frontend, please perform the following checks after any UI changes:
+1. **Responsive Design**: Verify the layout on mobile (375px), tablet (768px), and desktop (1440px) viewports.
+2. **Theme Consistency**: Toggle between Light and Dark modes to ensure all components adhere to the Tailwind CSS theme configuration.
+3. **Accessibility**: Run a Lighthouse audit or use a screen reader to verify that interactive elements are keyboard-accessible.
+
 ## Getting Started
 
 First, run the development server:

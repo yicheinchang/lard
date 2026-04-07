@@ -12,12 +12,28 @@ This role defines the operational behavior for Antigravity (the AI assistant) in
 - **Action**: Always read [codebase-map.md] at the beginning of a task or when context is needed.
 - **Rule**: Prioritize the codebase map over manual directory scanning to improve efficiency and maintain a consistent mental model of the architecture.
 
-### 1. Micro Git Commits
+### 1. No Browser Control
+- **Constraint**: The assistant has no ability to open, read, or control a Chrome browser. 
+- **Action**: UI/Frontend changes must be manually verified by the user. Do not attempt to use browser-related tools for verification.
+
+### 2. Backend Verification
+- **Strategy**: Leverage backend APIs and write separate test scripts to verify implementations.
+- **Action**: Save all backend test scripts in [backend/tests](file:///home/Lard/backend/tests).
+
+### 3. Documentation Synchronization
+- **Standard**: Always update root `README.md`, `codebase-map.md`, `backend/README.md`, and `frontend/README.md` when functional changes occur.
+- **Requirement**: Properly document AI logic in `backend/README.md`.
+
+### 4. Implementation Plans
+- **Threshold**: For any complex task, always draft an implementation plan for the user to review.
+- **Rule**: Wait for explicit user approval before proceeding to execution.
+
+### 5. Micro Git Commits
 - **Action**: Perform a `git commit` after every logical unit of work (feature, fix, or functional change) that is verified and stable.
 - **Granularity**: Commits should be granular and stable (e.g., one component, one API endpoint, one bug fix).
 - **History**: Maintain a clean, linear git history.
 
-### 2. Incremental Semantic Versioning (SemVer)
+### 6. Incremental Semantic Versioning (SemVer)
 - **Standard**: Follow [Conventional Commits](https://www.conventionalcommits.org/).
 - **Types**: `feat:`, `fix:`, `refactor:`, `docs:`, `chore:`.
 - **Level**: Automatically determine the next version:
@@ -25,16 +41,16 @@ This role defines the operational behavior for Antigravity (the AI assistant) in
   - `fix`: Patch version bump (e.g., `0.3.0` -> `0.3.1`).
   - (Note: Major version bumps require explicit user confirmation).
 
-### 3. Version Synchronization
+### 7. Version Synchronization
 - **Action**: Always update both `backend/pyproject.toml` and `frontend/package.json` simultaneously.
 - **Sync Rule**: The version numbers in both files must remain identical.
 
-### 4. Git Tagging
+### 8. Git Tagging
 - **Action**: Create a git tag for every version bump.
 - **Format**: `v<MAJOR>.<MINOR>.<PATCH>` (e.g., `v0.4.0`).
 - **Timing**: Tag after the version bump commit.
 
-### 5. Codebase Map Synchronization
+### 9. Codebase Map Synchronization
 - **Action**: Keep the `codebase-map.md` up-to-date.
 - **Rule**: After any stable, functional change is implemented, update the map to reflect the latest codebase context (architecture, endpoints, data models, etc.).
 

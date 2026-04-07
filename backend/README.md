@@ -27,78 +27,112 @@ chmod +x run.sh
 ./run.sh prod
 ```
 
-## 🧠 AI Extraction Engine
+## 🧪 Testing
 
-The core of **Lard** is its high-fidelity AI job extraction engine, powered by **LangGraph**. It is designed to handle everything from simple LinkedIn posts to complex enterprise career portals.
+The backend follows a script-based verification strategy. All test scripts are maintained in [backend/tests](file:///home/Lard/backend/tests).
 
-### 🔄 Sequential Fallback Strategy
-
-The engine uses a two-phase process to ensure maximum accuracy:
-
-1.  **Phase 1: JSON-LD (Strict Metadata)**:
-    - Automatically detects and resolves Schema.org `JobPosting` metadata hidden in `<script>` tags.
-    - Provides machine-precise structural data (Salary, Dates, Job ID, etc.) for high-traffic sites (e.g., Greenhouse, Workday).
-2.  **Phase 2: Full-Text (Semantic Gap-Filling)**:
-    - Triggered if metadata is missing or incomplete (e.g., "N/A" placeholders).
-    - Leverages LLM reasoning to parse the raw page content and "fill in the gaps."
-    - Merges results using JSON-LD as the primary source of truth.
-
-### 🎭 Extraction Modes
-
-- **Single-Agent**: Ideal for high-performance models (GPT-4o, Claude 3). Uses a single sophisticated call to extract all data.
-- **Multi-Agent**: Orchestrates 8+ parallel agents (for Company, Role, Salary, etc.) to decompose tasks for smaller models (Gemma, Llama).
-    - Includes **Job Post Verification** to halt immediately on non-job content.
-    - Features **JSON Fragment Routing** to minimize token usage by sending only relevant snippets to specific agents.
-
-### 🤖 The State Machine
-
-```text
-       [ Start ]
-           |
-           v
-+-----------------------+
-| Check Job Post (LLM)  | --(No)--> [ END (Error) ]
-+-----------------------+
-           |
-           v
-+-----------------------+
-|    Extract Data       | <-----------+
-| (JSON-LD or Text)     |             |
-+-----------------------+             |
-           |                          | (Retry / Fallback)
-           v                          |
-+-----------------------+             |
-| Validate Description  | --(Fail)----+
-|    (QA Node)          |
-+-----------------------+
-           |
-      (Pass / Max)
-           |
-           v
-        [ END ]
+### Running Tests
+To verify API endpoints or AI logic, use the provided test suite:
+```bash
+cd backend
+uv run python -m tests.test_ai_extraction  # Example
 ```
 
-### ⚡ Verification & QA Loop
+---
 
-Each extraction is validated by a dedicated **QA Node** using a 3-retry circuit breaker:
-- Ensures descriptions are formatted in clean Markdown.
-- Detects and repairs AI hallucinations or truncation compared to the source.
-- Flags "Potential Hallucination" in the UI if validation fails after 3 attempts.
+## 🧠 AI Extraction Engine (The Routing Matrix)
+
+**Lard** features a sophisticated AI extraction pipeline that adapts to both the model's capability and the source material's structure.
+
+### 📊 Strategy vs. Input
+The system automatically routes tasks based on the **Extraction Strategy** (configured in Settings) and the **Input Type** detected by the parser.
+
+| Strategy | Input: JSON-LD (URL) | Input: Text (URL, PDF, Markdown) |
+| :--- | :--- | :--- |
+| **Single-Agent** | Monolithic prompt mapping Schema.org data to JobDetails. | Monolithic prompt with embedded self-verification logic. |
+| **Multi-Agent** | Parallelized fragment routing (bypasses LLM for missing fields). | 8+ parallel field-specific agents with raw-pass description extraction. |
+
+---
+
+### 🚀 Strategy 1: Single-Agent (High-Performance)
+Ideal for frontier models (GPT-4o, Claude 3). 
+- **Embedded Verification**: In Text mode, the prompt includes instructions to verify content and detect hallucinations in a single pass, reducing latency.
+- **Strict Mapping**: Directly converts structured JSON-LD into the application's schema.
+
+### 🎭 Strategy 2: Multi-Agent (Small-Model/Parallel)
+Optimized for local models (Gemma, Llama) through task decomposition.
+- **Verification Node**: A dedicated `check_job_post_node` halts execution immediately if the content is not a job posting.
+- **Parallel Fields**: Extracts Company, Role, Salary, etc., concurrently using `asyncio.Semaphore` (configurable concurrency).
+- **JSON Fragment Routing**: To save tokens, the system slices JSON-LD and only sends relevant snippets to specific agents (e.g., `baseSalary` goes only to the Salary agent).
+- **Raw-Pass Description**: The description field is extracted without a strict JSON schema to prevent truncation and hangs common with small models.
+
+---
+
+## 🔄 Common AI Logic
+
+Regardless of strategy, the following core features ensure 100% extraction fidelity:
+
+### 1. Sequential Fallback Strategy
+The engine prioritizes structured data but falls back to semantic reasoning if needed:
+- **Priority A (JSON-LD)**: Attempts to extract 100% accurate data from `<script type="application/ld+json">`.
+- **Heuristic Validation**: If critical fields (Company, Role) are "N/A", placeholders, or missing, a fallback is triggered.
+- **Priority B (Full Text)**: Re-parses the raw page content to fill the gaps.
+- **Result Merging**: Merges findings, treating JSON-LD as the primary source of truth.
+
+### 2. QA Validation Loop (Circuit Breaker)
+Each extraction is validated by a dedicated **QA Node** with a 3-retry limit:
+- **Completeness Check**: Ensures the LAST items of lists (responsibilities, requirements) are present.
+- **Feedback Injection**: If validation fails, the specific failure reason is injected into the next extraction attempt's prompt to "guide" the LLM toward a fix.
+- **UI Flagging**: If the circuit breaker trips after 3 attempts, a `hallucination_detected` flag is set, triggering a warning in the UI.
+
+---
+
+## 📈 Visual Workflows
+
+### AI Extraction Lifecycle
+```mermaid
+graph TD
+    A[Start: URL/Text/File] --> B{Strategy?}
+    B -- Single --> C[Monolithic Extractor]
+    B -- Multi --> D[Job Post Verifier Node]
+    D -- Pass --> E[Parallel Field Agents]
+    D -- Fail --> END[End: Error]
+    
+    C --> F{Sequential Fallback?}
+    E --> F
+    
+    F -- Missing JSON Metadata --> G[Full Text Semantic Fallback]
+    F -- Complete --> H[QA Validation Node]
+    G --> H
+    
+    H -- Fail < 3 Retries --> I[Inject Feedback & Retry]
+    I --> B
+    H -- Pass / Max Retries --> J[Finalize & Save]
+```
+
+### Multi-Agent JSON Routing
+```mermaid
+graph LR
+    LD[Raw JSON-LD] --> S[Slicer]
+    S -- "hiringOrganization" --> C[Company Agent]
+    S -- "baseSalary" --> Sal[Salary Agent]
+    S -- "description" --> Desc[Raw-Pass Agent]
+    C & Sal & Desc --> M[Result Merger]
+```
+
+---
 
 ## ⚡ Architecture & Optimization
 
-### Lazy Loading
-To achieve < 5s startup time, this project uses an `app_factory` pattern and lazy-loads all heavy AI dependencies (LangChain, OpenAI, etc.).
-
-- **Main App**: `main.py`
-- **AI Agent**: `ai/graph.py` (Deffered compilation)
-- **Vector Store**: `database/vector_store.py` (Lazy client initialization)
-
-### Reloader Flags
-The development script uses highly targeted `--reload-dir` flags to prevent expensive scanning of the `.venv` directory.
+### Lazy Loading & Startup
+The backend reaches a "Ready" state in **< 5 seconds** through:
+- **`app_factory` pattern**: Library imports are deferred until needed.
+- **Targeted Reloader**: `uvicorn` watches only `/backend` source files, ignoring `.venv` and `uploads`.
+- **Embedding Cache**: Local model cache for `sentence-transformers` to avoid cold-start downloads.
 
 ## 📁 Directory Structure
-- `ai/`: LangGraph agents and LLM chains.
+- `ai/`: LangGraph agents, LLM factory, and prompt definitions.
 - `database/`: SQLAlchemy models and ChromaDB vector store.
-- `routers/`: API endpoint definitions.
-- `uploads/`: Repository for uploaded PDFs.
+- `routers/`: API endpoint definitions (REST & SSE).
+- `tests/`: Verification scripts and backend test suite.
+- `uploads/`: Repository for uploaded documents.
