@@ -128,33 +128,14 @@ class ExtractRequest(BaseModel):
 class TextExtractRequest(BaseModel):
     text: str
 
-@router.post("/extract-url")
-async def extract_from_url(req: ExtractRequest, request: Request):
-    # Backward compatibility: Wait for stream to finish and return JSON
-    result = {"extracted": None, "error": None}
-    async for event in _extract_stream_generator(request, url=req.url):
-        event_str = event.strip()
-        if not event_str.startswith("data: "):
-            continue
-        try:
-            payload = event_str.replace("data: ", "", 1)
-            data = json.loads(payload)
-            if data.get("event") == "final_result":
-                result["extracted"] = data.get("extracted")
-            elif data.get("event") == "error":
-                result["error"] = data.get("msg")
-        except json.JSONDecodeError:
-            continue
-    return result
-
-async def _extract_stream_generator(request: Request, url: str = None, text: str = None):
-    """Generator for SSE events during extraction."""
+async def _run_extraction_core(request: Request, url: str | None = None, text: str | None = None, progress_callback = None):
+    """Core logic to run the extraction graph. Used by both streaming and atomic endpoints."""
     _check_ai_enabled()
     
-    # 1. Initial Status
     structured_data = None
     if url:
-        yield f"data: {json.dumps({'event': 'progress', 'msg': f'Reading URL: {url[:60]}...'})}\n\n"
+        if progress_callback:
+            await progress_callback({"event": "progress", "msg": f"Reading URL: {url[:60]}..."})
         try:
             # Add browser-standard headers to avoid being blocked by anti-bot systems
             headers = {
@@ -165,13 +146,17 @@ async def _extract_stream_generator(request: Request, url: str = None, text: str
             async with httpx.AsyncClient(follow_redirects=True) as client:
                 resp = await client.get(url, timeout=20, headers=headers)
                 resp.raise_for_status()
-                yield f"data: {json.dumps({'event': 'progress', 'msg': 'Cleaning HTML content...'})}\n\n"
+                if progress_callback:
+                    await progress_callback({"event": "progress", "msg": "Cleaning HTML content..."})
                 text, structured_data = _clean_html(resp.text)
-                snippet = _preprocess_text(text, max_chars=100)
-                yield f"data: {json.dumps({'event': 'progress', 'msg': f'Processing text: {snippet[:60]}...'})}\n\n"
-                text = _preprocess_text(text)
                 
-                # Log cleaned text for manual investigation (as requested)
+                # Preprocess and log snippet
+                text = _preprocess_text(text)
+                snippet = text[:100]
+                if progress_callback:
+                    await progress_callback({"event": "progress", "msg": f"Processing text: {snippet[:60]}..."})
+                
+                # Log cleaned text for manual investigation
                 try:
                     os.makedirs("tmp", exist_ok=True)
                     with open("tmp/last_extracted_content.txt", "w", encoding="utf-8") as f:
@@ -179,10 +164,11 @@ async def _extract_stream_generator(request: Request, url: str = None, text: str
                 except Exception as log_err:
                     print(f"Failed to log extracted content: {log_err}")
         except Exception as e:
-            yield f"data: {json.dumps({'event': 'error', 'msg': str(e)})}\n\n"
-            return
+            raise HTTPException(status_code=500, detail=f"Failed to fetch content from URL: {str(e)}")
+            
     elif text:
-        yield f"data: {json.dumps({'event': 'progress', 'msg': f'Processing input text...'})}\n\n"
+        if progress_callback:
+            await progress_callback({"event": "progress", "msg": "Processing input text..."})
         text = _preprocess_text(text)
         # Log input text for manual investigation
         try:
@@ -191,45 +177,58 @@ async def _extract_stream_generator(request: Request, url: str = None, text: str
                 f.write(text)
         except Exception as log_err:
             print(f"Failed to log extracted content: {log_err}")
-        
-    # 2. AI Execution with Progress Callback
-    async def progress_callback(data: dict):
-        # Translate graph events to SSE events
-        await asyncio.sleep(0.1) # Smooth out updates
-        # Ensure we yield string in the correct format for the outer loop's perspective
-        # But this is a callback, so we need to put it into a queue or yield it.
-        # Simplest: use a queue.
-        await q.put(f"data: {json.dumps(data)}\n\n")
 
+    # Standard AI Graph invocation
+    from ai.graph import get_agent_app
+    agnt_log("Router", task="Extraction", result="Starting fresh AI Graph run...")
+    
+    result = await get_agent_app().ainvoke({
+        "text": text, 
+        "url": url, 
+        "request": request, 
+        "progress_callback": progress_callback,
+        "structured_data": structured_data,
+        "extracted_data": None,
+        "error": None,
+        "retries": 0,
+        "validation_feedback": None,
+        "use_text_fallback": False,
+        "previous_json_results": None
+    })
+    
+    if result.get("error"):
+         raise Exception(result["error"])
+         
+    return result.get("extracted_data")
+
+@router.post("/extract-url")
+async def extract_from_url(req: ExtractRequest, request: Request):
+    """Direct, non-streaming extraction from a URL."""
+    try:
+        data = await _run_extraction_core(request, url=req.url)
+        return {"extracted": data, "error": None}
+    except Exception as e:
+        return {"extracted": None, "error": str(e)}
+
+async def _extract_stream_generator(request: Request, url: str | None = None, text: str | None = None):
+    """Generator for SSE events during extraction."""
+    _check_ai_enabled()
     q = asyncio.Queue()
 
+    async def progress_callback(data: dict):
+        await asyncio.sleep(0.05) # Tiny throttle for smooth UI
+        await q.put(f"data: {json.dumps(data)}\n\n")
+
     async def run_ai():
-        from ai.graph import get_agent_app
         try:
-            agnt_log("Router", task="Extraction", result="Starting fresh AI Graph run...")
-            result = await get_agent_app().ainvoke({
-                "text": text, 
-                "url": url, 
-                "request": request, 
-                "progress_callback": progress_callback,
-                "structured_data": structured_data,
-                "extracted_data": None,
-                "error": None,
-                "retries": 0,
-                "validation_feedback": None,
-                "use_text_fallback": False,
-                "previous_json_results": None
-            })
-            await q.put(f"data: {json.dumps({'event': 'final_result', 'extracted': result.get('extracted_data'), 'error': result.get('error')})}\n\n")
+            data = await _run_extraction_core(request, url=url, text=text, progress_callback=progress_callback)
+            await q.put(f"data: {json.dumps({'event': 'final_result', 'extracted': data, 'error': None})}\n\n")
         except Exception as e:
             await q.put(f"data: {json.dumps({'event': 'error', 'msg': str(e)})}\n\n")
         finally:
             await q.put(None)
 
-    # Start AI in background
     ai_task = asyncio.create_task(run_ai())
-
-    # Yield items from the queue until AI finish (None)
     try:
         while True:
             item = await q.get()
@@ -237,18 +236,12 @@ async def _extract_stream_generator(request: Request, url: str = None, text: str
                 break
             yield item
     finally:
-        # Strict termination: If the generator exits (client disconnect or manual stop), 
-        # cancel the background AI task immediately to stop Ollama calls.
         if not ai_task.done():
-            print("Client disconnected, canceling AI task...")
             ai_task.cancel()
             try:
-                # Wait for cancellation to complete
                 await ai_task
-            except asyncio.CancelledError:
-                print("AI task successfully canceled.")
-            except Exception as e:
-                print(f"Error during AI task cancellation: {e}")
+            except (asyncio.CancelledError, Exception):
+                pass
 
 @router.post("/extract-url-stream")
 async def extract_url_stream(req: ExtractRequest, request: Request):
@@ -261,27 +254,27 @@ async def extract_text_stream(req: TextExtractRequest, request: Request):
 
 @router.post("/extract-text")
 async def extract_from_text(req: TextExtractRequest, request: Request):
-    _check_ai_enabled()
-    text = _preprocess_text(req.text)
-    from ai.graph import get_agent_app
-    result = await get_agent_app().ainvoke({"text": text, "url": None, "request": request})
-    return {"extracted": result["extracted_data"], "error": result["error"]}
+    """Direct, non-streaming extraction from text."""
+    try:
+        data = await _run_extraction_core(request, text=req.text)
+        return {"extracted": data, "error": None}
+    except Exception as e:
+        return {"extracted": None, "error": str(e)}
 
 @router.post("/extract-file-stream")
 async def extract_file_stream(request: Request, file: UploadFile = File(...)):
     _check_ai_enabled()
-    # Save temporarily
     os.makedirs("tmp", exist_ok=True)
     temp_path = f"tmp/{file.filename}"
-    content = await file.read()
-    with open(temp_path, "wb") as buffer:
-        buffer.write(content)
     
     async def file_gen():
         try:
+            content = await file.read()
+            with open(temp_path, "wb") as buffer:
+                buffer.write(content)
+
             filename = file.filename or "unknown"
             ext = filename.split('.')[-1].lower() if '.' in filename else ''
-            text = ""
             
             if ext == 'pdf':
                 yield f"data: {json.dumps({'event': 'progress', 'msg': f'Parsing PDF: {filename}'})}\n\n"
@@ -289,19 +282,14 @@ async def extract_file_stream(request: Request, file: UploadFile = File(...)):
                 loader = PyPDFLoader(temp_path)
                 pages = await asyncio.to_thread(loader.load) # Run blocking load in thread
                 text = "\n".join([page.page_content for page in pages])
-            elif ext in ['md', 'txt'] or not ext:
-                yield f"data: {json.dumps({'event': 'progress', 'msg': f'Reading File: {filename}'})}\n\n"
-                with open(temp_path, "r", encoding="utf-8") as f:
-                    text = f.read()
             else:
-                yield f"data: {json.dumps({'event': 'progress', 'msg': f'Reading File ({ext}): {filename}'})}\n\n"
+                yield f"data: {json.dumps({'event': 'progress', 'msg': f'Reading File: {filename}'})}\n\n"
                 try:
                     with open(temp_path, "r", encoding="utf-8") as f:
                         text = f.read()
                 except UnicodeDecodeError:
-                    raise Exception(f"Unsupported binary file type: {ext}")
+                    raise Exception(f"Failed to read file as UTF-8. Non-text binaries are not supported.")
 
-            text = _preprocess_text(text)
             async for event in _extract_stream_generator(request, text=text):
                 yield event
         except Exception as e:
@@ -319,22 +307,37 @@ async def extract_pdf_stream(request: Request, file: UploadFile = File(...)):
 
 @router.post("/extract-file")
 async def extract_from_file(request: Request, file: UploadFile = File(...)):
-    # Backward compatibility
-    res = {"extracted": None, "error": None}
-    async for event in (await extract_file_stream(request, file)).body_iterator:
-        event_str = event.strip()
-        if not event_str.startswith("data: "):
-            continue
-        try:
-            payload = event_str.replace("data: ", "", 1)
-            data = json.loads(payload)
-            if data["event"] == "final_result":
-                res["extracted"] = data.get("extracted")
-            elif data.get("event") == "error":
-                res["error"] = data.get("msg")
-        except json.JSONDecodeError:
-            continue
-    return res
+    """Direct, non-streaming extraction from file."""
+    _check_ai_enabled()
+    os.makedirs("tmp", exist_ok=True)
+    temp_path = f"tmp/{file.filename}"
+    try:
+        content = await file.read()
+        with open(temp_path, "wb") as buffer:
+            buffer.write(content)
+            
+        filename = file.filename or "unknown"
+        ext = filename.split('.')[-1].lower() if '.' in filename else ''
+        
+        if ext == 'pdf':
+            from langchain_community.document_loaders import PyPDFLoader
+            loader = PyPDFLoader(temp_path)
+            pages = await asyncio.to_thread(loader.load)
+            text = "\n".join([page.page_content for page in pages])
+        else:
+            try:
+                with open(temp_path, "r", encoding="utf-8") as f:
+                    text = f.read()
+            except UnicodeDecodeError:
+                raise Exception("Failed to read file as UTF-8.")
+
+        data = await _run_extraction_core(request, text=text)
+        return {"extracted": data, "error": None}
+    except Exception as e:
+        return {"extracted": None, "error": str(e)}
+    finally:
+        if os.path.exists(temp_path):
+            os.remove(temp_path)
 
 @router.post("/extract-pdf")
 async def extract_from_pdf(request: Request, file: UploadFile = File(...)):

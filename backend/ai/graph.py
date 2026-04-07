@@ -336,9 +336,10 @@ async def check_job_post_node(state: AgentState):
         return {"error": None}
 
     # Log LLM Info once
-    if not state.get("llm_logged"):
+    llm_logged = state.get("llm_logged", False)
+    if not llm_logged:
         log_llm_info()
-        state["llm_logged"] = True
+        llm_logged = True
 
     settings = load_app_settings()
     mode = settings.get("extraction_mode", "single")
@@ -346,7 +347,7 @@ async def check_job_post_node(state: AgentState):
     # Requirement: In single-agent strategy, this feature is embedded in the agent prompt.
     if mode == "single":
         agnt_log("Verifier", task="Job Post Verification", result="SKIP: Embedded in Single-Agent Extractor")
-        return {"error": None}
+        return {"error": None, "llm_logged": llm_logged}
 
     progress_cb = state.get("progress_callback")
     if progress_cb:
@@ -370,15 +371,15 @@ async def check_job_post_node(state: AgentState):
             reason = res.reason or "The content does not appear to be a job posting."
             # Log result
             agnt_log("Verifier", result=f"FAIL: {category}")
-            return {"error": f"NOT_A_JOB_POST: This document looks like a {category}. {reason}"}
+            return {"error": f"NOT_A_JOB_POST: This document looks like a {category}. {reason}", "llm_logged": llm_logged}
             
         # Log result
         agnt_log("Verifier", result="PASS: Job post confirmed.")
-        return {"error": None}
+        return {"error": None, "llm_logged": llm_logged}
     except Exception as e:
         print(f"Error in job post check node: {e}")
         # Fail-fast on tech errors to ensure extraction only runs on verified content
-        return {"error": f"IDENTIFICATION_ERROR: AI failed to verify the document content. {str(e)}"}
+        return {"error": f"IDENTIFICATION_ERROR: AI failed to verify the document content. {str(e)}", "llm_logged": llm_logged}
 
 async def extract_node(state: AgentState):
     settings = load_app_settings()
@@ -410,13 +411,13 @@ async def extract_node(state: AgentState):
         is_fallback_transition = vf.startswith("FALLBACK_PHASE:") if vf else False
         
         if state.get("extracted_data") and not is_fallback_transition:
+            # --- QA RETRY PATH: Only extract description with feedback ---
             results = state["extracted_data"].copy()
             if progress_cb:
                 await progress_cb({"event": "progress", "msg": f"AI: Regenerating Description (QA Retry {state.get('retries', 0)}/3)..."})
             
             text_with_feedback = f"PREVIOUS ATTEMPT FAILED QA VALIDATION:\n{vf}\n\nORIGINAL TEXT:\n{text}" if vf else text
 
-            # Redo description only
             if mode == "multi":
                 from ai.chains import JobDescription, description_extraction_prompt, description_json_prompt
                 sema = asyncio.Semaphore(settings.get("max_concurrency", 1))
@@ -428,7 +429,6 @@ async def extract_node(state: AgentState):
             else:
                 llm = get_llm(num_ctx=settings["llm_config"].get("num_ctx"))
                 
-                # Choose correct prompt based on current active source
                 if active_source == "JSON-LD":
                     extractor = structured_data_validation_prompt | llm.with_structured_output(JobDetails)
                     inputs = {
@@ -467,9 +467,10 @@ async def extract_node(state: AgentState):
                 if progress_cb:
                     await progress_cb({"event": "progress", "msg": "AI: JSON-LD found! Validating and converting metadata..."})
                 
-                if not state.get("llm_logged"):
+                llm_logged = state.get("llm_logged", False)
+                if not llm_logged:
                     log_llm_info()
-                    state["llm_logged"] = True
+                    llm_logged = True
 
                 agnt_log("Extractor (JSON-LD)", task="Mapping Fields", input_data=json.dumps(structured_data)[:50])
 
@@ -490,7 +491,7 @@ async def extract_node(state: AgentState):
                 agnt_log("Extractor (JSON-LD)", task="RAW_AI_OUTPUT", result=str(result)[:200])
                 data = result.model_dump()
                 agnt_log("Extractor (JSON-LD)", result=f"SUCCESS: Data extracted. [Company: {data.get('company')}, Role: {data.get('role')}]")
-                return {"extracted_data": data, "error": None}
+                return {"extracted_data": data, "error": None, "llm_logged": llm_logged}
 
         else:
             # --- PATH B: Text Fallback (or Non-JSON Entry) ---
@@ -521,11 +522,12 @@ async def extract_node(state: AgentState):
                 
                 return {"extracted_data": final_results, "error": None}
             else:
-                # Single-Agent Full Text Extraction
+                # --- PATH B: Text Fallback (or Non-JSON Entry) ---
+                llm_logged = state.get("llm_logged", False)
                 llm = get_llm(num_ctx=settings["llm_config"].get("num_ctx"))
-                if not state.get("llm_logged"):
+                if not llm_logged:
                     log_llm_info()
-                    state["llm_logged"] = True
+                    llm_logged = True
 
                 if request and await request.is_disconnected():
                     return {"extracted_data": None, "error": "Cancelled"}
@@ -569,7 +571,7 @@ async def extract_node(state: AgentState):
                             final_results[k] = v
 
                 agnt_log("Extractor (Text)", result=f"SUCCESS: Data extracted. [Company: {final_results.get('company')}, Role: {final_results.get('role')}]")
-                return {"extracted_data": final_results, "error": None}
+                return {"extracted_data": final_results, "error": None, "llm_logged": llm_logged}
     except asyncio.TimeoutError:
         return {"extracted_data": None, "error": "Extraction timed out after 5 minutes. Try smaller snippets or Multi-Agent mode."}
     except Exception as e:
@@ -637,12 +639,15 @@ async def description_validator_node(state: AgentState):
         if missing_reasons:
             reasons_str = "\n".join(missing_reasons)
             agnt_log("Validator", task="FALLBACK_TRIGGERED", result=f"Missing/Invalid {len(missing_reasons)} fields (Sequential Fallback):\n{reasons_str}\nSwitching to TEXT mode.")
-            # Reset retry counter for the new source
+            
+            # --- SEQUENTIAL FALLBACK RESET ---
+            # LangGraph State uses `operator.add` for `retries`. 
+            # To reset to 0 for a new phase, we return a negative value equal to current count.
             return {
                 "use_text_fallback": True, 
                 "previous_json_results": extracted,
                 "validation_feedback": f"FALLBACK_PHASE: Missing/Invalid fields: {', '.join([r.split('(')[0].strip('- ').strip() for r in missing_reasons])}",
-                "retries": -retries # Reset to 0
+                "retries": -retries
             }
 
     from ai.chains import get_validation_prompt, DescriptionValidation
