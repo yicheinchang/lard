@@ -114,22 +114,24 @@ graph TD
 
 ### Multi-Agent Extraction (Parallel)
 ```mermaid
-graph TD
-    Source["Job Source Content"] --> Mode{"Initial Path?"}
+graph LR
+    Source["Job Content"] --> Router{"Route By Type"}
     
-    Mode -- "JSON-LD" --> Slicer["JSON Slicer<br/>(Extracts Strict Fragments)"]
-    Slicer --> JAgentPool[["Job Agent Pool<br/>(Company, Role, Salary, etc.)"]]
+    subgraph JSON_LD_Pipeline [JSON-LD Path]
+        Router --> Slicer["Fragment Slicer"]
+        Slicer --> Agents["Parallel Agent Pool"]
+        Agents --> Heuristic{"Validation"}
+        Heuristic -- "Missing Fields" --> Fallback["Targeted Text Extraction"]
+        Fallback --> Agents
+    end
     
-    JAgentPool --> Heuristic{"Heuristic Check?<br/>(Per-Field Failure?)"}
+    subgraph Text_Pipeline [Raw Text Path]
+        Router --> Chunker["Semantic Chunker"]
+        Chunker --> TAgents["Parallel Agent Pool"]
+    end
     
-    Heuristic -- "Field(s) Missing / 'N/A'" --> Fallback["Targeted Text Extraction<br/>(Extracts ONLY failed fields from Text)"]
-    Heuristic -- "All Pass" --> Merger["Result Merger"]
-    
-    Mode -- "Full Text / PDF" --> Chunker["Text Chunker<br/>(Semantic Context)"]
-    Chunker --> JAgentPool
-    Fallback --> JAgentPool
-    
-    JAgentPool --> Merger
+    Heuristic -- "Complete" --> Merger["Result Merger"]
+    TAgents --> Merger
     Merger --> Final["Finalize & Save"]
 ```
 
