@@ -60,14 +60,13 @@ Ideal for frontier models (GPT-4o, Claude 3).
 - **Embedded Verification**: In Text mode, the prompt includes an internal verification block to confirm "is_job_post" and "detected_category" without a separate node call.
 - **Strict Mapping**: Directly converts structured JSON-LD into the application's schema.
 
-### Single-Agent Extraction (High-Performance)
 ```mermaid
 graph TD
     Source["Job Source Content"] --> Mode{"Initial Path?"}
     
-    Mode -- "JSON-LD Found" --> Mapper["Monolithic JSON-LD Mapper<br/>(Priority A: Strict Mapping)"]
     Mode -- "Raw Text / PDF" --> Extractor["Monolithic Text Extractor<br/>(Priority B: Semantic)"]
     
+    Mode -- "JSON-LD Found" --> Mapper["Monolithic JSON-LD Mapper<br/>(Priority A: Strict Mapping)"]
     Mapper --> Heuristic{"Heuristic Check?<br/>(Any 'N/A' or Missing?)"}
     
     Heuristic -- "JSON Fail: Fallback to Text" --> Extractor
@@ -78,7 +77,7 @@ graph TD
     QA -- "QA Fail < 3 Retries" --> Retry["Inject Feedback & Retry<br/>(Monolithic Regeneration)"]
     Retry --> Extractor
     
-    QA -- "Pass / Max Retries" --> Final["Finalize & Save"]
+    QA -- "Pass" --> Final["Finalize & Save"]
 ```
 
 ### 🎭 Strategy 2: Multi-Agent (Small-Model/Parallel)
