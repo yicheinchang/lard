@@ -341,6 +341,27 @@ export function SettingsPage() {
     return () => clearTimeout(timer);
   }, [llmProvider, llmConfig.ollama_base_url]);
 
+  // ── Prompt Sync logic ─────────────────────────────────────────────
+
+  // Ensure activeSystemPrompt is always valid for the current extractionMode
+  useEffect(() => {
+    if (extractionMode === 'multi') {
+      // In multi-mode, some global prompts are hidden
+      if (activeSystemTab === 'global' && (activeSystemPrompt === 'extraction_base' || activeSystemPrompt === 'json_ld')) {
+        setActiveSystemPrompt('job_post_check');
+      }
+    } else {
+      // In single-mode, text/json tabs are hidden entirely
+      if (activeSystemTab !== 'global') {
+        setActiveSystemTab('global');
+        setActiveSystemPrompt('extraction_base');
+      } else if (activeSystemPrompt !== 'extraction_base' && activeSystemPrompt !== 'json_ld' && activeSystemPrompt !== 'job_post_check' && activeSystemPrompt !== 'qa_validator') {
+        // If we were on a field prompt and switched to single-mode, reset to extraction_base
+        setActiveSystemPrompt('extraction_base');
+      }
+    }
+  }, [extractionMode, activeSystemTab, activeSystemPrompt]);
+
   // ── Save handler ───────────────────────────────────────────────────
 
   const handleSave = async (forceRebuild = false) => {

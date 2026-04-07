@@ -1,5 +1,5 @@
 # Codebase Map: Lard - Lazy AI-powered Resume Database
-Last Updated: 2026-04-07T18:58:00Z
+Last Updated: 2026-04-07T19:03:30Z
 
 This document provides a summary of the project's architecture, tech stack, and key logic to give AI coding agents instant context.
 
@@ -73,7 +73,7 @@ This document provides a summary of the project's architecture, tech stack, and 
   - `ChatAssistant.tsx`: Global drawer for the AI agent.
   - `SettingsPage.tsx`: Integrated configuration for LLMs and themes. Features a collapsible **Advanced AI Prompt Settings** subsection with:
       *   **Additive Guidance**: Field-specific instruction tabs for fine-tuning extraction.
-      *   **Base System Prompts**: Independent sub-section for modifying core backend prompts (Extraction, JSON-LD, QA Validator) and granular field-level prompts for Multi-Agent mode (Text and JSON) with a dedicated reset handler. Features a nested tabbed UI for efficient management of 18 total base prompts. **Selective Filtering**: Prompts are filtered based on the active **Extraction Strategy** (Single vs. Multi-Agent). Supports **Granular Resets** for each specific prompt to factory defaults. Enhanced readability with `rows={12}` text areas. Includes **Focus Persistence Fixes** and **Persistence Support** in the backend for reliable prompt engineering.
+      *   **Base System Prompts**: Independent sub-section for modifying core backend prompts (Extraction, JSON-LD, QA Validator) and granular field-level prompts for Multi-Agent mode (Text and JSON) with a dedicated reset handler. Features a nested tabbed UI for efficient management of 18 total base prompts. **Selective Filtering**: Prompts are filtered based on the active **Extraction Strategy** (Single vs. Multi-Agent). **Active Selection Sync**: Automatically synchronizes the active prompt tab when switching strategies or tabs to ensure only visible prompts are selected. Supports **Granular Resets** for each specific prompt to factory defaults. Enhanced readability with `rows={12}` text areas. Includes **Focus Persistence Fixes** and **Persistence Support** in the backend for reliable prompt engineering.
   - `src/lib/`:
   - `api.ts`: Axios client with typed backend endpoints.
   - `ViewContext.tsx`: Global UI state including **Navigation Guards** for unsaved changes and sidebar state.
