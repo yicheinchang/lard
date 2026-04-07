@@ -77,7 +77,8 @@ async def _run_field_extraction(field, schema, prompt, text, url, request, semap
                 # Check for validation feedback on retry
                 vf = state.get("validation_feedback", "") if state else ""
                 if vf:
-                    inputs["validation_feedback"] = f"PREVIOUS ATTEMPT FAILED QA VALIDATION:\n{vf}\nPLEASE FIX THESE ISSUES.\n"
+                    label = "TRANSITION FEEDBACK (FALLBACK TO TEXT):" if state.get("use_text_fallback") else "PREVIOUS ATTEMPT FAILED QA VALIDATION:"
+                    inputs["validation_feedback"] = f"{label}\n{vf}\n"
                     
                 raw_res = await asyncio.wait_for(
                     raw_chain.ainvoke(inputs),
@@ -118,7 +119,8 @@ async def _run_field_extraction(field, schema, prompt, text, url, request, semap
             # Also check for validation feedback in case user added it to base prompts
             vf = state.get("validation_feedback", "") if state else ""
             if vf:
-                inputs["validation_feedback"] = f"PREVIOUS ATTEMPT FAILED QA VALIDATION:\n{vf}\nPLEASE FIX THESE ISSUES.\n"
+                label = "TRANSITION FEEDBACK (FALLBACK TO TEXT):" if state.get("use_text_fallback") else "PREVIOUS ATTEMPT FAILED QA VALIDATION:"
+                inputs["validation_feedback"] = f"{label}\n{vf}\n"
 
             res = await asyncio.wait_for(
                 chain.ainvoke(inputs),
@@ -230,7 +232,8 @@ async def _run_field_json_extraction(field, schema, prompt, text, fragment, requ
                 # Dynamic check for variables in description prompt (JSON)
                 vf = state.get("validation_feedback", "") if state else ""
                 if vf:
-                    inputs["validation_feedback"] = f"PREVIOUS ATTEMPT FAILED QA VALIDATION:\n{vf}\nPLEASE FIX THESE ISSUES.\n"
+                    label = "TRANSITION FEEDBACK (FALLBACK TO TEXT):" if state.get("use_text_fallback") else "PREVIOUS ATTEMPT FAILED QA VALIDATION:"
+                    inputs["validation_feedback"] = f"{label}\n{vf}\n"
 
                 raw_res = await asyncio.wait_for(raw_chain.ainvoke(inputs), timeout=600)
                 val = raw_res.content
@@ -252,7 +255,8 @@ async def _run_field_json_extraction(field, schema, prompt, text, fragment, requ
             # Also check for validation feedback in base prompts
             vf = state.get("validation_feedback", "") if state else ""
             if vf:
-                inputs["validation_feedback"] = f"PREVIOUS ATTEMPT FAILED QA VALIDATION:\n{vf}\nPLEASE FIX THESE ISSUES.\n"
+                label = "TRANSITION FEEDBACK (FALLBACK TO TEXT):" if state.get("use_text_fallback") else "PREVIOUS ATTEMPT FAILED QA VALIDATION:"
+                inputs["validation_feedback"] = f"{label}\n{vf}\n"
 
             res = await asyncio.wait_for(chain.ainvoke(inputs), timeout=300)
             val = res.model_dump()
@@ -386,6 +390,7 @@ async def extract_node(state: AgentState):
     is_json_ld = state.get("structured_data") is not None
     structured_data = state.get("structured_data")
     use_text_fallback = state.get("use_text_fallback", False)
+    vf = state.get("validation_feedback", "")
     
     # Priority A: JSON-LD (Attempt 0)
     # Priority B: Text Fallback (Attempt 1+)
@@ -409,7 +414,6 @@ async def extract_node(state: AgentState):
             if progress_cb:
                 await progress_cb({"event": "progress", "msg": f"AI: Regenerating Description (QA Retry {state.get('retries', 0)}/3)..."})
             
-            vf = state.get("validation_feedback", "")
             text_with_feedback = f"PREVIOUS ATTEMPT FAILED QA VALIDATION:\n{vf}\n\nORIGINAL TEXT:\n{text}" if vf else text
 
             # Redo description only
@@ -532,11 +536,15 @@ async def extract_node(state: AgentState):
 
                 extractor = get_extraction_prompt(settings) | llm.with_structured_output(JobDetails)
                 cg = settings.get("custom_prompts", {}).get("single_agent", "")
+                
+                # Determine correct label for validation_feedback
+                label = "TRANSITION FEEDBACK (FALLBACK TO TEXT):" if use_text_fallback else "PREVIOUS ATTEMPT FAILED QA VALIDATION:"
+                
                 inputs = { 
                     "text": text, 
                     "url": url or "Not provided",
                     "custom_guidance": f"ADDITIONAL USER INSTRUCTIONS:\n{cg}" if cg else "",
-                    "validation_feedback": ""
+                    "validation_feedback": f"{label}\n{vf}\n" if vf else ""
                 }
                     
                 agnt_log("Extractor (Text)", task="Full Extraction", input_data=str(text)[:50])
@@ -685,26 +693,27 @@ async def description_validator_node(state: AgentState):
             timeout=180
         )
         
-    failed = not result.is_valid or not result.is_complete
-    if failed:
-        reason = result.failure_reason or "Unknown validation error"
-        agnt_log("Validator", task="QA_FAILURE", result=f"REJECTED: {reason}")
-        print(f"\n[AI VALIDATOR] Validation Failed ({source_type} Mode) (Attempt {retries + 1}/3):")
-        print(f" > WHY: {reason}")
+        failed = not result.is_valid or not result.is_complete
+        if failed:
+            reason = result.failure_reason or "Unknown validation error"
+            agnt_log("Validator", task="QA_FAILURE", result=f"REJECTED: {reason}")
+            print(f"\n[AI VALIDATOR] Validation Failed ({source_type} Mode) (Attempt {retries + 1}/3):")
+            print(f" > WHY: {reason}")
             
             if retries >= 2:
                 # Final attempt failed
                 extracted["hallucination_detected"] = True
                 extracted["hallucination_reasons"] = f"QA Fail (Final Attempt): {reason}"
-                return {"extracted_data": extracted, "retries": retries + 1, "validation_feedback": reason}
+                return {"extracted_data": extracted, "retries": 1, "validation_feedback": reason}
 
             if progress_cb:
                 await progress_cb({"event": "progress", "msg": f"AI Validator issue: {reason}"})
             return {"retries": 1, "validation_feedback": reason}
             
         # Log success
-        agnt_log("Validator", result="PASS: Description is valid.")
+        agnt_log("Validator", task="DONE", result="PASS: Description is valid.")
         return {"extracted_data": extracted, "validation_feedback": None}
+
     except Exception as e:
         print(f"Validation step failed: {e}")
         # Terminate loop to avoid infinite retry on persistent LLM errors

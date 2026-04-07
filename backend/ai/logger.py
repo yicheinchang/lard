@@ -13,7 +13,7 @@ def agnt_log(agent: str, task: str = None, result: str = None, input_data: str =
         msg = f"{agent} | {task or 'CALL'} | {str(input_data).replace('\n', ' ')}"
     elif result:
         # Finish case: <Agent> | DONE | <Result>
-        msg = f"{agent} | DONE | {str(result).replace('\n', ' ')}"
+        msg = f"{agent} | {task or 'DONE'} | \n{str(result)}"
     elif task:
         # Generic status: <Agent> | <Status>
         msg = f"{agent} | {task}"
@@ -21,9 +21,6 @@ def agnt_log(agent: str, task: str = None, result: str = None, input_data: str =
         return
 
     full_msg = f"{prefix}{msg}"
-    if len(full_msg) > 80:
-        full_msg = full_msg[:77] + "..."
-    
     print(full_msg)
 
 def log_llm_info():
