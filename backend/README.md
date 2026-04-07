@@ -89,30 +89,6 @@ Optimized for local models (Gemma, Llama) through task decomposition.
 - **Comprehensive Text Context**: In Full Text mode (or fallback), the system provides the **complete cleaned text** of the job post to each specialized agent. This ensures that even buried details (like a Salary range in a footer) are captured.
 - **Raw-Pass Description**: The description field is extracted without a strict JSON schema to prevent truncation and hangs.
 
----
-
-## 🔄 Common AI Logic
-
-Regardless of strategy, the following core features ensure 100% extraction fidelity:
-
-### 1. Sequential Fallback Strategy
-The engine prioritizes structured data but falls back to semantic reasoning if needed:
-- **Priority A (JSON-LD)**: Attempts to extract accurate data from Schema.org script tags first.
-- **Full-Schema Heuristic Validation**: The system checks **every field** in the schema (Company, Role, Location, Salary, Job ID, Dates, Description). If any field is "N/A", a placeholder, or missing, a fallback is triggered for that specific field.
-- **Priority B (Full Text)**: Re-parses the raw page content to fill gaps detected in the JSON-LD pass.
-- **Result Merging**: Treating JSON-LD as the primary source of truth, it only replaces/fills fields that failed the heuristic check.
-
-### 2. QA Validation Loop (Circuit Breaker)
-Each extraction is validated by a dedicated **QA Node** with a 3-retry limit:
-- **Scope**: Targeted primarily at the Description field for verbatim accuracy and completeness.
-- **Feedback Injection**: If validation fails, the failure reason is injected into the prompt of the same extraction node for the next attempt.
-- **UI Flagging**: If the circuit breaker trips after 3 attempts, the final output is preserved but flagged for manual review in the frontend.
-
----
-
-## 📈 Visual Workflows
-
-### Multi-Agent Extraction (Parallel)
 ```mermaid
 graph TD
     Source["Job Source Content"] --> Router{"Input Type?"}
@@ -131,6 +107,25 @@ graph TD
     
     Merger --> Final["Finalize & Save"]
 ```
+
+---
+
+## 🔄 Common AI Logic
+
+Regardless of strategy, the following core features ensure 100% extraction fidelity:
+
+### 1. Sequential Fallback Strategy
+The engine prioritizes structured data but falls back to semantic reasoning if needed:
+- **Priority A (JSON-LD)**: Attempts to extract accurate data from Schema.org script tags first.
+- **Full-Schema Heuristic Validation**: The system checks **every field** in the schema (Company, Role, Location, Salary, Job ID, Dates, Description). If any field is "N/A", a placeholder, or missing, a fallback is triggered for that specific field.
+- **Priority B (Full Text)**: Re-parses the raw page content to fill gaps detected in the JSON-LD pass.
+- **Result Merging**: Treating JSON-LD as the primary source of truth, it only replaces/fills fields that failed the heuristic check.
+
+### 2. QA Validation Loop (Circuit Breaker)
+Each extraction is validated by a dedicated **QA Node** with a 3-retry limit:
+- **Scope**: Targeted primarily at the Description field for verbatim accuracy and completeness.
+- **Feedback Injection**: If validation fails, the failure reason is injected into the prompt of the same extraction node for the next attempt.
+- **UI Flagging**: If the circuit breaker trips after 3 attempts, the final output is preserved but flagged for manual review in the frontend.
 
 ---
 
