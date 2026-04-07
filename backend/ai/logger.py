@@ -4,24 +4,32 @@ def agnt_log(agent: str, task: str = None, result: str = None, input_data: str =
     """
     Standardized logging for AI agents.
     Format: AGNT:     <AgentName> | <Task/Status> | <Details>
-    Max 80 characters.
+    Multi-line details are indented to maintain grouping.
     """
     prefix = "AGNT:     "
     
+    # 1. Prepare Header
+    header = f"{agent} | {task or 'INFO'}"
+    
+    # 2. Prepare Detail
+    detail = None
     if input_data:
-        # Task calling case: <Agent> | <Task> | <Input>
-        msg = f"{agent} | {task or 'CALL'} | {str(input_data).replace('\n', ' ')}"
+        detail = str(input_data)
     elif result:
-        # Finish case: <Agent> | DONE | <Result>
-        msg = f"{agent} | {task or 'DONE'} | \n{str(result)}"
-    elif task:
-        # Generic status: <Agent> | <Status>
-        msg = f"{agent} | {task}"
+        detail = str(result)
+    
+    # 3. Print
+    if detail and ("\n" in detail or len(header + " | " + detail) > 70):
+        # Multi-line or Long content: Header on line 1, Detail indented below
+        print(f"{prefix}{header} |")
+        for line in detail.split("\n"):
+            print(f"    {line}")
+    elif detail:
+        # Short single-line content
+        print(f"{prefix}{header} | {detail}")
     else:
-        return
-
-    full_msg = f"{prefix}{msg}"
-    print(full_msg)
+        # Header only
+        print(f"{prefix}{header}")
 
 def log_llm_info():
     """

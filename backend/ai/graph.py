@@ -26,6 +26,24 @@ class AgentState(TypedDict):
     use_text_fallback: bool
     previous_json_results: dict | None
 
+def _is_valid_value(val: Any) -> bool:
+    """
+    Checks if an extracted value is a meaningful result.
+    Filters out placeholders like 'N/A', 'Unknown', or empty strings.
+    Used for heuristic validation and cross-pass merging.
+    """
+    if val is None:
+        return False
+    if not isinstance(val, str):
+        return True # Non-string truthy values are considered valid
+    
+    placeholders = ["n/a", "unknown", "not provided", "[company name]", "null", "undefined", "tbd", "tbc", "none"]
+    v_clean = val.lower().strip()
+    
+    if not v_clean or v_clean in placeholders or len(v_clean) < 2:
+        return False
+    return True
+
 async def _run_field_extraction(field, schema, prompt, text, url, request, semaphore, progress_cb=None, state=None):
     """Async helper to execute a single agent task within a concurrency limit."""
     async with semaphore:
@@ -517,7 +535,8 @@ async def extract_node(state: AgentState):
                 # Merge: JSON ground truth > Text results
                 final_results = previous_json.copy()
                 for k, v in new_results.items():
-                    if not final_results.get(k): # Prioritize existing non-null data from JSON
+                    # If JSON result is missing or a placeholder, use the Fallback Text result
+                    if not _is_valid_value(final_results.get(k)):
                         final_results[k] = v
                 
                 return {"extracted_data": final_results, "error": None}
@@ -567,7 +586,8 @@ async def extract_node(state: AgentState):
                 final_results = data
                 if previous_json:
                     for k, v in previous_json.items():
-                        if v: # If JSON had it, it wins
+                        # ONLY preserve JSON value if it's actually valid content
+                        if _is_valid_value(v):
                             final_results[k] = v
 
                 agnt_log("Extractor (Text)", result=f"SUCCESS: Data extracted. [Company: {final_results.get('company')}, Role: {final_results.get('role')}]")
@@ -624,17 +644,13 @@ async def description_validator_node(state: AgentState):
             "description": "Job Description"
         }
         
-        placeholders = ["n/a", "unknown", "not provided", "[company name]", "null", "undefined", "tbd", "tbc"]
         missing_reasons = []
         
         for key, label in important_fields.items():
             val = extracted.get(key)
-            if not val:
-                missing_reasons.append(f"  - {key} (Missing from JSON)")
-            elif isinstance(val, str) and val.lower().strip() in placeholders:
-                missing_reasons.append(f"  - {key} (Placeholder '{val}' detected)")
-            elif isinstance(val, str) and len(val.strip()) < 2:
-                missing_reasons.append(f"  - {key} (Value too short: '{val}')")
+            if not _is_valid_value(val):
+                reason = f"'{val}'" if val is not None else "Missing"
+                missing_reasons.append(f"  - {key} ({reason})")
 
         if missing_reasons:
             reasons_str = "\n".join(missing_reasons)
