@@ -65,7 +65,7 @@ Ideal for frontier models (GPT-4o, Claude 3).
 graph TD
     Source["Job Source Content"] --> Mode{"Initial Path?"}
     
-    Mode -- "Raw Text / PDF" --> Extractor["Monolithic Text Extractor<br/>(Priority B: Semantic)"]
+    
     
     Mode -- "JSON-LD Found" --> Mapper["Monolithic JSON-LD Mapper<br/>(Priority A: Strict Mapping)"]
     Mapper --> Heuristic{"Heuristic Check?<br/>(Any 'N/A' or Missing?)"}
@@ -78,6 +78,9 @@ graph TD
     QA -- "QA Fail < 3 Retries" --> Retry["Inject Feedback & Retry<br/>(Monolithic Regeneration)"]
     Retry --> Extractor
     
+    QA -- "Pass" --> Final["Finalize & Save"]
+
+    Mode -- "Raw Text / PDF" --> Extractor["Monolithic Text Extractor<br/>(Priority B: Semantic)"]
 ```
 
 ### 🎭 Strategy 2: Multi-Agent (Small-Model/Parallel)
