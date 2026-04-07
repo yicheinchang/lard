@@ -1,5 +1,5 @@
 # Codebase Map: Lard - Lazy AI-powered Resume Database
-Last Updated: 2026-04-07T19:03:30Z
+Last Updated: 2026-04-07T20:12:15Z
 
 This document provides a summary of the project's architecture, tech stack, and key logic to give AI coding agents instant context.
 
@@ -57,8 +57,8 @@ This document provides a summary of the project's architecture, tech stack, and 
 - `src/components/`: Reusable UI components:
   - `AppShell.tsx`: Main layout wrapper featuring a **Resizable Sidebar** (Draggable handle with width persistence). Includes **Mobile Responsive Header** and **Hamburger Menu Drawer**.
   - `KanbanBoard.tsx`: Drag-and-drop pipeline visualization. Features **Independent Vertical Scrolling** for columns and a **Sticky Horizontal Scrollbar** at the bottom of the viewport. Supports dynamic heights (shrinks to fit content).
-  - `TableView.tsx`: Density-rich list view of applications. Inherits global sort and search filters from `page.tsx`.
-  - `JobCard.tsx`: Individual job item in the Kanban board.
+  - `TableView.tsx`: Density-rich list view of applications. Includes **Hover-activated Tooltips** for company and role cells to prevent truncation.
+  - `JobCard.tsx`: Individual job item in the Kanban board. Features **Hover-activated Tooltips** for company and role names with smart wrapping and overflow support.
   - `JobDetailView.tsx`: Core component for job application management. Features a **Centered Floating Modal** with a backdrop-blur overlay and a **Full-Screen Toggle**. Consists of three tabs:
       *   **Interview Pipeline** (Default): Timeline events with full CRUD and inline editing.
       *   **Job Details**: Metadata management and document attachments.

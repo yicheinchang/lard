@@ -172,12 +172,26 @@ export const TableView: React.FC<TableViewProps> = ({ jobs, onUpdateStatus, onJo
                           <Star className={`w-3.5 h-3.5 ${job.is_starred ? 'fill-current' : ''}`} />
                         </button>
                       )}
-                      <span className="text-white font-medium group-hover:text-violet-300 transition-colors">
-                        {job.company}
-                      </span>
+                      <div className="group/tooltip relative inline-flex items-center">
+                        <span className="text-white font-medium group-hover:text-violet-300 transition-colors truncate">
+                          {job.company}
+                        </span>
+                        {/* Tooltip for company */}
+                        <div className="absolute left-0 top-full mt-1.5 opacity-0 group-hover/tooltip:opacity-100 pointer-events-none transition-all duration-200 bg-black/90 backdrop-blur-md border border-white/20 text-white text-[11px] px-2.5 py-1.5 rounded-lg shadow-2xl z-50 whitespace-normal break-words min-w-max max-w-[280px]">
+                          {job.company}
+                        </div>
+                      </div>
                     </div>
                   </td>
-                  <td className="px-4 py-3 text-gray-300">{job.role}</td>
+                  <td className="px-4 py-3 text-gray-300">
+                    <div className="group/tooltip relative inline-flex items-center">
+                      <span className="truncate">{job.role}</span>
+                      {/* Tooltip for role */}
+                      <div className="absolute left-0 top-full mt-1.5 opacity-0 group-hover/tooltip:opacity-100 pointer-events-none transition-all duration-200 bg-black/90 backdrop-blur-md border border-white/20 text-white text-[11px] px-2.5 py-1.5 rounded-lg shadow-2xl z-50 whitespace-normal break-words min-w-max max-w-[280px]">
+                        {job.role}
+                      </div>
+                    </div>
+                  </td>
                   <td className="px-4 py-3">
                     <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium border ${statusBadgeColors[job.status] || 'text-gray-400 bg-white/5 border-white/10'}`}>
                       {job.status}
