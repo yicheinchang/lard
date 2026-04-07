@@ -117,7 +117,7 @@ export const JobCard: React.FC<JobCardProps> = ({ job, onUpdateStatus, onClick, 
                 <span className="truncate">{job.company}</span>
               </h3>
               {/* Tooltip for company */}
-              <div className="absolute left-0 top-full mt-1.5 opacity-0 group-hover/tooltip:opacity-100 pointer-events-none transition-all duration-200 bg-black/90 backdrop-blur-md border border-white/20 text-white text-[11px] px-2.5 py-1.5 rounded-lg shadow-2xl z-50 whitespace-nowrap">
+              <div className="absolute left-0 top-full mt-1.5 opacity-0 group-hover/tooltip:opacity-100 pointer-events-none transition-all duration-200 bg-black/90 backdrop-blur-md border border-white/20 text-white text-[11px] px-2.5 py-1.5 rounded-lg shadow-2xl z-50 whitespace-normal break-words max-w-[280px]">
                 {job.company}
               </div>
             </div>
@@ -125,7 +125,7 @@ export const JobCard: React.FC<JobCardProps> = ({ job, onUpdateStatus, onClick, 
             <div className="group/tooltip relative mt-0.5">
               <p className="text-[11px] text-[var(--fg-muted)] ml-5 truncate">{job.role}</p>
               {/* Tooltip for role */}
-              <div className="absolute left-5 top-full opacity-0 group-hover/tooltip:opacity-100 pointer-events-none transition-all duration-200 bg-black/90 backdrop-blur-md border border-white/20 text-white text-[11px] px-2.5 py-1.5 rounded-lg shadow-2xl z-50 whitespace-nowrap">
+              <div className="absolute left-5 top-full opacity-0 group-hover/tooltip:opacity-100 pointer-events-none transition-all duration-200 bg-black/90 backdrop-blur-md border border-white/20 text-white text-[11px] px-2.5 py-1.5 rounded-lg shadow-2xl z-50 whitespace-normal break-words max-w-[280px]">
                 {job.role}
               </div>
             </div>

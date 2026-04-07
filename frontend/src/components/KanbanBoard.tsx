@@ -57,7 +57,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({ jobs, onUpdateStatus, 
               <span className="bg-[var(--surface-hover)] text-[var(--fg-subtle)] text-xs px-2 py-0.5 rounded-full font-medium">{columnJobs.length}</span>
             </div>
             
-            <div className={`flex flex-col gap-2 p-2 pr-2 rounded-2xl border flex-1 min-h-0 overflow-y-auto custom-scrollbar ${columnAccents[column.key] || 'bg-[var(--surface)] border-[var(--border-color)]'}`}>
+            <div className={`flex flex-col gap-2 p-2 pr-2 rounded-2xl border flex-1 min-h-0 overflow-y-auto overflow-x-hidden custom-scrollbar ${columnAccents[column.key] || 'bg-[var(--surface)] border-[var(--border-color)]'}`}>
               {columnJobs.length === 0 ? (
                 <div className="h-full flex items-center justify-center text-sm text-[var(--fg-subtle)] opacity-40 italic py-10">
                   No jobs here
