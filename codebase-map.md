@@ -1,5 +1,5 @@
 # Codebase Map: Lard - Lazy AI-powered Resume Database
-Last Updated: 2026-04-07T01:10:00Z
+Last Updated: 2026-04-07T03:23:00Z
 
 This document provides a summary of the project's architecture, tech stack, and key logic to give AI coding agents instant context.
 
@@ -256,37 +256,28 @@ The system is designed to be model-agnostic. Through `llm_factory.py`, it can sw
 - **Local**: Ollama (default: `gemma3:4b-it-qat`)
 - **Cloud**: OpenAI (GPT-4o) or Anthropic (Claude 3)
 
-### 3. Agent Operational Rules
+### 4. Agent Operational Rules
 The workspace uses a formalized rule system in `.agents/rules/workspace-role.md` to ensure:
 - **Micro Git Commits**: Atomic, granular commits for every stable change.
 - **Synchronized Versioning**: Automated SemVer updates across backend and frontend.
 - **Codebase Map Sync**: Mandatory updates to this document to maintain architectural context.
-- **Backend Startup Optimization (Extreme v3)**: The backend is optimized for sub-10s startup even with heavy AI dependencies:
-    - **Background Eager Loading**: AI libraries (LangChain/PyTorch) and the LangGraph workflow are preloaded in a background thread during the FastAPI `lifespan` to guarantee instant first-call responses without penalizing backend startup speed.
-    - **Global Embedding Cache**: HuggingFace instances are cached to prevent repetitive PyTorch model reloads during large document ingestions.
-    - **Decoupled Prompts**: Raw system prompts are isolated in `backend/ai/prompts.py` to prevent heavy LangChain library loads (and 3.14 compatibility hangs) during initial app configuration.
-    - **Reloader Indexing**: The `uvicorn` reloader is configured via `run.sh` to watch only source directories and explicitly exclude `.venv` and `node_modules`.
-    - **Deep Lazy Loading**: Heavy AI prompts and `langchain` utilities are imported strictly inside the functions that need them.
-    - **Production Ready**: Use `./run.sh prod` for optimized concurrency (multiple workers) without file watching.
-    - **Persistent Model Cache**: Embedding models are cached locally in `backend/chroma_db/models/` to bypass re-downloads.
+- **Extreme Backend Startup Optimization**: Sub-10s cold start even with heavy AI dependencies via:
+    - **Background Eager Loading**: AI libraries (LangChain/PyTorch) and LangGraph workflows preloaded in background threads during FastAPI `lifespan`.
+    - **Global Embedding Cache**: HuggingFace instances cached to prevent PyTorch reloads.
+    - **Decoupled Prompts**: Raw system prompts isolated in `backend/ai/prompts.py` to prevent library hangs during initial config.
+    - **Targeted Reloader**: `uvicorn` watches only source directories, explicitly excluding `.venv` and `node_modules`.
+    - **Deep Lazy Loading**: Heavy AI utilities imported strictly inside the call functions.
+    - **Persistent Model Cache**: Models cached locally in `backend/chroma_db/models/` to bypass re-downloads.
+    - **Production Ready**: Use `./run.sh prod` for optimized worker concurrency.
 - **Git Tagging**: Automated tagging for every version.
 
-### 3. State Management (LangGraph)
+### 5. State Management (LangGraph)
 The AI assistant uses **LangGraph** to manage conversational state, enabling multi-turn workflows and tool-calling (e.g., querying the database vs. searching documents).
 
-### 4. Dynamic Configuration
+### 6. Dynamic Configuration
 Settings are not just environment variables. They are persisted in `backend/app_settings.json`, allowing the user to change providers or themes at runtime via the UI without restarting the server.
 
-### 5. Backend Startup Optimization (Extreme v2)
-The backend is optimized for instant startup (< 5s) even with heavy AI dependencies:
-- **Reloader Indexing**: The `uvicorn` reloader is configured to watch only source directories (`ai`, `routers`, `database`) via the unified `run.sh` script, bypassing the scan of 15,000 files in the root.
-- **Factory Pattern & Lazy Routers**: `main.py` uses a `create_app()` factory that defers router inclusion and framework initialization until the worker is spawned.
-- **Deep Lazy Loading**: All heavy AI prompts and `langchain` utilities are imported strictly inside the functions that need them.
-- **Production Ready**: Use `./run.sh prod` for optimized concurrency (multiple workers) without file watching.
-- **Persistent Model Cache**: Embedding models are cached locally in `backend/chroma_db/models/`.
- to bypass re-downloads.
-
-### 6. AI Extraction & Preprocessing
+### 7. AI Extraction & Preprocessing
 The system uses a multi-stage pipeline to extract job details from URLs, PDFs, and text:
 - **Job Post Verification**: LangGraph-based `check_job_post_node` that confirms content is a job posting before extraction. Bypassed if JSON-LD is found. Supports Single-Agent embedding (verification result in main output) and Multi-Agent specialized nodes. Features a **fail-fast** strategy that halts the workflow immediately on negative results or technical verification errors. Customizable via the Settings UI.
 - **Contextual Metadata**: Extracts Company, Role, Location, Salary, Job ID, and Dates.
