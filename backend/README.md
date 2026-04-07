@@ -49,22 +49,23 @@ The system automatically routes tasks based on the **Extraction Strategy** (conf
 
 | Strategy | Input: JSON-LD (URL) | Input: Text (URL, PDF, Markdown) |
 | :--- | :--- | :--- |
-| **Single-Agent** | Monolithic prompt mapping Schema.org data to JobDetails. | Monolithic prompt with embedded self-verification logic. |
-| **Multi-Agent** | Parallelized fragment routing (bypasses LLM for missing fields). | 8+ parallel field-specific agents with raw-pass description extraction. |
+| **Single-Agent** | Monolithic prompt mapping Schema.org data to JobDetails. | Monolithic prompt with **Embedded Self-Verification** logic. |
+| **Multi-Agent** | Parallelized fragment routing (Bypasses LLM for missing fields). | 8+ parallel field-specific agents with raw-pass description extraction. |
 
 ---
 
 ### 🚀 Strategy 1: Single-Agent (High-Performance)
 Ideal for frontier models (GPT-4o, Claude 3). 
-- **Embedded Verification**: In Text mode, the prompt includes instructions to verify content and detect hallucinations in a single pass, reducing latency.
+- **Monolithic Context**: A single sophisticated LLM call captures all metadata and the description.
+- **Embedded Verification**: In Text mode, the prompt includes an internal verification block to confirm "is_job_post" and "detected_category" without a separate node call.
 - **Strict Mapping**: Directly converts structured JSON-LD into the application's schema.
 
 ### 🎭 Strategy 2: Multi-Agent (Small-Model/Parallel)
 Optimized for local models (Gemma, Llama) through task decomposition.
-- **Verification Node**: A dedicated `check_job_post_node` halts execution immediately if the content is not a job posting.
-- **Parallel Fields**: Extracts Company, Role, Salary, etc., concurrently using `asyncio.Semaphore` (configurable concurrency).
-- **JSON Fragment Routing**: To save tokens, the system slices JSON-LD and only sends relevant snippets to specific agents (e.g., `baseSalary` goes only to the Salary agent).
-- **Raw-Pass Description**: The description field is extracted without a strict JSON schema to prevent truncation and hangs common with small models.
+- **Verification Node**: A dedicated `check_job_post_node` runs as the first step to halt execution immediately on non-job content.
+- **Parallel Fields**: Extracts Company, Role, Location, Salary, ID, Posted, Deadline, and Description concurrently using `asyncio.Semaphore`.
+- **JSON Fragment Routing**: The system slices JSON-LD and only sends relevant snippets to specific agents (e.g., `baseSalary` goes only to the Salary agent). Fields missing in JSON-LD bypass the LLM phase for that attempt.
+- **Raw-Pass Description**: The description field is extracted without a strict JSON schema to prevent truncation.
 
 ---
 
@@ -74,16 +75,16 @@ Regardless of strategy, the following core features ensure 100% extraction fidel
 
 ### 1. Sequential Fallback Strategy
 The engine prioritizes structured data but falls back to semantic reasoning if needed:
-- **Priority A (JSON-LD)**: Attempts to extract 100% accurate data from `<script type="application/ld+json">`.
-- **Heuristic Validation**: If critical fields (Company, Role) are "N/A", placeholders, or missing, a fallback is triggered.
-- **Priority B (Full Text)**: Re-parses the raw page content to fill the gaps.
-- **Result Merging**: Merges findings, treating JSON-LD as the primary source of truth.
+- **Priority A (JSON-LD)**: Attempts to extract accurate data from Schema.org script tags first.
+- **Full-Schema Heuristic Validation**: The system checks **every field** in the schema (Company, Role, Location, Salary, Job ID, Dates, Description). If any field is "N/A", a placeholder, or missing, a fallback is triggered for that specific field.
+- **Priority B (Full Text)**: Re-parses the raw page content to fill gaps detected in the JSON-LD pass.
+- **Result Merging**: Treating JSON-LD as the primary source of truth, it only replaces/fills fields that failed the heuristic check.
 
 ### 2. QA Validation Loop (Circuit Breaker)
 Each extraction is validated by a dedicated **QA Node** with a 3-retry limit:
-- **Completeness Check**: Ensures the LAST items of lists (responsibilities, requirements) are present.
-- **Feedback Injection**: If validation fails, the specific failure reason is injected into the next extraction attempt's prompt to "guide" the LLM toward a fix.
-- **UI Flagging**: If the circuit breaker trips after 3 attempts, a `hallucination_detected` flag is set, triggering a warning in the UI.
+- **Scope**: Targeted primarily at the Description field for verbatim accuracy and completeness.
+- **Feedback Injection**: If validation fails, the failure reason is injected into the prompt of the same extraction node for the next attempt.
+- **UI Flagging**: If the circuit breaker trips after 3 attempts, the final output is preserved but flagged for manual review in the frontend.
 
 ---
 
@@ -93,31 +94,38 @@ Each extraction is validated by a dedicated **QA Node** with a 3-retry limit:
 ```mermaid
 graph TD
     A[Start: URL/Text/File] --> B{Strategy?}
-    B -- Single --> C[Monolithic Extractor]
-    B -- Multi --> D[Job Post Verifier Node]
-    D -- Pass --> E[Parallel Field Agents]
+    B -- Single Agent --> C[Monolithic Extractor<br/>(Embedded Verifier)]
+    B -- Multi Agent --> D[Job Post Verifier Node]
+    
+    D -- Pass --> E[Parallel Field Agents<br/>(8+ Specialized Nodes)]
     D -- Fail --> END[End: Error]
     
     C --> F{Sequential Fallback?}
     E --> F
     
-    F -- Missing JSON Metadata --> G[Full Text Semantic Fallback]
+    F -- Missing / Invalid<br/>Schema Fields --> G[Full Text Semantic Fallback]
     F -- Complete --> H[QA Validation Node]
     G --> H
     
-    H -- Fail < 3 Retries --> I[Inject Feedback & Retry]
-    I --> B
+    H -- QA Fail < 3 Retries --> I[Inject Feedback & Retry]
+    I --> F
     H -- Pass / Max Retries --> J[Finalize & Save]
 ```
 
-### Multi-Agent JSON Routing
+### Multi-Agent JSON Routing (Parallel)
 ```mermaid
 graph LR
     LD[Raw JSON-LD] --> S[Slicer]
     S -- "hiringOrganization" --> C[Company Agent]
+    S -- "title" --> R[Role Agent]
+    S -- "jobLocation" --> L[Location Agent]
     S -- "baseSalary" --> Sal[Salary Agent]
+    S -- "identifier" --> ID[Job ID Agent]
+    S -- "datePosted" --> P[Posted Agent]
+    S -- "validThrough" --> DL[Deadline Agent]
     S -- "description" --> Desc[Raw-Pass Agent]
-    C & Sal & Desc --> M[Result Merger]
+    
+    C & R & L & Sal & ID & P & DL & Desc --> M[Result Merger]
 ```
 
 ---
