@@ -60,6 +60,7 @@ Ideal for frontier models (GPT-4o, Claude 3).
 - **Embedded Verification**: In Text mode, the prompt includes an internal verification block to confirm "is_job_post" and "detected_category" without a separate node call.
 - **Strict Mapping**: Directly converts structured JSON-LD into the application's schema.
 
+#### Single-Agent Pipeline (Flowchart)
 ```mermaid
 graph TD
     Source["Job Source Content"] --> Mode{"Initial Path?"}
@@ -110,27 +111,6 @@ Each extraction is validated by a dedicated **QA Node** with a 3-retry limit:
 ---
 
 ## 📈 Visual Workflows
-
-### AI Extraction Lifecycle
-```mermaid
-graph TD
-    A["Start: URL/Text/File"] --> B{"Input Mode?"}
-    
-    B -- "JSON-LD Metadata Found" --> C["Initial Extraction<br/>(Priority A: Strict Map)"]
-    B -- "Raw Text / PDF / No JSON" --> D["Full Text Extraction<br/>(Priority B: Semantic)"]
-    
-    C --> E{"Heuristic Check?<br/>(Any 'N/A' or Missing Fields?)"}
-    
-    E -- "Field(s) Fail" --> D
-    E -- "All Fields Pass" --> G["QA Validation Node<br/>(Description QA)"]
-    
-    D --> G
-    
-    G -- "QA Fail < 3 Retries" --> H["Inject Feedback & Retry<br/>(Targeted Field Regeneration)"]
-    H --> D
-    
-    G -- "Pass / Max Retries" --> I["Finalize & Save"]
-```
 
 ### Multi-Agent Extraction (Parallel)
 ```mermaid
