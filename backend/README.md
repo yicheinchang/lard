@@ -78,7 +78,6 @@ graph TD
     QA -- "QA Fail < 3 Retries" --> Retry["Inject Feedback & Retry<br/>(Monolithic Regeneration)"]
     Retry --> Extractor
     
-    QA -- "Pass" --> Final["Finalize & Save"]
 ```
 
 ### 🎭 Strategy 2: Multi-Agent (Small-Model/Parallel)
@@ -94,16 +93,15 @@ graph TD
     Source["Job Source Content"] --> Router{"Input Type?"}
     
     Router -- "JSON-LD Found" --> Slicer["JSON Slicer<br/>(Extracts Fragments)"]
+    Router -- "Raw Text / PDF" --> TextSource["Processed Full Text<br/>(Semantic Context)"]
     
     Slicer --> JPool[["Job Agent Pool<br/>(Parallel Fields)"]]
+    TextSource --> JPool
     
     JPool --> Heuristic{"Heuristic Check?<br/>(Fields Missing?)"}
     
     Heuristic -- "All Fields Valid" --> Merger["Result Merger"]
-    Heuristic -- "JSON Fail: Fallback to Text" --> TextSource["Processed Full Text<br/>(Semantic Context)"]
-    Router -- "Raw Text / PDF" --> TextSource
-    
-    TextSource --> JPool
+    Heuristic -- "JSON Fail: Fallback to Text" --> TextSource
     
     Merger --> Final["Finalize & Save"]
 ```
