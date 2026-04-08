@@ -77,12 +77,13 @@ export const FilterPopover: React.FC<FilterPopoverProps> = ({
         </div>
 
         <div className="space-y-6 max-h-[70vh] overflow-y-auto pr-1 custom-scrollbar">
-          {/* Applied Date Range */}
+          {/* Activity Date Range */}
           <div className="space-y-3">
             <label className="flex items-center gap-2 text-xs font-semibold text-[var(--fg-muted)] uppercase tracking-wider">
               <Calendar className="w-4 h-4" />
-              Applied Date Range
+              Activity Date Range
             </label>
+            <p className="text-[10px] text-[var(--fg-subtle)] italic -mt-2 ml-6">Filters by applied date, interview steps, or decision dates.</p>
             <div className="grid grid-cols-2 gap-2">
               <div className="space-y-1">
                 <span className="text-[10px] text-[var(--fg-subtle)] ml-1 font-medium">From</span>

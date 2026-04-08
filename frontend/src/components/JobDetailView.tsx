@@ -59,7 +59,7 @@ export const JobDetailView: React.FC<JobDetailViewProps> = ({ job, onClose, onJo
         'company', 'role', 'url', 'status', 'location',
         'description', 'salary_range', 'hr_email',
         'hiring_manager_name', 'hiring_manager_email',
-        'company_job_id', 'created_at', 'applied_date'
+        'company_job_id', 'created_at', 'applied_date', 'decision_date', 'closed_date'
       ];
 
       const infoDirty = fields.some(field => {
@@ -1002,6 +1002,11 @@ export const JobDetailView: React.FC<JobDetailViewProps> = ({ job, onClose, onJo
                       </div>
 
                       <div className="flex flex-col gap-1">
+                        <label className="text-[10px] uppercase tracking-wider text-[var(--fg-subtle)]">Decision Made Date</label>
+                        <input type="date" className="bg-[var(--bg)] border border-[var(--border-color)] rounded-md px-2 py-1 text-sm text-[var(--fg)] focus:outline-none focus:border-violet-500 style-date" value={editFormData.decision_date ? editFormData.decision_date.substring(0, 10) : ''} onChange={e => handleEditChange('decision_date', e.target.value)} />
+                      </div>
+
+                      <div className="flex flex-col gap-1">
                         <label className="text-[10px] uppercase tracking-wider text-[var(--fg-subtle)]">System Record Created</label>
                         <input type="date" className="bg-[var(--bg)] border border-[var(--border-color)] rounded-md px-2 py-1 text-sm text-[var(--fg)] focus:outline-none focus:border-violet-500 style-date" value={editFormData.created_at ? editFormData.created_at.substring(0, 10) : ''} onChange={e => handleEditChange('created_at', e.target.value)} />
                       </div>
@@ -1091,6 +1096,12 @@ export const JobDetailView: React.FC<JobDetailViewProps> = ({ job, onClose, onJo
                       <span className="text-[var(--fg-subtle)] block text-xs mb-1 flex items-center gap-1.5"><CircleDollarSign className="w-3.5 h-3.5 text-green-500/70" /> Salary Range</span>
                       <span className="text-[var(--fg-muted)] font-medium">{job.salary_range || 'Not specified'}</span>
                     </div>
+                    {['Offered', 'Rejected', 'Discontinued'].includes(job.status) && (
+                      <div className="pt-2">
+                        <span className="text-[var(--fg-subtle)] block text-xs mb-1">Decision Date</span>
+                        <span className="text-[var(--fg-muted)] font-medium text-amber-400/80">{job.decision_date ? new Date(job.decision_date).toLocaleDateString() : 'Not Set'}</span>
+                      </div>
+                    )}
                     {job.status === 'Closed' && (
                       <div className="pt-2">
                         <span className="text-[var(--fg-subtle)] block text-xs mb-1">Job Closed Date</span>

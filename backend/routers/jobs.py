@@ -73,6 +73,7 @@ class JobBase(BaseModel):
     notes: Optional[str] = None
     created_at: Optional[datetime] = None
     applied_date: Optional[datetime] = None
+    decision_date: Optional[datetime] = None
     closed_date: Optional[datetime] = None
     last_operation: Optional[str] = None
     is_starred: Optional[bool] = False
@@ -100,6 +101,7 @@ class JobUpdate(BaseModel):
     notes: Optional[str] = None
     created_at: Optional[datetime] = None
     applied_date: Optional[datetime] = None
+    decision_date: Optional[datetime] = None
     closed_date: Optional[datetime] = None
     last_operation: Optional[str] = None
     is_starred: Optional[bool] = None

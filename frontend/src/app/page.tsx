@@ -83,15 +83,25 @@ export default function Home() {
         if (!filterCriteria.statuses.includes(job.status)) return false;
       }
 
-      // 3. Date Range Filter
-      if (filterCriteria.appliedDateStart) {
-        if (!job.applied_date || new Date(job.applied_date) < new Date(filterCriteria.appliedDateStart)) return false;
-      }
-      if (filterCriteria.appliedDateEnd) {
-        // Add 1 day to end date to include the entire day
-        const end = new Date(filterCriteria.appliedDateEnd);
-        end.setDate(end.getDate() + 1);
-        if (!job.applied_date || new Date(job.applied_date) >= end) return false;
+      // 3. Activity Date Range Filter
+      if (filterCriteria.appliedDateStart || filterCriteria.appliedDateEnd) {
+        const start = filterCriteria.appliedDateStart ? new Date(filterCriteria.appliedDateStart) : null;
+        const end = filterCriteria.appliedDateEnd ? new Date(filterCriteria.appliedDateEnd) : null;
+        if (end) end.setDate(end.getDate() + 1); // Include entire end day
+
+        const checkInRange = (d?: string) => {
+          if (!d) return false;
+          const date = new Date(d);
+          if (start && date < start) return false;
+          if (end && date >= end) return false;
+          return true;
+        };
+
+        const hasAppliedInRange = checkInRange(job.applied_date);
+        const hasDecisionInRange = checkInRange(job.decision_date);
+        const hasInterviewInRange = job.steps?.some(step => checkInRange(step.step_date));
+
+        if (!hasAppliedInRange && !hasDecisionInRange && !hasInterviewInRange) return false;
       }
 
       // 4. Closing Soon Filter
@@ -227,7 +237,13 @@ export default function Home() {
     try {
       const updateData: any = { status };
       if (date) {
-        updateData.applied_date = new Date(date).toISOString();
+        if (['Offered', 'Rejected', 'Discontinued'].includes(status)) {
+          updateData.decision_date = new Date(date).toISOString();
+        } else if (status === 'Applied') {
+          updateData.applied_date = new Date(date).toISOString();
+        } else if (status === 'Closed') {
+          updateData.closed_date = new Date(date).toISOString();
+        }
       }
       
       setIsUploadingDoc(true);

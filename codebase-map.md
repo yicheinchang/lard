@@ -172,6 +172,7 @@ Global configuration persisted on the server (`app_settings.json`).
 - `notes`: (Text, Markdown) User notes, automatically vectorized for RAG.
 - `hr_email`, `hiring_manager_name`, `hiring_manager_email`, `headhunter_name`, `headhunter_email`: (String)
 - `applied_date`: (DateTime, Nullable) The date the application was actually submitted. No default; null for Wishlist items. Clearing this date while steps exist is blocked. An entry here triggers an automatic move to "Applied" (or "Interviewing" if steps exist).
+- `decision_date`: (DateTime, Nullable) The date when a final decision (Offered, Rejected, Discontinued) was made.
 - `created_at`: (DateTime) The date the record was first added to the system.
 - `last_updated`: (DateTime) Triggered on any record change.
 

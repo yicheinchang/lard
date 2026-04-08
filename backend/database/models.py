@@ -59,6 +59,7 @@ class JobApplication(Base):
     
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
     applied_date = Column(DateTime, nullable=True)
+    decision_date = Column(DateTime, nullable=True)
     closed_date = Column(DateTime, nullable=True)
     last_updated = Column(DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
     last_operation = Column(String, nullable=True)

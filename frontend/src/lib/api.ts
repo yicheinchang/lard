@@ -49,6 +49,7 @@ export interface Job {
 
   created_at: string;
   applied_date?: string;
+  decision_date?: string;
   closed_date?: string;
   last_updated?: string;
   last_operation?: string;
