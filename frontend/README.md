@@ -7,6 +7,13 @@ Next.js-based frontend for the **Lard** (Lazy AI-powered Resume Database) applic
 > [!IMPORTANT]
 > Because the AI assistant does not have access to a live browser, all frontend changes **must be manually verified** by the developer. Ensure that theme consistency (Light/Dark mode) and responsive layouts (Mobile/Desktop) are checked before marking a feature as stable.
 
+## 📊 Component Highlights
+
+### Responsive Kanban Board
+The Kanban board features a dual-layout system for optimal productivity:
+- **Desktop/Tablet**: High-density horizontal grid with a minimum column width of `250px`. Supports horizontal scrolling to prevent information squishing.
+- **Mobile/Narrow Screens**: Integrated **Tabbed UI** (Segmented Control) that triggers below `1024px`. Automatically switches to a single-column focus with real-time job counts per stage.
+
 ## Manual Verification
 
 To ensure the quality of the frontend, please perform the following checks after any UI changes:

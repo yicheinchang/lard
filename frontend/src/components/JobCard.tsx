@@ -157,7 +157,7 @@ export const JobCard: React.FC<JobCardProps> = ({ job, onUpdateStatus, onClick, 
         </div>
 
         <div className="flex items-center justify-between border-t border-white/5 pt-2 mt-1 relative">
-          <span className={`px-2 py-0.5 rounded-full text-[10px] uppercase tracking-wider font-semibold flex items-center gap-1.5 shrink-0 ${statusColors[job.status] || 'text-[var(--fg-subtle)] bg-[var(--surface-hover)]'}`}>
+          <span className={`px-2 py-0.5 rounded-full text-[10px] uppercase tracking-wider font-semibold flex items-center gap-1.5 shrink-0 whitespace-nowrap ${statusColors[job.status] || 'text-[var(--fg-subtle)] bg-[var(--surface-hover)]'}`}>
             {statusIcons[job.status]}
             {job.status}
           </span>

@@ -56,9 +56,10 @@ This document provides a summary of the project's architecture, tech stack, and 
 - `src/app/`: Next.js routes (Layouts and Pages).
 - `src/components/`: Reusable UI components:
   - `AppShell.tsx`: Main layout wrapper featuring a **Resizable Sidebar** (Draggable handle with width persistence). Includes **Mobile Responsive Header** and **Hamburger Menu Drawer**.
-  - `KanbanBoard.tsx`: Drag-and-drop pipeline visualization. Features **Independent Vertical Scrolling** for columns and a **Sticky Horizontal Scrollbar** at the bottom of the viewport. Supports dynamic heights (shrinks to fit content).
+  - `KanbanBoard.tsx`: Responsive drag-and-drop pipeline visualization. Features **Min-Width enforcement** (250px) for desktop with horizontal scrolling and a **Tabbed Mobile UI** (below 1024px) for focused single-column tracking. Supports independent vertical scrolling and dynamic counts.
   - `TableView.tsx`: Density-rich list view of applications. Includes **Hover-activated Tooltips** for company and role cells to prevent truncation.
-  - `JobCard.tsx`: Individual job item in the Kanban board. Features **Hover-activated Tooltips** for company and role names with smart wrapping and overflow support.
+  - `JobCard.tsx`: Individual job item in the Kanban board. Features **Hover-activated Tooltips** and **Status text protection** (nowrap) for clean readability at any width.
+
   - `JobDetailView.tsx`: Core component for job application management. Features a **Centered Floating Modal** with a backdrop-blur overlay and a **Full-Screen Toggle**. Consists of three tabs:
       *   **Interview Pipeline** (Default): Timeline events with full CRUD and inline editing.
       *   **Job Details**: Metadata management and document attachments.
