@@ -177,7 +177,7 @@ export const TableView: React.FC<TableViewProps> = ({ jobs, onUpdateStatus, onJo
                           {job.company}
                         </span>
                         {/* Tooltip for company */}
-                        <div className="absolute left-0 top-full mt-1.5 opacity-0 group-hover/tooltip:opacity-100 pointer-events-none transition-all duration-200 bg-black/90 backdrop-blur-md border border-white/20 text-white text-[11px] px-2.5 py-1.5 rounded-lg shadow-2xl z-50 whitespace-normal break-words min-w-max max-w-[280px]">
+                        <div className="absolute left-0 top-full mt-1.5 opacity-0 group-hover/tooltip:opacity-100 pointer-events-none transition-all duration-200 tooltip-box text-[11px] px-2.5 py-1.5 rounded-lg shadow-2xl z-50 whitespace-normal break-words min-w-max max-w-[280px]">
                           {job.company}
                         </div>
                       </div>
@@ -187,7 +187,7 @@ export const TableView: React.FC<TableViewProps> = ({ jobs, onUpdateStatus, onJo
                     <div className="group/tooltip relative inline-flex items-center">
                       <span className="truncate">{job.role}</span>
                       {/* Tooltip for role */}
-                      <div className="absolute left-0 top-full mt-1.5 opacity-0 group-hover/tooltip:opacity-100 pointer-events-none transition-all duration-200 bg-black/90 backdrop-blur-md border border-white/20 text-white text-[11px] px-2.5 py-1.5 rounded-lg shadow-2xl z-50 whitespace-normal break-words min-w-max max-w-[280px]">
+                      <div className="absolute left-0 top-full mt-1.5 opacity-0 group-hover/tooltip:opacity-100 pointer-events-none transition-all duration-200 tooltip-box text-[11px] px-2.5 py-1.5 rounded-lg shadow-2xl z-50 whitespace-normal break-words min-w-max max-w-[280px]">
                         {job.role}
                       </div>
                     </div>

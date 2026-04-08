@@ -641,7 +641,7 @@ export const JobDetailView: React.FC<JobDetailViewProps> = ({ job, onClose, onJo
                     <Plus className="w-4 h-4" /> Add Step
                   </button>
                   {!job.applied_date && (
-                    <div className="absolute bottom-full right-0 mb-2 w-48 p-2 bg-black/80 backdrop-blur text-[10px] text-white rounded-lg opacity-0 group-hover/addstep:opacity-100 pointer-events-none transition-opacity border border-white/10 shadow-xl">
+                    <div className="absolute bottom-full right-0 mb-2 w-48 p-2 tooltip-box text-[10px] rounded-lg opacity-0 group-hover/addstep:opacity-100 pointer-events-none transition-opacity shadow-xl z-50">
                       You must provide an "Actually Applied" date in the Job Details tab before adding interview steps.
                     </div>
                   )}

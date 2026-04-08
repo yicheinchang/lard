@@ -1,5 +1,5 @@
 # Codebase Map: Lard - Lazy AI-powered Resume Database
-Last Updated: 2026-04-07T20:21:40Z
+Last Updated: 2026-04-08T18:36:15Z
 
 This document provides a summary of the project's architecture, tech stack, and key logic to give AI coding agents instant context.
 
@@ -69,6 +69,7 @@ This document provides a summary of the project's architecture, tech stack, and 
   - `FilterPopover.tsx`: Advanced filtering UI for dashboard header. Features a **Toggle-based Starred Status** filter (Starred/Unstarred icons) and refined active-state logic.
   - `ProcessingOverlay.tsx`: Full-screen overlay for tracking long-running AI tasks with SSE updates. Feature: **Auto-closes 1.5s after success** and theme-aware styling.
   - `AutoSaveIndicator.tsx`: Small, non-blocking status indicator for background AI vectorization during note taking.
+  - `tooltip-box`: Theme-aware CSS utility in `globals.css` ensuring readable tooltips in both light and dark modes.
   - `AddJobModal.tsx`: Core form for new applications. Includes AI Auto-fill, Potential Hallucination Warning System, and **validation guards for required fields** (Company/Role).
   - `ConfirmDialog.tsx`: Multi-functional modal replacing native prompts. Supports **Date Inputs**, **File Uploads**, and **Combobox Text Inputs** (with custom `<datalist>`). Includes variant-based styling (`danger`, `success`, `default`).
   - `ChatAssistant.tsx`: Global drawer for the AI agent.

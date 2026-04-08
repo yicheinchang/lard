@@ -304,6 +304,22 @@ input[type="date"].style-date::-webkit-calendar-picker-indicator {
   background-color: #111118 !important;
 }
 
+/* ── Tooltip Component ───────────────────────────────────────────── */
+.tooltip-box {
+  background-color: rgba(0, 0, 0, 0.9);
+  color: #ffffff !important; /* Force white text in dark tooltip */
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+[data-theme="light"] .tooltip-box {
+  background-color: #ffffff;
+  color: var(--fg) !important; /* Responsive text color in light mode */
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.15);
+}
+
 /* ── Native Form Element Readability ─────────────────────────────── */
 
 select, option, input, textarea {
