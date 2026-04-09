@@ -88,7 +88,7 @@ docker-compose up -d --build
 Access the application at **[http://localhost:8081](http://localhost:8081)**.
 
 ### 4. Persistence
-All data (database, settings, uploads) is persisted in the `./data` directory in the project root.
+All data (database, settings, uploads) is persisted using **Docker Named Volumes**, ensuring your data is safe even if containers are removed.
 
 ---
 

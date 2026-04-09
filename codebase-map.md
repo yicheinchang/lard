@@ -25,7 +25,7 @@ This document provides a summary of the project's architecture, tech stack, and 
 ### Infrastructure
 - **Containerization**: Docker & Docker Compose
 - **Orchestration**: Multi-stage builds for Frontend and Backend
-- **Persistence**: Host-mounted directory (`./data/`)
+- **Persistence**: Docker Named Volumes
 - **Isolation**: Backend private to host; Gateway via Frontend (Next.js Proxy)
 - **Deployment Port**: 8081
 

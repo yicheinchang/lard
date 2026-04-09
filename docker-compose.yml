@@ -5,14 +5,14 @@ services:
     container_name: lard-backend
     restart: unless-stopped
     volumes:
-      - ./data/tracker.db:/app/tracker.db
-      - ./data/app_settings.json:/app/app_settings.json
-      - ./data/chroma_db:/app/chroma_db
-      - ./data/uploads:/app/uploads
+      - lard-db:/app/db_init # Helper for potential migrations, but let's stick to files
+      - lard-db-file:/app/tracker.db
+      - lard-settings:/app/app_settings.json
+      - lard-chroma:/app/chroma_db
+      - lard-uploads:/app/uploads
     environment:
       - DATABASE_URL=sqlite:////app/tracker.db
       - OLLAMA_BASE_URL=http://host.docker.internal:11434
-      # Pass through provider keys if in .env
       - OPENAI_API_KEY=${OPENAI_API_KEY:-}
       - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
     extra_hosts:
@@ -40,3 +40,10 @@ services:
       options:
         max-size: "10m"
         max-file: "3"
+
+volumes:
+  lard-db-file:
+  lard-settings:
+  lard-chroma:
+  lard-uploads:
+  lard-db:
