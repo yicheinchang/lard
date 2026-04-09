@@ -23,7 +23,7 @@ export const DocumentPreview: React.FC<DocumentPreviewProps> = ({
   useEffect(() => {
     if (isOpen && (fileUrl?.endsWith('.md') || fileUrl?.endsWith('.txt'))) {
       setLoading(true);
-      fetch(`http://localhost:8000${fileUrl}`)
+      fetch(`/api/proxy${fileUrl}`)
         .then(res => res.text())
         .then(text => {
           setMarkdownContent(text);
@@ -42,7 +42,7 @@ export const DocumentPreview: React.FC<DocumentPreviewProps> = ({
   if (!isOpen || !fileUrl) return null;
 
   const isPdf = fileUrl.toLowerCase().endsWith('.pdf');
-  const fullUrl = `http://localhost:8000${fileUrl}`;
+  const fullUrl = `/api/proxy${fileUrl}`;
 
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 md:p-8 bg-black/80 backdrop-blur-md animate-fade-in" onClick={onClose}>

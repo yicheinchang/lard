@@ -1,6 +1,7 @@
 # 🐱 Lard - Frontend
 
 Next.js-based frontend for the **Lard** (Lazy AI-powered Resume Database) application.
+Serves as the **Secure Gateway** for the entire stack, utilizing an **API Proxy** for streaming and **Server Actions** for secure mutations.
 
 ## 🧪 Verified Development
 

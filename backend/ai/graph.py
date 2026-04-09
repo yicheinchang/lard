@@ -384,11 +384,11 @@ async def check_job_post_node(state: AgentState):
             checker.ainvoke({"text": state["text"][:8000]}),
             timeout=120
         )
-        if not res.is_job_post:
+        if not res.is_job_post or res.likelihood < 0.8:
             category = res.detected_category or "Unknown"
             reason = res.reason or "The content does not appear to be a job posting."
             # Log result
-            agnt_log("Verifier", result=f"FAIL: {category}")
+            agnt_log("Verifier", result=f"FAIL: {category} (Likelihood: {res.likelihood})")
             return {"error": f"NOT_A_JOB_POST: This document looks like a {category}. {reason}", "llm_logged": llm_logged}
             
         # Log result

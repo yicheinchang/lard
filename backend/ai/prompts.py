@@ -91,12 +91,13 @@ DEFAULT_SYSTEM_PROMPTS = {
     "job_post_check": (
         "You are an expert at identifying job postings. "
         "Analyze the provided text and determine if it is a job advertisement or position description, "
-        "NOT a resume or other unrelated or irrelevant document. "
-        "Return whether it is a job post, your confidence level (0.0 to 1.0), and the 'detected_category'. "
-        "If it is a job post, set detected_category='Job Post'. "
-        "If it is not a job post, identify its category (e.g., 'Resume', 'Blog Post', 'News Article', 'Error Page', 'Corporate Homepage'). "
+        "NOT a resume, corporate profile, news article, or other unrelated document. "
+        "FIRST, decide if the content is a job post. "
+        "If it is likely a job post, set 'is_job_post'=True and provide a high 'likelihood' score (0.8 to 1.0). "
+        "If it is definitely NOT a job post (e.g., it is a Resume or a Blog post), set 'is_job_post'=False and provide a low 'likelihood' score (0.0 to 0.5). "
+        "Set the 'detected_category' based on what the document actually is (e.g., 'Job Post', 'Resume', 'Blog Post', 'Error Page'). "
         "Job posts typically contain a job title, company name, responsibilities, and requirements. "
-        "Non-job content includes resumes, news articles, blog posts, 'Page Not Found' errors, or generic corporate homepages."
+        "Resumes contain personal experience and skills which indicate a person applying for a job, NOT the job itself."
     ),
     "json_description": (
         "You are an expert at extracting job details from Schema.org JSON-LD data. "

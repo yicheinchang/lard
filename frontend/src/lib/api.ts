@@ -1,7 +1,23 @@
 import axios from 'axios';
 
+import { 
+  updateSettingsAction, 
+  rebuildVectorsAction, 
+  testLlmAction, 
+  testEmbeddingAction,
+  updateJobAction,
+  deleteJobAction,
+  checkDuplicateAction,
+  addStepAction,
+  updateStepAction,
+  deleteStepAction,
+  deleteDocumentAction,
+  extractUrlAction,
+  extractTextAction
+} from './actions';
+
 const api = axios.create({
-  baseURL: 'http://localhost:8000/api',
+  baseURL: '/api/proxy/api',
 });
 
 export interface StepType {
@@ -130,8 +146,7 @@ export const getSettings = async (): Promise<AppSettings> => {
 };
 
 export const updateSettings = async (data: Partial<AppSettings>): Promise<AppSettings> => {
-  const response = await api.put('/settings', data);
-  return response.data;
+  return updateSettingsAction(data);
 };
 
 export const getDefaultPrompts = async (): Promise<AppSettings['system_prompts']> => {
@@ -140,24 +155,21 @@ export const getDefaultPrompts = async (): Promise<AppSettings['system_prompts']
 };
 
 export const rebuildVectors = async () => {
-  const response = await api.post('/settings/rebuild-vectors');
-  return response.data;
+  return rebuildVectorsAction();
 };
 
 export const testLlmConnection = async (testConfig?: { provider: string; config: any }) => {
-  const response = await api.post('/settings/test-llm', testConfig ? {
+  return testLlmAction(testConfig ? {
     provider: testConfig.provider,
     config: testConfig.config
   } : undefined);
-  return response.data;
 };
 
 export const testEmbeddingConnection = async (testConfig?: { provider: string; config: any }) => {
-  const response = await api.post('/settings/test-embedding', testConfig ? {
+  return testEmbeddingAction(testConfig ? {
     provider: testConfig.provider,
     config: testConfig.config
   } : undefined);
-  return response.data;
 };
 
 export const getOllamaModels = async (baseUrl: string): Promise<string[]> => {
@@ -181,7 +193,7 @@ export const createJobStream = async (job: Partial<Job>, file: File | null, onPr
     formData.append('file', file);
   }
 
-  const response = await fetch(`http://localhost:8000/api/jobs/stream`, {
+  const response = await fetch(`/api/proxy/api/jobs/stream`, {
     method: 'POST',
     body: formData,
   });
@@ -218,7 +230,7 @@ export const createJobStream = async (job: Partial<Job>, file: File | null, onPr
 };
 
 export const updateJobStream = async (id: number, jobUpdate: Partial<Job>, onProgress: (event: string, msg: string, data?: any) => void) => {
-  const response = await fetch(`http://localhost:8000/api/jobs/${id}/stream`, {
+  const response = await fetch(`/api/proxy/api/jobs/${id}/stream`, {
     method: 'PUT',
     headers: {
       'Content-Type': 'application/json',
@@ -258,13 +270,11 @@ export const updateJobStream = async (id: number, jobUpdate: Partial<Job>, onPro
 };
 
 export const updateJob = async (id: number, jobUpdate: Partial<Job>) => {
-  const response = await api.put(`/jobs/${id}`, jobUpdate);
-  return response.data;
+  return updateJobAction(id, jobUpdate);
 };
 
 export const deleteJob = async (id: number) => {
-  const response = await api.delete(`/jobs/${id}`);
-  return response.data;
+  return deleteJobAction(id);
 };
 
 export const getStepTypes = async () => {
@@ -278,33 +288,27 @@ export const getCompanies = async (): Promise<{id: number, name: string}[]> => {
 };
 
 export const checkJobDuplicate = async (data: { company: string, role: string, url?: string, company_job_id?: string }) => {
-  const response = await api.post('/jobs/check-duplicate', data);
-  return response.data;
+  return checkDuplicateAction(data);
 };
 
 export const addInterviewStep = async (jobId: number, step_type_name: string, step_date?: string, status?: string, notes?: string) => {
-  const response = await api.post(`/jobs/${jobId}/steps`, { step_type_name, step_date, status, notes });
-  return response.data;
+  return addStepAction(jobId, { step_type_name, step_date, status, notes });
 };
 
 export const updateInterviewStep = async (stepId: number, updateData: { step_type_name?: string, step_date?: string, status?: string, notes?: string }) => {
-  const response = await api.put(`/jobs/steps/${stepId}`, updateData);
-  return response.data;
+  return updateStepAction(stepId, updateData);
 };
 
 export const deleteInterviewStep = async (stepId: number) => {
-  const response = await api.delete(`/jobs/steps/${stepId}`);
-  return response.data;
+  return deleteStepAction(stepId);
 };
 
 export const extractJobFromUrl = async (url: string, signal?: AbortSignal) => {
-  const response = await api.post('/ai/extract-url', { url }, { signal });
-  return response.data;
+  return extractUrlAction(url);
 };
 
 export const extractJobFromText = async (text: string, signal?: AbortSignal) => {
-  const response = await api.post('/ai/extract-text', { text }, { signal });
-  return response.data;
+  return extractTextAction(text);
 };
 
 export const extractJobFromFile = async (file: File, signal?: AbortSignal) => {
@@ -328,7 +332,7 @@ export const uploadJobDocumentStream = async (jobId: number, file: File, docType
   formData.append('file', file);
   formData.append('doc_type', docType);
 
-  const response = await fetch(`http://localhost:8000/api/jobs/${jobId}/documents/stream`, {
+  const response = await fetch(`/api/proxy/api/jobs/${jobId}/documents/stream`, {
     method: 'POST',
     body: formData,
   });
@@ -365,8 +369,7 @@ export const uploadJobDocumentStream = async (jobId: number, file: File, docType
 };
 
 export const deleteJobDocument = async (docId: number) => {
-  const response = await api.delete(`/documents/${docId}`);
-  return response.data;
+  return deleteDocumentAction(docId);
 };
 
 export default api;

@@ -211,7 +211,7 @@ export const AddJobModal: React.FC<AddJobModalProps> = ({ isOpen, onClose, onAdd
         return fd;
       })() : JSON.stringify({ url: formData.url });
 
-      const response = await fetch(`http://localhost:8000${endpoint}`, {
+      const response = await fetch(`/api/proxy${endpoint}`, {
         method: 'POST',
         headers: selectedFile ? {} : { 'Content-Type': 'application/json' },
         body,

@@ -26,8 +26,8 @@ An AI-powered, high-performance job application tracking system with automated d
 
 ## 📂 Project Structure
 
-- **`/backend`**: FastAPI ecosystem. Handles data persistence (SQLAlchemy + SQLite), vector search (ChromaDB), and AI orchestration (LangGraph).
-- **`/frontend`**: Next.js 15 + Tailwind CSS. Provides a premium, theme-aware user experience with local persistence for layout adjustments.
+- **`/backend`**: FastAPI ecosystem. Handles data persistence (SQLAlchemy + SQLite), vector search (ChromaDB), and AI orchestration (LangGraph). Isolated from public access.
+- **`/frontend`**: Next.js 15 + Tailwind CSS. Acts as the secure gateway via **API Proxying** and **Server Actions**.
 
 ---
 
@@ -71,4 +71,4 @@ For detailed architecture, API endpoints, and optimization details, refer to:
 
 ---
 Built with ❤️ by Antigravity.
-Current version: v0.51.26
+Current version: v0.54.0
