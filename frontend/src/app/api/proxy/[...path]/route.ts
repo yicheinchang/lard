@@ -21,7 +21,7 @@ async function handleRequest(req: NextRequest, { params }: { params: Promise<{ p
   // Clone headers and set host for the backend
   const headers = new Headers(req.headers);
   headers.delete('host'); // Let fetch set the correct host header
-  headers.set('X-Forwarded-For', req.ip || '127.0.0.1');
+  headers.set('X-Forwarded-For', headers.get('x-forwarded-for') || '127.0.0.1');
 
   try {
     const fetchOptions: RequestInit = {

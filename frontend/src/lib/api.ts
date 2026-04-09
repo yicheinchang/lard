@@ -136,6 +136,7 @@ export interface AppSettings {
     json_id: string;
     json_posted: string;
     json_deadline: string;
+    json_description: string;
     job_post_check: string;
   };
 }

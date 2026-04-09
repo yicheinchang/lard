@@ -22,6 +22,7 @@ const defaultSettings: AppSettings = {
     openai_model: 'gpt-4o-mini',
     anthropic_api_key: '',
     anthropic_model: 'claude-3-haiku-20240307',
+    num_ctx: 8192,
   },
   embedding_provider: 'default',
   embedding_config: {
@@ -32,6 +33,41 @@ const defaultSettings: AppSettings = {
   },
   extraction_mode: 'single',
   max_concurrency: 2,
+  custom_prompts: {
+    single_agent: '',
+    multi_agent: {
+      company: '',
+      role: '',
+      location: '',
+      salary_range: '',
+      job_posted_date: '',
+      application_deadline: '',
+      description: ''
+    },
+    job_post_check: ''
+  },
+  system_prompts: {
+    extraction_base: '',
+    extraction_description: '',
+    json_ld: '',
+    qa_validator: '',
+    field_company: '',
+    field_role: '',
+    field_location: '',
+    field_salary: '',
+    field_id: '',
+    field_posted: '',
+    field_deadline: '',
+    json_company: '',
+    json_role: '',
+    json_location: '',
+    json_salary: '',
+    json_id: '',
+    json_posted: '',
+    json_deadline: '',
+    json_description: '',
+    job_post_check: ''
+  }
 };
 
 const SettingsContext = createContext<SettingsContextType | undefined>(undefined);
