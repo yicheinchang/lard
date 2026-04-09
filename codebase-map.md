@@ -1,5 +1,5 @@
-# 🗺️ Lard - Codebase Map (v0.54.0)
-Last Updated: 2026-04-09T15:46:00Z
+# 🗺️ Lard - Codebase Map (v0.55.0)
+Last Updated: 2026-04-09T19:38:00Z
 
 This document provides a summary of the project's architecture, tech stack, and key logic to give AI coding agents instant context.
 
@@ -19,6 +19,15 @@ This document provides a summary of the project's architecture, tech stack, and 
 - **Icons**: Lucide React
 - **API Pattern**: Next.js API Proxy (Route Handlers) & Server Actions
 - **API Client**: Axios (Proxied) & Fetch (Proxied SSE)
+
+---
+
+### Infrastructure
+- **Containerization**: Docker & Docker Compose
+- **Orchestration**: Multi-stage builds for Frontend and Backend
+- **Persistence**: Host-mounted directory (`./data/`)
+- **Isolation**: Backend private to host; Gateway via Frontend (Next.js Proxy)
+- **Deployment Port**: 8081
 
 ---
 

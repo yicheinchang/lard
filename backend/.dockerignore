@@ -1,0 +1,11 @@
+node_modules
+.venv
+__pycache__
+*.db
+chroma_db
+uploads
+app_settings.json
+.git
+.env
+import_times.log
+tmp/

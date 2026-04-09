@@ -1,0 +1,16 @@
+**/node_modules
+**/.venv
+**/__pycache__
+**/*.db
+**/chroma_db
+**/uploads
+**/app_settings.json
+**/.git
+**/.next
+**/dist
+**/out
+.env
+.env.local
+docker-compose.override.yml
+import_times.log
+tmp/

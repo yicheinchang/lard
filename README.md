@@ -62,6 +62,34 @@ cd backend
 ./run.sh prod
 ```
 
+```
+
+---
+
+## 🐳 Docker Deployment (Recommended)
+
+Run the entire stack with a single command using Docker Compose.
+
+### 1. Requirements
+- Docker and Docker Compose installed.
+- Ollama running on the host (if using local models).
+
+### 2. Configuration
+Copy the environment template:
+```bash
+cp .env.example .env
+```
+Edit `.env` to add your OpenAI/Anthropic keys if needed.
+
+### 3. Startup
+```bash
+docker-compose up -d --build
+```
+Access the application at **[http://localhost:8081](http://localhost:8081)**.
+
+### 4. Persistence
+All data (database, settings, uploads) is persisted in the `./data` directory in the project root.
+
 ---
 
 ## 📚 Documentation
@@ -71,4 +99,4 @@ For detailed architecture, API endpoints, and optimization details, refer to:
 
 ---
 Built with ❤️ by Antigravity.
-Current version: v0.54.0
+Current version: v0.55.0
