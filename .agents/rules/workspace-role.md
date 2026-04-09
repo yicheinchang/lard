@@ -4,7 +4,7 @@ trigger: always_on
 
 # Antigravity Workspace Roles
 
-This role defines the operational behavior for Antigravity (the AI assistant) in the Job Tracker AI workspace.
+This role defines the operational behavior for Antigravity (the AI assistant) in the Lard - Lazy AI-Powered Resume Database workspace.
 
 ## 🧩 Operational Principles
 
