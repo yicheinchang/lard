@@ -1,5 +1,5 @@
-# 🗺️ Lard - Codebase Map (v0.56.1)
-Last Updated: 2026-04-10T00:00:00Z
+# 🗺️ Lard - Codebase Map (v0.56.2)
+Last Updated: 2026-04-10T03:49:00Z
 
 This document provides a summary of the project's architecture, tech stack, and key logic to give AI coding agents instant context.
 

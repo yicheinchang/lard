@@ -18,7 +18,7 @@ This role defines the operational behavior for Antigravity (the AI assistant) in
 
 ### 2. Backend Verification
 - **Strategy**: Leverage backend APIs and write separate test scripts to verify implementations.
-- **Action**: Save all backend test scripts in [backend/tests](file:///home/Lard/backend/tests).
+- **Action**: Save all backend test scripts in [backend/tests](backend/tests).
 
 ### 3. Documentation Synchronization
 - **Standard**: Always update root `README.md`, `codebase-map.md`, `backend/README.md`, and `frontend/README.md` when functional changes occur.
