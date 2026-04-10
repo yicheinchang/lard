@@ -7,6 +7,7 @@ import asyncio
 import os
 import shutil
 import logging
+import io
 from config import load_app_settings
 from ai.logger import agnt_log
 
@@ -89,16 +90,14 @@ def _extract_content(html: str, url: str | None = None) -> tuple[str, dict | Non
     text = ""
     try:
         converter = get_docling_converter()
-        # Docling can process local files. We save to a temp file for consistent parsing.
-        temp_path = f"tmp_extraction_{os.getpid()}.html"
-        with open(temp_path, "w", encoding="utf-8") as f:
-            f.write(html)
+        from docling.datamodel.base_models import DocumentStream
         
-        result = converter.convert(temp_path)
+        # Use in-memory stream to avoid Disk I/O overhead
+        content_stream = io.BytesIO(html.encode("utf-8"))
+        doc_stream = DocumentStream(name="extraction.html", stream=content_stream)
+        
+        result = converter.convert(doc_stream)
         text = result.document.export_to_markdown()
-        
-        if os.path.exists(temp_path):
-            os.remove(temp_path)
     except Exception as e:
         logger.error(f"Docling failed: {e}")
         # Fallback to absolute basics if Docling crashes
