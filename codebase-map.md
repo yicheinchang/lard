@@ -1,4 +1,4 @@
-# 🗺️ Lard - Lazy AI-Powered Resume Database (v0.56.7)
+# 🗺️ Lard - Lazy AI-Powered Resume Database (v0.56.8)
 Last Updated: 2026-04-10T03:49:00Z
 
 This document provides a summary of the project's architecture, tech stack, and key logic to give AI coding agents instant context.
@@ -316,6 +316,7 @@ The system uses a multi-stage pipeline to extract job details from URLs, PDFs, a
 - **Sequential Fallback Strategy**: Implements a two-phase extraction pipeline. Attempt 1 (JSON-LD) targets structured data for speed and precision. If metadata fields (Company, Role, etc.) are missing, Attempt 2 (Full Text) is triggered. Features **Heuristic Validation** to detect placeholders like "N/A" or "Unknown" and trigger fallbacks immediately. Results are merged, treating JSON-LD as the primary source of truth and only "filling gaps" from the text-based extraction. This applies to both Single and Multi-Agent strategies.
 - **Enhanced Entity Recognition**: Single-agent prompts are optimized to identify metadata in document headers/summaries, specifically targeting alphanumeric Job IDs (e.g., "REQ-12345").
 - **Multi-line Diagnostic Logging**: The AI logger supports full, non-truncated multi-line output for fallback reasons and QA failures, providing high transparency for prompt engineering and debugging.
+- **Prompt Safety & Escaping**: Implements an `escape_braces` utility in `chains.py` that automatically escapes literal curly braces in all system prompts before they are passed to LangChain. This prevents template variable errors when prompts contain literal JSON examples, ensuring compatibility across all extraction strategies (Single/Multi-Agent) and models (with or without Tool Calling).
 
 ### 6. Document Ingestion
 Supports PDF and plain text. PDFs are parsed using `pypdf` and split into chunks before vectorization.

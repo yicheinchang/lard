@@ -2,6 +2,13 @@ from langchain_core.prompts import ChatPromptTemplate
 from pydantic import BaseModel, Field
 
 from .prompts import DEFAULT_SYSTEM_PROMPTS
+import re
+
+def escape_braces(s: str) -> str:
+    """Helper to escape literal curly braces in a string so they aren't treated as LangChain variables."""
+    if not s:
+        return ""
+    return s.replace("{", "{{").replace("}", "}}")
 
 def get_base_prompt(key: str, settings: dict | None = None) -> str:
     """Helper to retrieve a base system prompt from settings or fallback to default."""
@@ -75,7 +82,7 @@ def get_field_prompt(field_name: str, settings: dict | None = None):
         "application_deadline": "field_deadline"
     }
     key = mapping.get(field_name)
-    base = get_base_prompt(key, settings) if key else ""
+    base = escape_braces(get_base_prompt(key, settings) if key else "")
     
     return ChatPromptTemplate.from_messages([
         ("system", base + "{validation_feedback}{custom_guidance}"),
@@ -83,29 +90,33 @@ def get_field_prompt(field_name: str, settings: dict | None = None):
     ])
 
 def _create_description_prompt(settings: dict | None = None):
+    base = escape_braces(get_base_prompt("extraction_description", settings))
     return ChatPromptTemplate.from_messages([
-        ("system", get_base_prompt("extraction_description", settings) + "{validation_feedback}{custom_guidance}"),
+        ("system", base + "{validation_feedback}{custom_guidance}"),
         ("user", "CONTENT TO PROCESS:\n\"\"\"\n{text}\n\"\"\"")
     ])
 
 # Helper to create extraction prompt
 def get_extraction_prompt(settings: dict | None = None):
+    base = escape_braces(get_base_prompt("extraction_base", settings))
     return ChatPromptTemplate.from_messages([
-        ("system", get_base_prompt("extraction_base", settings) + "{validation_feedback}{custom_guidance}"),
+        ("system", base + "{validation_feedback}{custom_guidance}"),
         ("user", "SOURCE URL: {url}\n\nCONTENT TO PROCESS:\n\"\"\"\n{text}\n\"\"\"")
     ])
 
 # Helper to create JSON-LD prompt
 def get_json_ld_prompt(settings: dict | None = None):
+    base = escape_braces(get_base_prompt("json_ld", settings))
     return ChatPromptTemplate.from_messages([
-        ("system", get_base_prompt("json_ld", settings) + "{validation_feedback}{custom_guidance}"),
+        ("system", base + "{validation_feedback}{custom_guidance}"),
         ("user", "RAW JSON-LD DATA:\n{json_ld_data}\n\nRAW PAGE TEXT:\n{raw_text}")
     ])
 
 # Helper to create QA validation prompt
 def get_validation_prompt(settings: dict | None = None):
+    base = escape_braces(get_base_prompt("qa_validator", settings))
     return ChatPromptTemplate.from_messages([
-        ("system", get_base_prompt("qa_validator", settings) + "{custom_guidance}"),
+        ("system", base + "{custom_guidance}"),
         ("user", "SOURCE TYPE: {source_type}\n\nRAW SOURCE:\n\"\"\"\n{source_text}\n\"\"\"\n\nGENERATED DESCRIPTION:\n\"\"\"\n{generated_description}\n\"\"\"")
     ])
 
@@ -116,8 +127,10 @@ def get_job_post_check_prompt(settings: dict | None = None):
         cg = settings["custom_prompts"].get("job_post_check", "")
         if cg: custom_guidance = f"\n\nADDITIONAL USER INSTRUCTIONS:\n{cg}"
         
+    base = escape_braces(get_base_prompt("job_post_check", settings) + custom_guidance)
+        
     return ChatPromptTemplate.from_messages([
-        ("system", get_base_prompt("job_post_check", settings) + custom_guidance),
+        ("system", base),
         ("user", "CONTENT TO ANALYZE:\n\"\"\"\n{text}\n\"\"\"")
     ])
 
@@ -136,7 +149,7 @@ def get_json_field_prompt(field_name: str, settings: dict | None = None):
         "application_deadline": "json_deadline"
     }
     key = mapping.get(field_name)
-    base = get_base_prompt(key, settings) if key else ""
+    base = escape_braces(get_base_prompt(key, settings) if key else "")
 
     return ChatPromptTemplate.from_messages([
         ("system", base + "{validation_feedback}{custom_guidance}"),
@@ -145,7 +158,7 @@ def get_json_field_prompt(field_name: str, settings: dict | None = None):
 
 def _create_description_json_prompt(settings: dict | None = None):
     """Helper to create a dynamic metadata prompt for JSON-LD description extraction."""
-    base = get_base_prompt("json_description", settings)
+    base = escape_braces(get_base_prompt("json_description", settings))
     return ChatPromptTemplate.from_messages([
         ("system", base + "{validation_feedback}{custom_guidance}"),
         ("user", "JSON FRAGMENT TO PROCESS (Markdown Output Required):\n\"\"\"\n{json_fragment}\n\"\"\"")

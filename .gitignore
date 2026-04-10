@@ -21,7 +21,7 @@ backend/*.egg-info
 backend/.venv/
 backend/*.log
 backend/app_settings.json
-backend/test/
+# backend/test/
 backend/tmp/
 
 # Frontend
