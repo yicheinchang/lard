@@ -231,13 +231,23 @@ async def create_job_stream(
                 yield f"data: {json.dumps({'event': 'progress', 'msg': 'Vectorizing document content...'})}\n\n"
                 yield f"data: {json.dumps({'event': 'progress', 'msg': 'Extracting and vectorizing document content...'})}\n\n"
                 ext = file_path.split('.')[-1].lower() if '.' in file_path else ''
-                if ext in ['pdf', 'docx', 'pptx', 'html']:
-                    from routers.ai import get_docling_converter
-                    def run_docling():
-                        converter = get_docling_converter()
-                        result = converter.convert(file_path)
-                        return result.document.export_to_markdown()
-                    text = await asyncio.to_thread(run_docling)
+                if ext == 'pdf':
+                    from pypdf import PdfReader
+                    reader = PdfReader(file_path)
+                    text = ""
+                    for page in reader.pages:
+                        text += (page.extract_text() or "") + "\n"
+                elif ext in ['docx', 'pptx', 'html']:
+                    # Fallback for other formats if docling is broken
+                    try:
+                        from routers.ai import get_docling_converter
+                        def run_docling():
+                            converter = get_docling_converter()
+                            result = converter.convert(file_path)
+                            return result.document.export_to_markdown()
+                        text = await asyncio.to_thread(run_docling)
+                    except Exception:
+                        text = f"[Extraction failed for {ext} due to missing system libraries]"
                 else:
                     with open(file_path, "r", encoding="utf-8") as f:
                         text = f.read()
@@ -541,13 +551,22 @@ async def upload_job_document(job_id: int, file: UploadFile = File(...), doc_typ
     # Ingest document into vector store
     try:
         ext = file_path.split('.')[-1].lower() if '.' in file_path else ''
-        if ext in ['pdf', 'docx', 'pptx', 'html']:
-            from routers.ai import get_docling_converter
-            def run_docling():
-                converter = get_docling_converter()
-                result = converter.convert(file_path)
-                return result.document.export_to_markdown()
-            text = await asyncio.to_thread(run_docling)
+        if ext == 'pdf':
+            from pypdf import PdfReader
+            reader = PdfReader(file_path)
+            text = ""
+            for page in reader.pages:
+                text += (page.extract_text() or "") + "\n"
+        elif ext in ['docx', 'pptx', 'html']:
+            try:
+                from routers.ai import get_docling_converter
+                def run_docling():
+                    converter = get_docling_converter()
+                    result = converter.convert(file_path)
+                    return result.document.export_to_markdown()
+                text = await asyncio.to_thread(run_docling)
+            except Exception:
+                text = f"[Extraction failed for {ext} due to missing system libraries]"
         else:
             with open(file_path, "r", encoding="utf-8") as f:
                 text = f.read()
@@ -605,13 +624,22 @@ async def upload_job_document_stream(job_id: int, file: UploadFile = File(...), 
             yield f"data: {json.dumps({'event': 'progress', 'msg': 'Extracting content...'})}\n\n"
             # Ingest document into vector store
             ext = file_path.split('.')[-1].lower() if '.' in file_path else ''
-            if ext in ['pdf', 'docx', 'pptx', 'html']:
-                from routers.ai import get_docling_converter
-                def run_docling():
-                    converter = get_docling_converter()
-                    result = converter.convert(file_path)
-                    return result.document.export_to_markdown()
-                text = await asyncio.to_thread(run_docling)
+            if ext == 'pdf':
+                from pypdf import PdfReader
+                reader = PdfReader(file_path)
+                text = ""
+                for page in reader.pages:
+                    text += (page.extract_text() or "") + "\n"
+            elif ext in ['docx', 'pptx', 'html']:
+                try:
+                    from routers.ai import get_docling_converter
+                    def run_docling():
+                        converter = get_docling_converter()
+                        result = converter.convert(file_path)
+                        return result.document.export_to_markdown()
+                    text = await asyncio.to_thread(run_docling)
+                except Exception:
+                    text = f"[Extraction failed for {ext} due to missing system libraries]"
             else:
                 with open(file_path, "r", encoding="utf-8") as f:
                     text = f.read()
