@@ -25,7 +25,9 @@ FROM python:3.14-slim AS runtime
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     PATH="/app/.venv/bin:$PATH" \
-    PYTHONPATH="/app"
+    PYTHONPATH="/app" \
+    HF_HOME="/app/data/huggingface" \
+    RUNNING_IN_DOCKER="true"
 
 WORKDIR /app
 
@@ -38,9 +40,8 @@ COPY --from=builder /app/.venv /app/.venv
 # Copy application code
 COPY . .
 
-# Ensure data directories exist and are writable
-RUN mkdir -p /app/uploads /app/chroma_db && \
-    chown -R app:app /app
+# Ensure the central data directory exists
+RUN mkdir -p /app/data
 
 # The database and settings will be in the root of /app
 # We'll mount these via volumes in docker-compose
@@ -50,4 +51,4 @@ USER app
 EXPOSE 8000
 
 # Optimized production entry point
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "4", "--log-level", "info", "--no-access-log"]
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "1", "--log-level", "info", "--no-access-log"]

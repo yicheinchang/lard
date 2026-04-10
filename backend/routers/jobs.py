@@ -9,6 +9,7 @@ from typing import List, Optional
 from datetime import datetime, timezone
 from database.relational import get_db
 from database.models import JobApplication, InterviewStep, StepType, DocumentMeta, Company
+from config import UPLOADS_DIR
 
 router = APIRouter(prefix="/api", tags=["Jobs"])
 
@@ -207,10 +208,11 @@ async def create_job_stream(
             # 1. Handle File Attachment (Job Post)
             if file:
                 yield f"data: {json.dumps({'event': 'progress', 'msg': 'Uploading job post document...'})}\n\n"
-                os.makedirs("uploads", exist_ok=True)
+                os.makedirs(UPLOADS_DIR, exist_ok=True)
                 safe_filename = file.filename.replace(" ", "_").replace("/", "")
                 timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
-                file_path = f"uploads/{db_job.id}_{timestamp}_{safe_filename}"
+                filename = f"{db_job.id}_{timestamp}_{safe_filename}"
+                file_path = os.path.join(UPLOADS_DIR, filename)
                 
                 with open(file_path, "wb") as buffer:
                     shutil.copyfileobj(file.file, buffer)
@@ -219,7 +221,7 @@ async def create_job_stream(
                     job_id=db_job.id,
                     title=file.filename,
                     doc_type="job_post",
-                    file_path=f"/{file_path}"
+                    file_path=f"/uploads/{filename}"
                 )
                 db.add(doc)
                 db.commit()
@@ -512,10 +514,11 @@ def upload_job_document(job_id: int, file: UploadFile = File(...), doc_type: str
     if not db_job:
         raise HTTPException(status_code=404, detail="Job not found")
         
-    os.makedirs("uploads", exist_ok=True)
+    os.makedirs(UPLOADS_DIR, exist_ok=True)
     safe_filename = file.filename.replace(" ", "_").replace("/", "")
     timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
-    file_path = f"uploads/{job_id}_{timestamp}_{safe_filename}"
+    filename = f"{job_id}_{timestamp}_{safe_filename}"
+    file_path = os.path.join(UPLOADS_DIR, filename)
     
     with open(file_path, "wb") as buffer:
         shutil.copyfileobj(file.file, buffer)
@@ -524,7 +527,7 @@ def upload_job_document(job_id: int, file: UploadFile = File(...), doc_type: str
         job_id=job_id,
         title=file.filename,
         doc_type=doc_type,
-        file_path=f"/{file_path}"
+        file_path=f"/uploads/{filename}"
     )
     db.add(doc)
     db.commit()
@@ -570,10 +573,11 @@ async def upload_job_document_stream(job_id: int, file: UploadFile = File(...), 
                 yield f"data: {json.dumps({'event': 'error', 'msg': 'Job not found'})}\n\n"
                 return
 
-            os.makedirs("uploads", exist_ok=True)
+            os.makedirs(UPLOADS_DIR, exist_ok=True)
             safe_filename = file.filename.replace(" ", "_").replace("/", "")
             timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
-            file_path = f"uploads/{job_id}_{timestamp}_{safe_filename}"
+            filename = f"{job_id}_{timestamp}_{safe_filename}"
+            file_path = os.path.join(UPLOADS_DIR, filename)
             
             yield f"data: {json.dumps({'event': 'progress', 'msg': 'Saving file to system...'})}\n\n"
             with open(file_path, "wb") as buffer:
@@ -584,7 +588,7 @@ async def upload_job_document_stream(job_id: int, file: UploadFile = File(...), 
                 job_id=job_id,
                 title=file.filename,
                 doc_type=doc_type,
-                file_path=f"/{file_path}"
+                file_path=f"/uploads/{filename}"
             )
             db.add(doc)
             db.commit()
@@ -627,7 +631,10 @@ def delete_document(doc_id: int, db: Session = Depends(get_db)):
     if not doc:
         raise HTTPException(status_code=404, detail="Document not found")
         
-    local_path = doc.file_path.lstrip('/')
+    # Resolve path: the database stores "/uploads/filename", 
+    # but we need to delete from UPLOADS_DIR
+    filename = os.path.basename(doc.file_path)
+    local_path = os.path.join(UPLOADS_DIR, filename)
     if os.path.exists(local_path):
         try:
             os.remove(local_path)

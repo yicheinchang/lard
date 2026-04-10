@@ -3,6 +3,31 @@ import os
 from pydantic_settings import BaseSettings
 from ai.prompts import DEFAULT_SYSTEM_PROMPTS
 
+# ── Data Path Centralization ──────────────────────────────────────────
+
+RUNNING_IN_DOCKER = os.environ.get("RUNNING_IN_DOCKER", "false").lower() == "true"
+
+if RUNNING_IN_DOCKER:
+    DATA_DIR = "/app/data"
+else:
+    # Local development: data folder in project root
+    DATA_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "data"))
+
+# Subdirectories for specific data types
+DB_DIR = os.path.join(DATA_DIR, "db")
+UPLOADS_DIR = os.path.join(DATA_DIR, "uploads")
+CHROMA_DIR = os.path.join(DATA_DIR, "chroma_db")
+HF_HOME_DIR = os.path.join(DATA_DIR, "huggingface")
+
+# Ensure all directories exist (with explicit error handling)
+print(f"INFO:     Initializing data directories in {DATA_DIR}...")
+for d in [DB_DIR, UPLOADS_DIR, CHROMA_DIR, HF_HOME_DIR]:
+    try:
+        os.makedirs(d, exist_ok=True)
+        print(f"INFO:     Directory verified/created: {d}")
+    except Exception as e:
+        print(f"ERROR:    Failed to create directory {d}: {e}")
+
 class Settings(BaseSettings):
     """Env-var based settings — used as fallback defaults for app_settings.json."""
     LLM_PROVIDER: str = "ollama"
@@ -10,7 +35,8 @@ class Settings(BaseSettings):
     OLLAMA_MODEL: str = "gemma3:4b-it-qat"
     OPENAI_API_KEY: str | None = None
     ANTHROPIC_API_KEY: str | None = None
-    DATABASE_URL: str = "sqlite:///./tracker.db"
+    # Default SQLite path inside our centralized data directory
+    DATABASE_URL: str = f"sqlite:///{os.path.join(DB_DIR, 'tracker.db')}"
 
     class Config:
         env_file = ".env"
@@ -19,7 +45,7 @@ settings = Settings()
 
 # ── Dynamic app settings (persisted to JSON file) ──────────────────────
 
-APP_SETTINGS_PATH = os.path.join(os.path.dirname(__file__), "app_settings.json")
+APP_SETTINGS_PATH = os.path.join(DATA_DIR, "app_settings.json")
 
 DEFAULT_APP_SETTINGS = {
     "theme": "dark",

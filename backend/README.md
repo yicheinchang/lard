@@ -144,4 +144,4 @@ The backend reaches a "Ready" state in **< 5 seconds** through:
 - `database/`: SQLAlchemy models and ChromaDB vector store.
 - `routers/`: API endpoint definitions (REST & SSE).
 - `tests/`: Verification scripts and backend test suite.
-- `uploads/`: Repository for uploaded documents.
+- `data/` (Root): Consolidated persistence for DB, Uploads, Chroma, and Settings.

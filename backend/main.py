@@ -47,8 +47,9 @@ def create_app() -> FastAPI:
         allow_headers=["*"],
     )
 
-    os.makedirs("uploads", exist_ok=True)
-    app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
+    from config import UPLOADS_DIR
+    os.makedirs(UPLOADS_DIR, exist_ok=True)
+    app.mount("/uploads", StaticFiles(directory=UPLOADS_DIR), name="uploads")
 
     # Lazy Router Inclusion
     from routers import jobs, ai, settings

@@ -5,6 +5,9 @@
 .env*
 *.log
 *.bak
+data/
+!data/**/
+!data/**/.gitkeep
 
 # Backend
 backend/__pycache__/

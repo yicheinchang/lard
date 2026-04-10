@@ -1,5 +1,5 @@
-# 🗺️ Lard - Codebase Map (v0.55.0)
-Last Updated: 2026-04-09T19:38:00Z
+# 🗺️ Lard - Codebase Map (v0.56.0)
+Last Updated: 2026-04-10T00:00:00Z
 
 This document provides a summary of the project's architecture, tech stack, and key logic to give AI coding agents instant context.
 
@@ -22,11 +22,15 @@ This document provides a summary of the project's architecture, tech stack, and 
 
 ---
 
-### Infrastructure
-- **Containerization**: Docker & Docker Compose
-- **Orchestration**: Multi-stage builds for Frontend and Backend
-- **Persistence**: Docker Named Volumes
-- **Isolation**: Backend private to host; Gateway via Frontend (Next.js Proxy)
+### 🛠️ Infrastructure
+- **Persistence**: Consolidated project-root `/data` directory (shared by Local Dev and Docker).
+  - `data/db/`: Relational Data (SQLite).
+  - `data/chroma_db/`: Vector Data.
+  - `data/uploads/`: Original Documents.
+  - `data/huggingface/`: AI Model Cache.
+- **Containerization**: 
+  - `backend`: Multi-stage Python 3.14 + `uv`. High isolation.
+  - `frontend`: 3-stage Next.js Standalone. Secure API Proxying.
 - **Deployment Port**: 8081
 
 ---

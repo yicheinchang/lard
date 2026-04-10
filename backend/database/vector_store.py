@@ -1,7 +1,7 @@
 import os
-from config import load_app_settings
+from config import load_app_settings, CHROMA_DIR
 
-DB_DIR = os.path.join(os.path.dirname(__file__), "..", "chroma_db")
+DB_DIR = CHROMA_DIR
 COLLECTION_NAME = "jobs_collection"
 
 
