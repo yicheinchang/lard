@@ -1,4 +1,4 @@
-# 🗺️ Lard - Codebase Map (v0.56.3)
+# 🗺️ Lard - Lazy AI-Powered Resume Database (v0.56.4)
 Last Updated: 2026-04-10T03:49:00Z
 
 This document provides a summary of the project's architecture, tech stack, and key logic to give AI coding agents instant context.
@@ -301,6 +301,7 @@ Settings are not just environment variables. They are persisted in `backend/app_
 
 ### 7. AI Extraction & Preprocessing
 The system uses a multi-stage pipeline to extract job details from URLs, PDFs, and text:
+- **AI Extraction**: Multi-agent extraction pipeline (LangGraph) with a Sequential Fallback strategy. Uses **Docling** for layout-aware Markdown conversion and **extruct** for robust JSON-LD metadata extraction.
 - **Job Post Verification**: LangGraph-based `check_job_post_node` that confirms content is a job posting before extraction. Bypassed if JSON-LD is found. Supports Single-Agent embedding (verification result in main output) and Multi-Agent specialized nodes. Features a **fail-fast** strategy that halts the workflow immediately on negative results or technical verification errors. Customizable via the Settings UI.
 - **Contextual Metadata**: Extracts Company, Role, Location, Salary, Job ID, and Dates.
 - **JSON-LD First Strategy**: Prioritizes `application/ld+json` script tags (Schema.org `JobPosting`) for metadata extraction to ensure maximum accuracy on enterprise portals.

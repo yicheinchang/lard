@@ -1,6 +1,6 @@
 [project]
 name = "lard-backend"
-version = "0.56.3"
+version = "0.56.4"
 description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.14"
@@ -26,6 +26,8 @@ dependencies = [
     "sqlalchemy>=2.0.48",
     "torch>=2.4.0",
     "uvicorn>=0.42.0",
+    "docling>=2.85.0",
+    "extruct>=0.18.0",
 ]
 
 [[tool.uv.index]]
@@ -35,3 +37,4 @@ explicit = true
 
 [tool.uv.sources]
 torch = { index = "pytorch-cpu" }
+torchvision = { index = "pytorch-cpu" }

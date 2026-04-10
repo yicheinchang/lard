@@ -6,8 +6,23 @@ import json
 import asyncio
 import os
 import shutil
+import logging
 from config import load_app_settings
 from ai.logger import agnt_log
+
+logger = logging.getLogger(__name__)
+
+# --- Docling Global Singleton ---
+_docling_converter = None
+
+def get_docling_converter():
+    """Lazy-initialize the Docling converter to avoid heavy load on module import."""
+    global _docling_converter
+    if _docling_converter is None:
+        from docling.document_converter import DocumentConverter
+        # Default initialization loads models from HuggingFace on first use
+        _docling_converter = DocumentConverter()
+    return _docling_converter
 
 router = APIRouter(prefix="/api/ai", tags=["AI"])
 
@@ -18,101 +33,85 @@ def _check_ai_enabled():
     if not s.get("ai_enabled", True):
         raise HTTPException(status_code=403, detail="AI assistant is disabled. Enable it in Settings.")
 
-def _resolve_json_ld_references(all_data):
-    """
-    Traverses list of JSON-LD objects to build an ID map and resolve cross-references.
-    This helps the AI extract fields from complex @graph structures like Novartis.
-    """
-    id_map = {}
+def _find_job_posting(data):
+    """Deep search for a JobPosting node in structured data dictionaries or lists."""
+    if isinstance(data, dict):
+        types = data.get("@type", "")
+        is_job = "JobPosting" in (types if isinstance(types, list) else [str(types)])
+        if is_job: 
+            return data
+        for v in data.values():
+            res = _find_job_posting(v)
+            if res: return res
+    elif isinstance(data, list):
+        for item in data:
+            res = _find_job_posting(item)
+            if res: return res
+    return None
+
+def _clean_json_ld(data: dict) -> dict:
+    """Strip non-job nodes and metadata noise to keep the AI focused."""
+    if not data: return {}
     
-    def collect_ids(obj):
-        if isinstance(obj, dict):
-            node_id = obj.get("@id")
-            node_type = obj.get("@type")
-            if node_id:
-                if node_id not in id_map or node_type:
-                    id_map[node_id] = obj
-            for val in obj.values():
-                collect_ids(val)
-        elif isinstance(obj, list):
-            for item in obj:
-                collect_ids(item)
-
-    collect_ids(all_data)
+    # We focus on the JobPosting itself and its immediate children.
+    # We remove @context and large sibling nodes like WebSite or BreadcrumbList.
+    keys_to_keep = {
+        "title", "description", "datePosted", "employmentType", "hiringOrganization",
+        "jobLocation", "baseSalary", "salaryRange", "identifier", "validThrough",
+        "responsibilities", "skills", "qualifications", "educationRequirements",
+        "experienceRequirements", "occupationalCategory", "industry", "workHours",
+        "@type", "@id"
+    }
     
-    def expand_references(obj, visited=None):
-        if visited is None: visited = set()
-        obj_id = id(obj)
-        if obj_id in visited: return obj
-        visited.add(obj_id)
+    cleaned = {k: v for k, v in data.items() if k in keys_to_keep or not k.startswith("@")}
+    # Ensure @type is preserved
+    if "@type" in data: cleaned["@type"] = data["@type"]
+    
+    return cleaned
 
-        if isinstance(obj, dict):
-            # If it's a reference only link: {"@id": "some_id"}
-            if len(obj) == 1 and "@id" in obj:
-                ref_id = obj["@id"]
-                if ref_id in id_map:
-                    resolved = id_map[ref_id]
-                    if resolved is not obj:
-                        return resolved
-            return {k: expand_references(v, visited) for k, v in obj.items()}
-        elif isinstance(obj, list):
-            return [expand_references(item, visited) for item in obj]
-        return obj
-
-    return expand_references(all_data)
-
-def _clean_html(html: str) -> tuple[str, dict | None]:
-    """Generic HTML cleaning to extract main content while removing noise, with JSON-LD support."""
-    from bs4 import BeautifulSoup
-    soup = BeautifulSoup(html, 'html.parser')
-
-    # 1. Look for application/ld+json (Schema.org JobPosting)
-    json_ld_blocks = []
-    for ld_script in soup.find_all("script", type="application/ld+json"):
-        try:
-            content = ld_script.get_text().strip()
-            if not content:
-                continue
-            data = json.loads(content)
-            json_ld_blocks.append(data)
-        except Exception as e:
-            print(f"Error parsing JSON-LD: {e}")
-
-    # 2. Resolve references across all JSON-LD blocks and find the JobPosting
+def _extract_content(html: str, url: str | None = None) -> tuple[str, dict | None]:
+    """
+    State-of-the-art extraction using extruct (Metadata) and Docling (Clean Markdown).
+    """
+    # 1. Extract JSON-LD (Metadata Path)
+    import extruct
     structured_data = None
-    if json_ld_blocks:
-        resolved_all = _resolve_json_ld_references(json_ld_blocks)
-        
-        # Flatten: Search for the (now resolved) JobPosting node
-        def find_job_posting(data):
-            if isinstance(data, dict):
-                types = data.get("@type", "")
-                is_job = "JobPosting" in (types if isinstance(types, list) else [str(types)])
-                if is_job: 
-                    return data
-                # Recurse into dict values (like @graph)
-                for v in data.values():
-                    res = find_job_posting(v)
-                    if res: return res
-            elif isinstance(data, list):
-                for item in data:
-                    res = find_job_posting(item)
-                    if res: return res
-            return None
-            
-        structured_data = find_job_posting(resolved_all)
+    try:
+        data = extruct.extract(html, base_url=url, syntaxes=['json-ld'])
+        json_ld_blocks = data.get('json-ld', [])
+        found_job = _find_job_posting(json_ld_blocks)
+        if found_job:
+            structured_data = _clean_json_ld(found_job)
+    except Exception as e:
+        logger.error(f"Extruct failed: {e}")
 
-    # 2. Decompose generic noise (scripts, styles, etc.)
-    for tag in soup(["script", "style", "nav", "footer", "header", "aside", "form"]):
-        tag.decompose()
+    # 2. Extract Markdown (Text Path)
+    text = ""
+    try:
+        converter = get_docling_converter()
+        # Docling can process local files. We save to a temp file for consistent parsing.
+        temp_path = f"tmp_extraction_{os.getpid()}.html"
+        with open(temp_path, "w", encoding="utf-8") as f:
+            f.write(html)
         
-    # 3. Standard Text Extraction
-    main_content = soup.find('main') or soup.find('article') or soup.find(id='content') or soup.find(class_='job-description')
-    if main_content:
-        text = main_content.get_text(separator='\n', strip=True)
-    else:
-        text = soup.get_text(separator='\n', strip=True)
+        result = converter.convert(temp_path)
+        text = result.document.export_to_markdown()
         
+        if os.path.exists(temp_path):
+            os.remove(temp_path)
+    except Exception as e:
+        logger.error(f"Docling failed: {e}")
+        # Fallback to absolute basics if Docling crashes
+        from bs4 import BeautifulSoup
+        text = BeautifulSoup(html, 'html.parser').get_text(separator='\n', strip=True)
+
+    # 3. CSR Fallback Strategy
+    # If Docling produced very little text (likely an SPA/CSR page), 
+    # but we have a good JSON-LD description, we use the JSON description as the text source.
+    if len(text.strip()) < 500 and structured_data and structured_data.get("description"):
+        logger.info("Empty/Short Markdown detected on likely CSR page. Falling back to JSON-LD description.")
+        text = f"# Job Description (Extracted from Metadata)\n\n{structured_data['description']}"
+
     return text, structured_data
 
 def _preprocess_text(text: str, max_chars: int | None = None) -> str:
@@ -147,8 +146,8 @@ async def _run_extraction_core(request: Request, url: str | None = None, text: s
                 resp = await client.get(url, timeout=20, headers=headers)
                 resp.raise_for_status()
                 if progress_callback:
-                    await progress_callback({"event": "progress", "msg": "Cleaning HTML content..."})
-                text, structured_data = _clean_html(resp.text)
+                    await progress_callback({"event": "progress", "msg": "Extracting content and metadata..."})
+                text, structured_data = _extract_content(resp.text, url=url)
                 
                 # Preprocess and log snippet
                 text = _preprocess_text(text)
@@ -276,12 +275,17 @@ async def extract_file_stream(request: Request, file: UploadFile = File(...)):
             filename = file.filename or "unknown"
             ext = filename.split('.')[-1].lower() if '.' in filename else ''
             
-            if ext == 'pdf':
-                yield f"data: {json.dumps({'event': 'progress', 'msg': f'Parsing PDF: {filename}'})}\n\n"
-                from langchain_community.document_loaders import PyPDFLoader
-                loader = PyPDFLoader(temp_path)
-                pages = await asyncio.to_thread(loader.load) # Run blocking load in thread
-                text = "\n".join([page.page_content for page in pages])
+            if ext in ['pdf', 'docx', 'pptx', 'html']:
+                label = ext.upper() if ext != 'html' else 'Web Page'
+                yield f"data: {json.dumps({'event': 'progress', 'msg': f'Parsing {label} with Docling: {filename}'})}\n\n"
+                
+                # Execute Docling conversion in a thread to avoid blocking the event loop
+                def run_docling():
+                    converter = get_docling_converter()
+                    res = converter.convert(temp_path)
+                    return res.document.export_to_markdown()
+                
+                text = await asyncio.to_thread(run_docling)
             else:
                 yield f"data: {json.dumps({'event': 'progress', 'msg': f'Reading File: {filename}'})}\n\n"
                 try:
@@ -319,11 +323,12 @@ async def extract_from_file(request: Request, file: UploadFile = File(...)):
         filename = file.filename or "unknown"
         ext = filename.split('.')[-1].lower() if '.' in filename else ''
         
-        if ext == 'pdf':
-            from langchain_community.document_loaders import PyPDFLoader
-            loader = PyPDFLoader(temp_path)
-            pages = await asyncio.to_thread(loader.load)
-            text = "\n".join([page.page_content for page in pages])
+        if ext in ['pdf', 'docx', 'pptx', 'html']:
+            def run_docling():
+                converter = get_docling_converter()
+                res = converter.convert(temp_path)
+                return res.document.export_to_markdown()
+            text = await asyncio.to_thread(run_docling)
         else:
             try:
                 with open(temp_path, "r", encoding="utf-8") as f:
