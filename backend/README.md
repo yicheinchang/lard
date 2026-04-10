@@ -30,13 +30,13 @@ chmod +x run.sh
 
 ## 🧪 Testing
 
-The backend follows a script-based verification strategy. All test scripts are maintained in [backend/tests](file:///home/Lard/backend/tests).
+The backend follows a script-based verification strategy. All test scripts are maintained in [backend/test](file:///home/Lard/backend/test).
 
 ### Running Tests
 To verify API endpoints or AI logic, use the provided test suite:
 ```bash
 cd backend
-uv run python -m tests.test_ai_extraction  # Example
+uv run python -m test.test_ai_extraction  # Example
 ```
 
 ---
@@ -143,5 +143,5 @@ The backend reaches a "Ready" state in **< 5 seconds** through:
 - `ai/`: LangGraph agents, LLM factory, and prompt definitions.
 - `database/`: SQLAlchemy models and ChromaDB vector store.
 - `routers/`: API endpoint definitions (REST & SSE).
-- `tests/`: Verification scripts and backend test suite.
+- `test/`: Verification scripts and backend test suite.
 - `data/` (Root): Consolidated persistence for DB, Uploads, Chroma, and Settings.
