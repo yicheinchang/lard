@@ -996,7 +996,7 @@ wheels = [
 
 [[package]]
 name = "lard-backend"
-version = "0.51.26"
+version = "0.56.2"
 source = { virtual = "." }
 dependencies = [
     { name = "beautifulsoup4" },
