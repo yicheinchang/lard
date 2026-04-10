@@ -1,6 +1,6 @@
 [project]
 name = "lard-backend"
-version = "0.56.4"
+version = "0.56.6"
 description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.14"
@@ -25,9 +25,11 @@ dependencies = [
     "sentence-transformers>=3.4.1",
     "sqlalchemy>=2.0.48",
     "torch>=2.4.0",
+    "torchvision>=0.19.0",
     "uvicorn>=0.42.0",
     "docling>=2.85.0",
     "extruct>=0.18.0",
+    "transformers==4.48.2",
 ]
 
 [[tool.uv.index]]
