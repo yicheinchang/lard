@@ -1,6 +1,6 @@
 # Monorepo .gitignore for Job Tracker (Next.js & FastAPI)
 
-# Persistence
+# Persistence (Template structure only, no content)
 data/**
 !data/**/
 !data/**/.gitkeep
@@ -19,14 +19,10 @@ backend/dist/
 backend/wheels/
 backend/*.egg-info
 backend/.venv/
-backend/tracker.db
-backend/uploads/
 backend/*.log
 backend/app_settings.json
-backend/chroma_db/*
 backend/test/
 backend/tmp/
-!backend/chroma_db/.gitkeep
 
 # Frontend
 frontend/node_modules/
