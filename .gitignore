@@ -1,13 +1,15 @@
 # Monorepo .gitignore for Job Tracker (Next.js & FastAPI)
 
-# Common
-.DS_Store
-.env*
-*.log
-*.bak
-data/
+# Persistence
+data/**
 !data/**/
 !data/**/.gitkeep
+
+# Legacy/Temporary (Consolidated migration)
+backend/*.old
+backend/*.old.db
+backend/uploads.old/
+backend/chroma_db.old/
 
 # Backend
 backend/__pycache__/
