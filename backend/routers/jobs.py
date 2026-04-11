@@ -237,17 +237,13 @@ async def create_job_stream(
                     text = ""
                     for page in reader.pages:
                         text += (page.extract_text() or "") + "\n"
-                elif ext in ['docx', 'pptx', 'html']:
-                    # Fallback for other formats if docling is broken
-                    try:
-                        from routers.ai import get_docling_converter
-                        def run_docling():
-                            converter = get_docling_converter()
-                            result = converter.convert(file_path)
-                            return result.document.export_to_markdown()
-                        text = await asyncio.to_thread(run_docling)
-                    except Exception:
-                        text = f"[Extraction failed for {ext} due to missing system libraries]"
+                elif ext in ['docx', 'html']:
+                    from routers.ai import get_docling_converter
+                    def run_docling():
+                        converter = get_docling_converter()
+                        result = converter.convert(file_path)
+                        return result.document.export_to_markdown()
+                    text = await asyncio.to_thread(run_docling)
                 else:
                     with open(file_path, "r", encoding="utf-8") as f:
                         text = f.read()
@@ -557,16 +553,13 @@ async def upload_job_document(job_id: int, file: UploadFile = File(...), doc_typ
             text = ""
             for page in reader.pages:
                 text += (page.extract_text() or "") + "\n"
-        elif ext in ['docx', 'pptx', 'html']:
-            try:
-                from routers.ai import get_docling_converter
-                def run_docling():
-                    converter = get_docling_converter()
-                    result = converter.convert(file_path)
-                    return result.document.export_to_markdown()
-                text = await asyncio.to_thread(run_docling)
-            except Exception:
-                text = f"[Extraction failed for {ext} due to missing system libraries]"
+        elif ext in ['docx', 'html']:
+            from routers.ai import get_docling_converter
+            def run_docling():
+                converter = get_docling_converter()
+                result = converter.convert(file_path)
+                return result.document.export_to_markdown()
+            text = await asyncio.to_thread(run_docling)
         else:
             with open(file_path, "r", encoding="utf-8") as f:
                 text = f.read()
@@ -630,16 +623,13 @@ async def upload_job_document_stream(job_id: int, file: UploadFile = File(...), 
                 text = ""
                 for page in reader.pages:
                     text += (page.extract_text() or "") + "\n"
-            elif ext in ['docx', 'pptx', 'html']:
-                try:
-                    from routers.ai import get_docling_converter
-                    def run_docling():
-                        converter = get_docling_converter()
-                        result = converter.convert(file_path)
-                        return result.document.export_to_markdown()
-                    text = await asyncio.to_thread(run_docling)
-                except Exception:
-                    text = f"[Extraction failed for {ext} due to missing system libraries]"
+            elif ext in ['docx', 'html']:
+                from routers.ai import get_docling_converter
+                def run_docling():
+                    converter = get_docling_converter()
+                    result = converter.convert(file_path)
+                    return result.document.export_to_markdown()
+                text = await asyncio.to_thread(run_docling)
             else:
                 with open(file_path, "r", encoding="utf-8") as f:
                     text = f.read()

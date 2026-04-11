@@ -88,22 +88,16 @@ def _extract_content(html: str, url: str | None = None) -> tuple[str, dict | Non
 
     # 2. Extract Markdown (Text Path)
     text = ""
-    try:
-        from routers.ai import get_docling_converter
-        from docling.datamodel.base_models import DocumentStream
-        
-        # Use in-memory stream to avoid Disk I/O overhead
-        content_stream = io.BytesIO(html.encode("utf-8"))
-        doc_stream = DocumentStream(name="extraction.html", stream=content_stream)
-        
-        converter = get_docling_converter()
-        result = converter.convert(doc_stream)
-        text = result.document.export_to_markdown()
-    except Exception as e:
-        logger.error(f"Docling failed (likely missing system libraries): {e}")
-        # Fallback to absolute basics if Docling crashes
-        from bs4 import BeautifulSoup
-        text = BeautifulSoup(html, 'html.parser').get_text(separator='\n', strip=True)
+    from routers.ai import get_docling_converter
+    from docling.datamodel.base_models import DocumentStream
+    
+    # Use in-memory stream to avoid Disk I/O overhead
+    content_stream = io.BytesIO(html.encode("utf-8"))
+    doc_stream = DocumentStream(name="extraction.html", stream=content_stream)
+    
+    converter = get_docling_converter()
+    result = converter.convert(doc_stream)
+    text = result.document.export_to_markdown()
 
     # 3. CSR Fallback Strategy
     # If Docling produced very little text (likely an SPA/CSR page), 
@@ -282,22 +276,18 @@ async def extract_file_stream(request: Request, file: UploadFile = File(...)):
                 text = ""
                 for page in reader.pages:
                     text += (page.extract_text() or "") + "\n"
-            elif ext in ['docx', 'pptx', 'html']:
+            elif ext in ['docx', 'html']:
                 label = ext.upper() if ext != 'html' else 'Web Page'
                 yield f"data: {json.dumps({'event': 'progress', 'msg': f'Parsing {label} with Docling: {filename}'})}\n\n"
                 
-                try:
-                    # Execute Docling conversion in a thread to avoid blocking the event loop
-                    def run_docling():
-                        from routers.ai import get_docling_converter
-                        converter = get_docling_converter()
-                        res = converter.convert(temp_path)
-                        return res.document.export_to_markdown()
-                    
-                    text = await asyncio.to_thread(run_docling)
-                except Exception as doc_err:
-                    logger.error(f"Docling error: {doc_err}")
-                    text = f"[Extraction failed for {ext} due to missing system libraries]"
+                # Execute Docling conversion in a thread to avoid blocking the event loop
+                def run_docling():
+                    from routers.ai import get_docling_converter
+                    converter = get_docling_converter()
+                    res = converter.convert(temp_path)
+                    return res.document.export_to_markdown()
+                
+                text = await asyncio.to_thread(run_docling)
             else:
                 yield f"data: {json.dumps({'event': 'progress', 'msg': f'Reading File: {filename}'})}\n\n"
                 try:
@@ -341,17 +331,13 @@ async def extract_from_file(request: Request, file: UploadFile = File(...)):
             text = ""
             for page in reader.pages:
                 text += (page.extract_text() or "") + "\n"
-        elif ext in ['docx', 'pptx', 'html']:
-            try:
-                def run_docling():
-                    from routers.ai import get_docling_converter
-                    converter = get_docling_converter()
-                    res = converter.convert(temp_path)
-                    return res.document.export_to_markdown()
-                text = await asyncio.to_thread(run_docling)
-            except Exception as doc_err:
-                logger.error(f"Docling error: {doc_err}")
-                text = f"[Extraction failed for {ext}]"
+        elif ext in ['docx', 'html']:
+            def run_docling():
+                from routers.ai import get_docling_converter
+                converter = get_docling_converter()
+                res = converter.convert(temp_path)
+                return res.document.export_to_markdown()
+            text = await asyncio.to_thread(run_docling)
         else:
             try:
                 with open(temp_path, "r", encoding="utf-8") as f:
