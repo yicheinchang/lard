@@ -60,17 +60,30 @@ DEFAULT_SYSTEM_PROMPTS = {
         "- 'application_deadline': Use 'validThrough' or 'expires'. Convert to YYYY-MM-DD.\n"
         "Return ONLY the valid JSON matching the schema.\n\n"
     ),
+    "qa_validator_json": (
+        "You are an expert fidelity QA agent. You are validating a generated Markdown description against a source fragment from structured JSON-LD data (which may be HTML, Plain Text, or Markdown). "
+        "RULES:\n"
+        "1. AI HALLUCINATION: set is_valid=False if the LLM invented information not in the RAW SOURCE. Text content must remain VERBATIM.\n"
+        "2. COMPLETENESS: set is_complete=False if any text content is lost. Pay extreme attention to list items (<li>) and the LAST items/sentences of the source fragment.\n"
+        "3. FORMATTING: Formatting (headers/bolding) is flexible, but NO raw HTML tags should leak into the Markdown.\n"
+        "4. OUTPUT: If either flag is False, you MUST provide a detailed failure_reason explaining exactly what is missing or incorrect."
+    ),
+    "qa_validator_text": (
+        "You are an expert semantic QA agent. You are validating a generated job description against a full-page raw text source. "
+        "RULES:\n"
+        "1. BOUNDARY DETECTION: set is_complete=False if the generated description missed key responsibility or qualification sections from the body of the post.\n"
+        "2. NOISE EXCLUSION: set is_valid=False if the output includes irrelevant 'noise' like site navigation, related job lists, or cookie banners.\n"
+        "3. AI HALLUCINATION: set is_valid=False if info was 'invented' (e.g., benefits or requirements not explicitly in the text). Text must remain VERBATIM.\n"
+        "4. TRUNCATION: Check specifically if the LAST items in lists or sections of the RAW SOURCE are present.\n"
+        "5. OUTPUT: If either flag is False, you MUST provide a detailed failure_reason explaining exactly what is missing or incorrect."
+    ),
     "qa_validator": (
         "You are an expert QA agent. Your job is to validate a generated Job Description against its original source. "
         "You must check for both HALLUCINATIONS (added info) and COMPLETENESS (missing info). "
-        "RULES:\n"
-        "1. AI HALLUCINATION: set is_valid=False if the LLM invented information not in the RAW SOURCE.\n"
+        "RULES: 1. AI HALLUCINATION: set is_valid=False if the LLM invented information not in the RAW SOURCE. "
         "2. COMPLETENESS: set is_complete=False if the LLM truncated items or missed content. "
-        "Check specifically if the LAST items in each section of the RAW SOURCE (even if in HTML) are present in the GENERATED DESCRIPTION.\n"
-        "3. CONTEXT: If the source is 'JSON-LD', it contains HTML. Ignore the tags and focus on the text content. Everything must be included.\n"
-        "4. VERBATIM: While formatting is flexible, the text content itself must remain verbatim. Minor punctuation/whitespace fixes are fine.\n"
-        "5. FENCING: MUST NOT contain ```markdown blocks.\n"
-        "CRITICAL: If is_valid or is_complete is False, you MUST provide a detailed failure_reason explaining what is missing or wrong."
+        "3. VERBATIM: While formatting is flexible, the text content itself must remain verbatim. "
+        "CRITICAL: If is_valid or is_complete is False, you MUST provide a detailed failure_reason."
     ),
     # --- Multi-Agent Field Basics (Text) ---
     "field_company": "You are an expert at extracting job details. Identify the 'company' name verbatim from the text. \n\nRESPONSE FORMAT:\nReturn ONLY a JSON object like this: {{\"company\": \"Name\"}}. If not found, return null.",

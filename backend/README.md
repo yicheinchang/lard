@@ -68,20 +68,19 @@ graph TD
     
     
     
-    Mode -- "JSON-LD Found" --> Mapper["Monolithic JSON-LD Mapper<br/>(Priority A: Strict Mapping)"]
-    Mapper --> Heuristic{"Heuristic Check?<br/>(Any 'N/A' or Missing?)"}
+    Extract[Extract Node] --> Mode{Source?}
+    Mode -- JSON-LD --> JSONVal[JSON Validator]
+    Mode -- Text --> TextVal[Text Validator]
     
-    Heuristic -- "JSON Fail: Fallback to Text" --> Extractor
-    Heuristic -- "All Fields Pass" --> QA["Extraction Validation Node<br/>(Description QA)"]
+    JSONVal -- Pass --> END
+    JSONVal -- Fail Metadata --> TextExt[Text Extraction Phase] --> TextVal
+    JSONVal -- Fail QA --> Extract
     
-    Extractor --> QA
+    TextVal -- Pass --> END
+    TextVal -- Fail QA --> Extract
+    TextVal -- Max Retries --> WARN[End with Warning]
     
-    QA -- "QA Fail < 3 Retries" --> Retry["Inject Feedback & Retry<br/>(Monolithic Regeneration)"]
-    Retry --> Extractor
-    
-    QA -- "Pass" --> Final["Finalize & Save"]
-
-    Mode -- "Raw Text / PDF" --> Extractor["Monolithic Text Extractor<br/>(Priority B: Semantic)"]
+    END[Finalize & Save]
 ```
 
 ### 🎭 Strategy 2: Multi-Agent (Small-Model/Parallel)
@@ -117,11 +116,12 @@ graph TD
 Regardless of strategy, the following core features ensure 100% extraction fidelity:
 
 ### 1. Sequential Fallback Strategy
-The engine prioritizes structured data but falls back to semantic reasoning if needed:
-- **Priority A (JSON-LD)**: Attempts to extract accurate data from Schema.org script tags first.
-- **Full-Schema Heuristic Validation**: The system checks **every field** in the schema (Company, Role, Location, Salary, Job ID, Dates, Description). If any field is "N/A", a placeholder, or missing, a fallback is triggered for that specific field.
-- **Priority B (Full Text)**: Re-parses the raw page content to fill gaps detected in the JSON-LD pass.
-- **Result Merging**: Treating JSON-LD as the primary source of truth, it only replaces/fills fields that failed the heuristic check.
+1. **Check**: Rapid identification of Document Type (Job Post vs other).
+2. **Extract**: Dual-mode extraction (JSON-LD first, raw text fallback).
+3. **Specialized Validation**:
+    *   **JSON Validator**: Fidelity/HTML check for structured data.
+    *   **Text Validator**: Semantic/Boundary check for raw text.
+4. **Sequential Fallback**: Automatic promotion from JSON to Text if fields are missing.
 
 ### 2. QA Validation Loop (Circuit Breaker)
 Each extraction is validated by a dedicated **Extraction Validation Node** with a 3-retry limit:

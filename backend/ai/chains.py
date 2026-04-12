@@ -112,12 +112,20 @@ def get_json_ld_prompt(settings: dict | None = None):
         ("user", "RAW JSON-LD DATA:\n{json_ld_data}\n\nRAW PAGE TEXT:\n{raw_text}")
     ])
 
-# Helper to create QA validation prompt
-def get_validation_prompt(settings: dict | None = None):
-    base = escape_braces(get_base_prompt("qa_validator", settings))
+# Helper to create JSON-LD QA validation prompt
+def get_json_validation_prompt(settings: dict | None = None):
+    base = escape_braces(get_base_prompt("qa_validator_json", settings))
     return ChatPromptTemplate.from_messages([
         ("system", base + "{custom_guidance}"),
-        ("user", "SOURCE TYPE: {source_type}\n\nRAW SOURCE:\n\"\"\"\n{source_text}\n\"\"\"\n\nGENERATED DESCRIPTION:\n\"\"\"\n{generated_description}\n\"\"\"")
+        ("user", "SOURCE TYPE: JSON-LD\n\nRAW SOURCE FRAGMENT:\n\"\"\"\n{source_text}\n\"\"\"\n\nGENERATED DESCRIPTION:\n\"\"\"\n{generated_description}\n\"\"\"")
+    ])
+
+# Helper to create Raw Text QA validation prompt
+def get_text_validation_prompt(settings: dict | None = None):
+    base = escape_braces(get_base_prompt("qa_validator_text", settings))
+    return ChatPromptTemplate.from_messages([
+        ("system", base + "{custom_guidance}"),
+        ("user", "SOURCE TYPE: RAW TEXT\n\nRAW SOURCE PAGE:\n\"\"\"\n{source_text}\n\"\"\"\n\nGENERATED DESCRIPTION:\n\"\"\"\n{generated_description}\n\"\"\"")
     ])
 
 # Helper to create Job Post Check prompt

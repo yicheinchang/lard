@@ -25,6 +25,8 @@ class AgentState(TypedDict):
     llm_logged: bool
     use_text_fallback: bool
     previous_json_results: dict | None
+    active_source: str | None # "JSON-LD" or "TEXT"
+    description_verified: bool | None # True if validated by JSON fidelity check
 
 def _is_valid_value(val: Any) -> bool:
     """
@@ -414,6 +416,9 @@ async def extract_node(state: AgentState):
     # Priority A: JSON-LD (Attempt 0)
     # Priority B: Text Fallback (Attempt 1+)
     active_source = "JSON-LD" if (is_json_ld and not use_text_fallback) else "TEXT"
+    
+    # Track source in state for routing to the correct specialized validator
+    state_update = {"active_source": active_source}
 
     try:
         from ai.chains import (
@@ -466,8 +471,9 @@ async def extract_node(state: AgentState):
                 
                 result = await asyncio.wait_for(extractor.ainvoke(inputs), timeout=600)
                 results["description"] = result.model_dump().get("description")
-
-            return {"extracted_data": results, "error": None}
+ 
+            state_update["extracted_data"] = results
+            return state_update
 
         if request and await request.is_disconnected():
             return {"extracted_data": None, "error": "Cancelled"}
@@ -479,7 +485,8 @@ async def extract_node(state: AgentState):
                 if progress_cb:
                     await progress_cb({"event": "progress", "msg": "AI: JSON-LD found! Using Multi-Agent JSON extraction..."})
                 results = await _run_multi_agent_json_extraction(structured_data, text, request, progress_cb, state=state)
-                return {"extracted_data": results, "error": None}
+                state_update["extracted_data"] = results
+                return state_update
             else:
                 if progress_cb:
                     await progress_cb({"event": "progress", "msg": "AI: JSON-LD found! Validating and converting metadata..."})
@@ -507,7 +514,8 @@ async def extract_node(state: AgentState):
                 agnt_log("Extractor (JSON-LD)", task="RAW_AI_OUTPUT", result=str(result)[:200])
                 data = result.model_dump()
                 agnt_log("Extractor (JSON-LD)", result=f"SUCCESS: Data extracted. [Company: {data.get('company')}, Role: {data.get('role')}]")
-                return {"extracted_data": data, "error": None, "llm_logged": llm_logged}
+                state_update.update({"extracted_data": data, "error": None, "llm_logged": llm_logged})
+                return state_update
 
         else:
             # --- PATH B: Text Fallback (or Non-JSON Entry) ---
@@ -523,7 +531,8 @@ async def extract_node(state: AgentState):
                         missing_fields.append(f)
                 
                 if not missing_fields:
-                    return {"extracted_data": previous_json, "error": None}
+                    state_update["extracted_data"] = previous_json
+                    return state_update
 
                 if progress_cb:
                     await progress_cb({"event": "progress", "msg": f"AI: Falling back to text mode for {len(missing_fields)} missing fields..."})
@@ -537,7 +546,8 @@ async def extract_node(state: AgentState):
                     if not _is_valid_value(final_results.get(k)):
                         final_results[k] = v
                 
-                return {"extracted_data": final_results, "error": None}
+                state_update["extracted_data"] = final_results
+                return state_update
             else:
                 # --- PATH B: Text Fallback (or Non-JSON Entry) ---
                 llm_logged = state.get("llm_logged", False)
@@ -575,7 +585,8 @@ async def extract_node(state: AgentState):
                     if not data.get("is_job_post") or data.get("likelihood", 1.0) < 0.8:
                         category = data.get("detected_category") or "Unknown"
                         agnt_log("Extractor (Text)", result=f"FAIL: Not a job post ({category})")
-                        return {"extracted_data": None, "error": f"NOT_A_JOB_POST: This document looks like a {category}."}
+                        state_update.update({"extracted_data": None, "error": f"NOT_A_JOB_POST: This document looks like a {category}."})
+                        return state_update
 
                 if request and await request.is_disconnected():
                     return {"extracted_data": None, "error": "Cancelled"}
@@ -589,25 +600,29 @@ async def extract_node(state: AgentState):
                             final_results[k] = v
 
                 agnt_log("Extractor (Text)", result=f"SUCCESS: Data extracted. [Company: {final_results.get('company')}, Role: {final_results.get('role')}]")
-                return {"extracted_data": final_results, "error": None, "llm_logged": llm_logged}
+                state_update.update({"extracted_data": final_results, "error": None, "llm_logged": llm_logged})
+                return state_update
     except asyncio.TimeoutError:
         return {"extracted_data": None, "error": "Extraction timed out after 5 minutes. Try smaller snippets or Multi-Agent mode."}
     except Exception as e:
         return {"extracted_data": None, "error": str(e)}
 
-async def extraction_validator_node(state: AgentState):
+async def json_validator_node(state: AgentState):
+    """
+    Specialized validator for JSON-LD sources. 
+    Focuses on HTML fidelity and heuristic metadata completeness.
+    """
     request = state.get("request")
     if request and await request.is_disconnected():
         return {"validation_feedback": None, "error": "Cancelled"}
         
     extracted = state.get("extracted_data")
     if not extracted or not extracted.get("description"):
-        # If extraction was empty, do not try to validate (prevents loop if feedback exists)
         return {"validation_feedback": None}
         
     description = extracted["description"]
     
-    # Pre-parse common markdown wrapper hallucinations directly to save AI calls
+    # 1. Clean markdown wrappers
     if description.strip().startswith("```markdown"):
         lines = description.strip().split("\n")
         if len(lines) > 2 and lines[-1].strip() == "```":
@@ -616,126 +631,161 @@ async def extraction_validator_node(state: AgentState):
 
     retries = state.get("retries", 0)
     if retries >= 3:
-        # Circuit Breaker tripped
-        progress_cb = state.get("progress_callback")
-        if progress_cb:
-             await progress_cb({"event": "progress", "msg": "AI: Validation limit reached. Flagging potential hallucination."})
-             
-        # Instead of nulling, we keep the description but flag it for UI warning
         extracted["hallucination_detected"] = True
-        extracted["hallucination_reasons"] = state.get("validation_feedback", "Maximum validation attempts reached without passing QA.")
+        extracted["hallucination_reasons"] = state.get("validation_feedback", "Maximum validation attempts reached.")
         return {"extracted_data": extracted}
 
-    # --- SEQUENTIAL FALLBACK & HEURISTIC DETECTION ---
-    use_text_fallback = state.get("use_text_fallback", False)
-    is_json_ld = state.get("structured_data") is not None
+    # 2. HEURISTIC METADATA CHECK (Check if we need fallback soon)
+    important_fields = {
+        "company": "Company Name",
+        "role": "Job Role",
+        "location": "Location",
+        "salary_range": "Salary Range",
+        "company_job_id": "Job ID",
+        "job_posted_date": "Posted Date",
+        "application_deadline": "Application Deadline"
+    }
     
-    if not use_text_fallback and is_json_ld:
-        important_fields = {
-            "company": "Company Name",
-            "role": "Job Role",
-            "location": "Location",
-            "salary_range": "Salary Range",
-            "company_job_id": "Job ID",
-            "job_posted_date": "Posted Date",
-            "application_deadline": "Application Deadline",
-            "description": "Job Description"
-        }
-        
-        missing_reasons = []
-        
-        for key, label in important_fields.items():
-            val = extracted.get(key)
-            if not _is_valid_value(val):
-                reason = f"'{val}'" if val is not None else "Missing"
-                missing_reasons.append(f"  - {key} ({reason})")
+    missing_reasons = []
+    for key, label in important_fields.items():
+        val = extracted.get(key)
+        if not _is_valid_value(val):
+            reason = f"'{val}'" if val is not None else "Missing"
+            missing_reasons.append(f"  - {key} ({reason})")
 
-        if missing_reasons:
-            reasons_str = "\n".join(missing_reasons)
-            agnt_log("Validator", task="FALLBACK_TRIGGERED", result=f"Missing/Invalid {len(missing_reasons)} fields (Sequential Fallback):\n{reasons_str}\nSwitching to TEXT mode.")
-            
-            # --- SEQUENTIAL FALLBACK RESET ---
-            # LangGraph State uses `operator.add` for `retries`. 
-            # To reset to 0 for a new phase, we return a negative value equal to current count.
-            return {
-                "use_text_fallback": True, 
-                "previous_json_results": extracted,
-                "validation_feedback": f"FALLBACK_PHASE: Missing/Invalid fields: {', '.join([r.split('(')[0].strip('- ').strip() for r in missing_reasons])}",
-                "retries": -retries
-            }
-
-    from ai.chains import get_validation_prompt, DescriptionValidation
-    
+    # 3. LLM FIDELITY QA (Even if metadata failed, we want to 'Verify' the description)
+    from ai.chains import get_json_validation_prompt, DescriptionValidation
     progress_cb = state.get("progress_callback")
     if progress_cb:
-         await progress_cb({"event": "progress", "msg": "AI: Validating Extraction (AI Hallucination check)..."})
+         await progress_cb({"event": "progress", "msg": "AI: Validating JSON-LD fidelity..."})
 
     settings = load_app_settings()
     llm = get_llm(num_ctx=settings["llm_config"].get("num_ctx"))
-    validator = get_validation_prompt(settings) | llm.with_structured_output(DescriptionValidation)
+    validator = get_json_validation_prompt(settings) | llm.with_structured_output(DescriptionValidation)
     
-    # Log calling
-    agnt_log("Validator", task="Validating Description", input_data=str(description)[:50])
-
+    def find_description(data):
+        if isinstance(data, dict):
+            if "@graph" in data: return find_description(data["@graph"])
+            if data.get("@type") == "JobPosting": return data.get("description", "")
+            if "all_json_ld" in data: return find_description(data["all_json_ld"])
+        elif isinstance(data, list):
+            for item in data:
+                res = find_description(item)
+                if res: return res
+        return ""
+    raw_source = find_description(state["structured_data"])
+    
+    cg = settings.get("custom_prompts", {}).get("single_agent", "")
+    agnt_log("JSON Validator", task="Validating Fidelity", input_data=str(description)[:50])
+    
+    description_verified = False
     try:
-        # Source selection for validation comparison
-        if use_text_fallback or not is_json_ld:
-            source_type = "TEXT"
-            raw_source = state["text"]
-        else:
-            source_type = "JSON-LD"
-            # Sub-function to find JobPosting in an object or list
-            def find_description(data):
-                if isinstance(data, dict):
-                    if "@graph" in data:
-                        return find_description(data["@graph"])
-                    if data.get("@type") == "JobPosting":
-                        return data.get("description", "")
-                    if "all_json_ld" in data:
-                        return find_description(data["all_json_ld"])
-                elif isinstance(data, list):
-                    for item in data:
-                        res = find_description(item)
-                        if res: return res
-                return ""
-            raw_source = find_description(state["structured_data"])
-        
-        cg = settings.get("custom_prompts", {}).get("single_agent", "") # Use single agent guidance as fallback for QA
         result = await asyncio.wait_for(
             validator.ainvoke({
-                "source_type": source_type,
-                "source_text": str(raw_source)[:5000], 
+                "source_text": str(raw_source)[:8000], 
                 "generated_description": str(description),
                 "custom_guidance": f"ADDITIONAL QA GUIDANCE:\n{cg}" if cg else ""
             }),
             timeout=180
         )
         
-        failed = not result.is_valid or not result.is_complete
-        if failed:
-            reason = result.failure_reason or "Unknown validation error"
-            agnt_log("Validator", task="QA_FAILURE", result=f"REJECTED: {reason}")
-            print(f"\n[AI VALIDATOR] Validation Failed ({source_type} Mode) (Attempt {retries + 1}/3):")
-            print(f" > WHY: {reason}")
-            
+        if result.is_valid and result.is_complete:
+            agnt_log("JSON Validator", task="QA_DONE", result="PASS")
+            description_verified = True
+        else:
+            reason = result.failure_reason or "Fidelity error"
+            agnt_log("JSON Validator", task="QA_FAILURE", result=f"REJECTED: {reason}")
+            # If description itself is bad, we retry extraction (not necessarily fallback yet)
             if retries >= 2:
-                # Final attempt failed
                 extracted["hallucination_detected"] = True
-                extracted["hallucination_reasons"] = f"QA Fail (Final Attempt): {reason}"
+                extracted["hallucination_reasons"] = f"QA Fail (Final): {reason}"
                 return {"extracted_data": extracted, "retries": 1, "validation_feedback": reason}
-
-            if progress_cb:
-                await progress_cb({"event": "progress", "msg": f"AI Validator issue: {reason}"})
             return {"retries": 1, "validation_feedback": reason}
             
-        # Log success
-        agnt_log("Validator", task="DONE", result="PASS: Description is valid.")
+    except Exception as e:
+        agnt_log("JSON Validator", task="ERROR", result=str(e))
+        return {"retries": 1, "validation_feedback": f"Fidelity error: {e}"}
+
+    # 4. FINAL ROUTING: Did metadata fail?
+    if missing_reasons:
+        agnt_log("JSON Validator", task="FALLBACK", result=f"Missing {len(missing_reasons)} metadata fields. Switching to TEXT.")
+        return {
+            "use_text_fallback": True, 
+            "description_verified": description_verified,
+            "previous_json_results": extracted,
+            "validation_feedback": f"FALLBACK_PHASE: Missing/Invalid fields in JSON-LD.",
+            "retries": -retries
+        }
+
+    return {"extracted_data": extracted, "validation_feedback": None, "description_verified": True}
+
+async def text_validator_node(state: AgentState):
+    """
+    Specialized validator for Raw Text sources.
+    Focuses on boundary detection and semantic completeness.
+    """
+    request = state.get("request")
+    if request and await request.is_disconnected():
+        return {"validation_feedback": None, "error": "Cancelled"}
+        
+    extracted = state.get("extracted_data")
+    if not extracted or not extracted.get("description"):
+        return {"validation_feedback": None}
+        
+    description = extracted["description"]
+    if description.strip().startswith("```markdown"):
+        lines = description.strip().split("\n")
+        if len(lines) > 2 and lines[-1].strip() == "```":
+            description = "\n".join(lines[1:-1])
+            extracted["description"] = description
+
+    retries = state.get("retries", 0)
+    if retries >= 3:
+        extracted["hallucination_detected"] = True
+        extracted["hallucination_reasons"] = state.get("validation_feedback", "Max retries in text mode.")
+        return {"extracted_data": extracted}
+
+    # --- FAST PASS: Skip boundary check if already verified by JSON pass ---
+    if state.get("description_verified"):
+        agnt_log("Text Validator", task="FAST_PASS", result="Skipping boundary check (Description already verified by JSON Fidelity pass).")
         return {"extracted_data": extracted, "validation_feedback": None}
 
+    # --- LLM SEMANTIC QA (Text Mode) ---
+    from ai.chains import get_text_validation_prompt, DescriptionValidation
+    progress_cb = state.get("progress_callback")
+    if progress_cb:
+         await progress_cb({"event": "progress", "msg": "AI: Validating Text boundary (Semantic check)..."})
+
+    settings = load_app_settings()
+    llm = get_llm(num_ctx=settings["llm_config"].get("num_ctx"))
+    validator = get_text_validation_prompt(settings) | llm.with_structured_output(DescriptionValidation)
+    
+    cg = settings.get("custom_prompts", {}).get("single_agent", "")
+    agnt_log("Text Validator", task="Validating Boundaries", input_data=str(description)[:50])
+    
+    try:
+        result = await asyncio.wait_for(
+            validator.ainvoke({
+                "source_text": str(state["text"])[:8000], 
+                "generated_description": str(description),
+                "custom_guidance": f"ADDITIONAL QA GUIDANCE:\n{cg}" if cg else ""
+            }),
+            timeout=180
+        )
+        
+        if not result.is_valid or not result.is_complete:
+            reason = result.failure_reason or "Boundary error"
+            agnt_log("Text Validator", task="QA_FAILURE", result=f"REJECTED: {reason}")
+            if retries >= 2:
+                extracted["hallucination_detected"] = True
+                extracted["hallucination_reasons"] = f"QA Fail (Final): {reason}"
+                return {"extracted_data": extracted, "retries": 1, "validation_feedback": reason}
+            return {"retries": 1, "validation_feedback": reason}
+            
+        agnt_log("Text Validator", task="DONE", result="PASS")
+        return {"extracted_data": extracted, "validation_feedback": None}
     except Exception as e:
-        print(f"Validation step failed: {e}")
-        # Terminate loop to avoid infinite retry on persistent LLM errors
-        return {"retries": 1, "validation_feedback": f"Validation failed due to internal error: {e}"}
+        return {"retries": 1, "validation_feedback": f"Text QA error: {e}"}
 
 def should_continue_after_check(state: AgentState):
     if state.get("error"):
@@ -743,13 +793,9 @@ def should_continue_after_check(state: AgentState):
     return "extract"
 
 def should_retry(state: AgentState):
-    if state.get("error") is not None:
-        return "end"
-    
-    retries = state.get("retries", 0)
     feedback = state.get("validation_feedback")
-    
-    source = "TEXT" if state.get("use_text_fallback") else "JSON"
+    retries = state.get("retries", 0)
+    source = state.get("active_source", "TEXT")
     
     if feedback is not None and retries < 3:
         agnt_log("Graph", task="RETRY", result=f"Looping back to extraction (Attempt {retries + 1}/3) ({source} Mode)...")
@@ -759,6 +805,13 @@ def should_retry(state: AgentState):
         agnt_log("Graph", task="CIRCUIT_BREAKER", result="Max retries reached. Termination.")
         
     return "end"
+
+def route_to_validator(state: AgentState):
+    """Router to choose the specialized validator based on the extraction source."""
+    source = state.get("active_source", "TEXT")
+    if source == "JSON-LD":
+        return "json_validator"
+    return "text_validator"
 
 def get_agent_app():
     from langgraph.graph import StateGraph, END
@@ -774,7 +827,8 @@ def get_agent_app():
     
     workflow.add_node("check", check_job_post_node)
     workflow.add_node("extract", extract_node)
-    workflow.add_node("validate", extraction_validator_node)
+    workflow.add_node("json_validator", json_validator_node)
+    workflow.add_node("text_validator", text_validator_node)
     
     workflow.set_entry_point("check")
     
@@ -783,8 +837,18 @@ def get_agent_app():
         "end": END
     })
     
-    workflow.add_edge("extract", "validate")
-    workflow.add_conditional_edges("validate", should_retry, {
+    # Specialized Routing after extraction
+    workflow.add_conditional_edges("extract", route_to_validator, {
+        "json_validator": "json_validator",
+        "text_validator": "text_validator"
+    })
+    
+    # Both validators can lead to retries
+    workflow.add_conditional_edges("json_validator", should_retry, {
+        "retry": "extract",
+        "end": END
+    })
+    workflow.add_conditional_edges("text_validator", should_retry, {
         "retry": "extract",
         "end": END
     })
