@@ -849,6 +849,7 @@ export function SettingsPage() {
                           These instructions are appended to the system prompts. Use them to fine-tune extraction behavior or enforcement.
                         </p>
                         <button
+                          onClick={() => setCustomPrompts({
                             single_agent: '',
                             multi_agent: { company: '', role: '', location: '', salary_range: '', job_posted_date: '', application_deadline: '', description: '' },
                             job_post_check: '',
@@ -909,10 +910,15 @@ export function SettingsPage() {
 
                         <div className="animate-fade-in">
                           <Label 
-                            onReset={() => setCustomPrompts(p => ({
-                              ...p,
-                              multi_agent: { ...p.multi_agent, [activePromptField]: '' }
-                            }))}
+                            onReset={() => setCustomPrompts(p => {
+                               if (activePromptField === 'job_post_check' || activePromptField === 'qa_json' || activePromptField === 'qa_text') {
+                                 return { ...p, [activePromptField]: '' };
+                               }
+                               return {
+                                 ...p,
+                                 multi_agent: { ...p.multi_agent, [activePromptField]: '' }
+                               };
+                             })}
                             resetLabel={`Clear custom ${activePromptField.replace(/_/g, ' ')} guidance`}
                           >
                             {activePromptField.replace(/_/g, ' ')} guidance
