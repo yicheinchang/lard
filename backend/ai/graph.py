@@ -595,7 +595,7 @@ async def extract_node(state: AgentState):
     except Exception as e:
         return {"extracted_data": None, "error": str(e)}
 
-async def description_validator_node(state: AgentState):
+async def extraction_validator_node(state: AgentState):
     request = state.get("request")
     if request and await request.is_disconnected():
         return {"validation_feedback": None, "error": "Cancelled"}
@@ -668,7 +668,7 @@ async def description_validator_node(state: AgentState):
     
     progress_cb = state.get("progress_callback")
     if progress_cb:
-         await progress_cb({"event": "progress", "msg": "AI: Validating Description format (AI Hallucination check)..."})
+         await progress_cb({"event": "progress", "msg": "AI: Validating Extraction (AI Hallucination check)..."})
 
     settings = load_app_settings()
     llm = get_llm(num_ctx=settings["llm_config"].get("num_ctx"))
@@ -774,7 +774,7 @@ def get_agent_app():
     
     workflow.add_node("check", check_job_post_node)
     workflow.add_node("extract", extract_node)
-    workflow.add_node("validate", description_validator_node)
+    workflow.add_node("validate", extraction_validator_node)
     
     workflow.set_entry_point("check")
     

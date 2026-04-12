@@ -72,7 +72,7 @@ graph TD
     Mapper --> Heuristic{"Heuristic Check?<br/>(Any 'N/A' or Missing?)"}
     
     Heuristic -- "JSON Fail: Fallback to Text" --> Extractor
-    Heuristic -- "All Fields Pass" --> QA["QA Validation Node<br/>(Description QA)"]
+    Heuristic -- "All Fields Pass" --> QA["Extraction Validation Node<br/>(Description QA)"]
     
     Extractor --> QA
     
@@ -124,7 +124,7 @@ The engine prioritizes structured data but falls back to semantic reasoning if n
 - **Result Merging**: Treating JSON-LD as the primary source of truth, it only replaces/fills fields that failed the heuristic check.
 
 ### 2. QA Validation Loop (Circuit Breaker)
-Each extraction is validated by a dedicated **QA Node** with a 3-retry limit:
+Each extraction is validated by a dedicated **Extraction Validation Node** with a 3-retry limit:
 - **Scope**: Targeted primarily at the Description field for verbatim accuracy and completeness.
 - **Feedback Injection**: If validation fails, the failure reason is injected into the prompt of the same extraction node for the next attempt.
 - **UI Flagging**: If the circuit breaker trips after 3 attempts, the final output is preserved but flagged for manual review in the frontend.
