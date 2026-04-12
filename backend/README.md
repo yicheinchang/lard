@@ -69,8 +69,8 @@ graph TD
     
     
     Extract[Extract Node] --> Mode{Source?}
-    Mode -- JSON-LD --> JSONVal[JSON Validator]
-    Mode -- Text --> TextVal[Text Validator]
+    Mode -- JSON-LD --> JSONVal[JSON-Fidelity Validator]
+    Mode -- Text --> TextVal[Text-Source Validator]
     
     JSONVal -- Pass --> END
     JSONVal -- Fail Metadata --> TextExt[Text Extraction Phase] --> TextVal
@@ -119,8 +119,8 @@ Regardless of strategy, the following core features ensure 100% extraction fidel
 1. **Check**: Rapid identification of Document Type (Job Post vs other).
 2. **Extract**: Dual-mode extraction (JSON-LD first, raw text fallback).
 3. **Specialized Validation**:
-    *   **JSON Validator**: Fidelity/HTML check for structured data.
-    *   **Text Validator**: Semantic/Boundary check for raw text.
+    *   **JSON-Fidelity Validator**: Direct entity/HTML check for structured data.
+    *   **Text-Source Validator**: Comprehensive completeness & boundary check for raw text.
 4. **Sequential Fallback**: Automatic promotion from JSON to Text if fields are missing.
 
 ### 2. QA Validation Loop (Circuit Breaker)

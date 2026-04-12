@@ -114,6 +114,8 @@ export interface AppSettings {
       description: string;
     };
     job_post_check: string;
+    qa_json: string;
+    qa_text: string;
   };
   system_prompts: {
     extraction_base: string;
@@ -138,6 +140,8 @@ export interface AppSettings {
     json_deadline: string;
     json_description: string;
     job_post_check: string;
+    qa_validator_json: string;
+    qa_validator_text: string;
   };
 }
 

@@ -80,7 +80,9 @@ DEFAULT_APP_SETTINGS = {
             "application_deadline": "",
             "description": ""
         },
-        "job_post_check": ""
+        "job_post_check": "",
+        "qa_json": "",
+        "qa_text": ""
     },
     "system_prompts": {
         "extraction_base": DEFAULT_SYSTEM_PROMPTS["extraction_base"],
@@ -104,7 +106,9 @@ DEFAULT_APP_SETTINGS = {
         "json_posted": DEFAULT_SYSTEM_PROMPTS["json_posted"],
         "json_deadline": DEFAULT_SYSTEM_PROMPTS["json_deadline"],
         "json_description": DEFAULT_SYSTEM_PROMPTS["json_description"],
-        "job_post_check": DEFAULT_SYSTEM_PROMPTS["job_post_check"]
+        "job_post_check": DEFAULT_SYSTEM_PROMPTS["job_post_check"],
+        "qa_validator_json": DEFAULT_SYSTEM_PROMPTS["qa_validator_json"],
+        "qa_validator_text": DEFAULT_SYSTEM_PROMPTS["qa_validator_text"]
     }
 }
 

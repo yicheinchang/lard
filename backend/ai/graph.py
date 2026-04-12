@@ -657,7 +657,7 @@ async def json_validator_node(state: AgentState):
     from ai.chains import get_json_validation_prompt, DescriptionValidation
     progress_cb = state.get("progress_callback")
     if progress_cb:
-         await progress_cb({"event": "progress", "msg": "AI: Validating JSON-LD fidelity..."})
+         await progress_cb({"event": "progress", "msg": "AI: Validating JSON-LD fidelity (Fidelity check)..."})
 
     settings = load_app_settings()
     llm = get_llm(num_ctx=settings["llm_config"].get("num_ctx"))
@@ -675,7 +675,7 @@ async def json_validator_node(state: AgentState):
         return ""
     raw_source = find_description(state["structured_data"])
     
-    cg = settings.get("custom_prompts", {}).get("single_agent", "")
+    custom_guidance = settings.get("custom_prompts", {}).get("qa_json", "")
     agnt_log("JSON Validator", task="Validating Fidelity", input_data=str(description)[:50])
     
     description_verified = False
@@ -684,7 +684,7 @@ async def json_validator_node(state: AgentState):
             validator.ainvoke({
                 "source_text": str(raw_source)[:8000], 
                 "generated_description": str(description),
-                "custom_guidance": f"ADDITIONAL QA GUIDANCE:\n{cg}" if cg else ""
+                "custom_guidance": f"ADDITIONAL QA GUIDANCE:\n{custom_guidance}" if custom_guidance else ""
             }),
             timeout=180
         )
@@ -745,30 +745,30 @@ async def text_validator_node(state: AgentState):
         extracted["hallucination_reasons"] = state.get("validation_feedback", "Max retries in text mode.")
         return {"extracted_data": extracted}
 
-    # --- FAST PASS: Skip boundary check if already verified by JSON pass ---
+    # --- FAST PASS: Skip validation if already verified by JSON pass ---
     if state.get("description_verified"):
-        agnt_log("Text Validator", task="FAST_PASS", result="Skipping boundary check (Description already verified by JSON Fidelity pass).")
+        agnt_log("Text Validator", task="FAST_PASS", result="Skipping validation (Description already verified by JSON Fidelity pass).")
         return {"extracted_data": extracted, "validation_feedback": None}
 
     # --- LLM SEMANTIC QA (Text Mode) ---
     from ai.chains import get_text_validation_prompt, DescriptionValidation
     progress_cb = state.get("progress_callback")
     if progress_cb:
-         await progress_cb({"event": "progress", "msg": "AI: Validating Text boundary (Semantic check)..."})
+         await progress_cb({"event": "progress", "msg": "AI: Validating Text source (Completeness & Boundaries)..."})
 
     settings = load_app_settings()
     llm = get_llm(num_ctx=settings["llm_config"].get("num_ctx"))
     validator = get_text_validation_prompt(settings) | llm.with_structured_output(DescriptionValidation)
     
-    cg = settings.get("custom_prompts", {}).get("single_agent", "")
-    agnt_log("Text Validator", task="Validating Boundaries", input_data=str(description)[:50])
+    custom_guidance = settings.get("custom_prompts", {}).get("qa_text", "")
+    agnt_log("Text Validator", task="Validating Text Source", input_data=str(description)[:50])
     
     try:
         result = await asyncio.wait_for(
             validator.ainvoke({
                 "source_text": str(state["text"])[:8000], 
                 "generated_description": str(description),
-                "custom_guidance": f"ADDITIONAL QA GUIDANCE:\n{cg}" if cg else ""
+                "custom_guidance": f"ADDITIONAL QA GUIDANCE:\n{custom_guidance}" if custom_guidance else ""
             }),
             timeout=180
         )
