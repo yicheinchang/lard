@@ -319,7 +319,7 @@ async def _run_multi_agent_json_extraction(structured_data: dict, text: str, req
         ("role", JobRole, get_json_field_prompt("role", settings), structured_data.get("title")),
         ("location", JobLocation, get_json_field_prompt("location", settings), structured_data.get("jobLocation")),
         ("salary_range", JobSalary, get_json_field_prompt("salary_range", settings), structured_data.get("baseSalary")),
-        ("company_job_id", JobId, get_json_field_prompt("company_job_id", settings), structured_data.get("identifier") or structured_data.get("url")),
+        ("company_job_id", JobId, get_json_field_prompt("company_job_id", settings), structured_data.get("identifier")),
         ("job_posted_date", PostedDate, get_json_field_prompt("job_posted_date", settings), structured_data.get("datePosted")),
         ("application_deadline", DeadlineDate, get_json_field_prompt("application_deadline", settings), structured_data.get("validThrough")),
         ("description", JobDescription, description_json_prompt, structured_data.get("description")),
@@ -682,7 +682,7 @@ async def json_validator_node(state: AgentState):
     try:
         result = await asyncio.wait_for(
             validator.ainvoke({
-                "source_text": str(raw_source)[:8000], 
+                "source_text": str(raw_source)[:30000], 
                 "generated_description": str(description),
                 "custom_guidance": f"ADDITIONAL QA GUIDANCE:\n{custom_guidance}" if custom_guidance else ""
             }),
@@ -766,7 +766,7 @@ async def text_validator_node(state: AgentState):
     try:
         result = await asyncio.wait_for(
             validator.ainvoke({
-                "source_text": str(state["text"])[:8000], 
+                "source_text": str(state["text"])[:30000], 
                 "generated_description": str(description),
                 "custom_guidance": f"ADDITIONAL QA GUIDANCE:\n{custom_guidance}" if custom_guidance else ""
             }),

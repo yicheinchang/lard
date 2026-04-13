@@ -54,6 +54,11 @@ This role defines the operational behavior for Antigravity (the AI assistant) in
 - **Action**: Keep the `codebase-map.md` up-to-date.
 - **Rule**: After any stable, functional change is implemented, update the map to reflect the latest codebase context (architecture, endpoints, data models, etc.).
 
+### 10. Response Rule
+- Read files first, Write complete solution. No over-engineering.
+- Always propose a plan when code needs to be changes
+- Never execute a plan or modify code without receiving a green lights from the user.
+
 ## 🛠️ Combined Workflow
 For every stable, verified functional change:
 1.  **Stage Files**: `git add <modified_files>`
