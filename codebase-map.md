@@ -1,5 +1,5 @@
-# 🗺️ Lard - Lazy AI-Powered Resume Database (v0.58.8)
-Last Updated: 2026-04-13T19:57:40Z
+# 🗺️ Lard - Lazy AI-Powered Resume Database (v0.58.9)
+Last Updated: 2026-04-13T20:05:25Z
 
 This document provides a summary of the project's architecture, tech stack, and key logic to give AI coding agents instant context.
 
@@ -80,7 +80,7 @@ This document provides a summary of the project's architecture, tech stack, and 
       *   **Application Notes**: Dedicated Markdown editor (`MdEditor`) for research and interview prep.
   - `DocumentPreview.tsx`: Overlay for high-fidelity viewing of PDF, Markdown, and plain text documents.
   - `Ticker.tsx`: News-ticker style progress bar for real-time AI extraction status.
-  - `FilterPopover.tsx`: Advanced filtering UI for dashboard header. Features a **Universally Centered Modal** (fixed positioning) ensuring consistent placement and visibility (sticky action buttons) across all screen sizes. Includes a Toggle-based Starred Status filter (Starred/Unstarred icons) and refined active-state logic.
+  - `FilterPopover.tsx`: Advanced filtering UI for dashboard header. Features a **Centered Modal** (constrained width) with a unified scrollable body containing both filters and action buttons to ensure visibility and reachability on all screen heights.
   - `ProcessingOverlay.tsx`: Full-screen overlay for tracking long-running AI tasks with SSE updates. Feature: **Auto-closes 1.5s after success** and theme-aware styling.
   - `AutoSaveIndicator.tsx`: Small, non-blocking status indicator for background AI vectorization during note taking.
   - `tooltip-box`: Theme-aware CSS utility in `globals.css` ensuring readable tooltips in both light and dark modes.

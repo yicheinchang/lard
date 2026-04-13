@@ -61,11 +61,11 @@ export const FilterPopover: React.FC<FilterPopoverProps> = ({
         onClick={onClose}
       />
       
-      {/* Modal Container */}
-      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 pointer-events-none">
+      {/* Simplified Modal Container */}
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
         {/* The Filter Modal Box */}
-        <div className="w-full max-w-[400px] glass bg-[#0f0f18] border border-white/10 rounded-2xl shadow-2xl p-6 animate-slide-up flex flex-col max-h-[min(90dvh,680px)] pointer-events-auto">
-          {/* Header */}
+        <div className="w-full max-w-[420px] glass bg-[#0f0f18] border border-white/10 rounded-2xl shadow-2xl p-6 animate-slide-up max-h-[95vh] flex flex-col pointer-events-auto">
+          {/* Header - Fixed to top of modal box */}
           <div className="flex items-center justify-between mb-5 shrink-0">
           <div className="flex items-center gap-2">
             <SlidersHorizontal className="w-4 h-4 text-violet-400" />
@@ -79,8 +79,8 @@ export const FilterPopover: React.FC<FilterPopoverProps> = ({
           </button>
         </div>
 
-          {/* Scrollable Content */}
-          <div className="flex-1 overflow-y-auto pr-1 custom-scrollbar space-y-6">
+          {/* Scrollable Body containing filters AND action buttons */}
+          <div className="flex-1 overflow-y-auto pr-2 custom-scrollbar space-y-8">
           {/* Activity Date Range */}
           <div className="space-y-3">
             <label className="flex items-center gap-2 text-xs font-semibold text-[var(--fg-muted)] uppercase tracking-wider">
@@ -262,8 +262,10 @@ export const FilterPopover: React.FC<FilterPopoverProps> = ({
           </div>
           </div>
 
-          {/* Footer - Always Visible */}
-          <div className="mt-8 pt-5 border-t border-[var(--border-color)] flex items-center justify-between shrink-0">
+            </div>
+
+            {/* Footer - Part of scrollable content to ensure reachability */}
+            <div className="mt-8 pt-5 border-t border-[var(--border-color)] flex items-center justify-between">
           <button
             onClick={onClear}
             className="flex items-center gap-2 text-xs font-bold text-[var(--fg-subtle)] hover:text-red-500 transition-colors"
