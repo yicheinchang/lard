@@ -67,218 +67,216 @@ export const FilterPopover: React.FC<FilterPopoverProps> = ({
         <div className="w-full max-w-[420px] glass bg-[#0f0f18] border border-white/10 rounded-2xl shadow-2xl p-6 animate-slide-up max-h-[95vh] flex flex-col pointer-events-auto">
           {/* Header - Fixed to top of modal box */}
           <div className="flex items-center justify-between mb-5 shrink-0">
-          <div className="flex items-center gap-2">
-            <SlidersHorizontal className="w-4 h-4 text-violet-400" />
-            <h3 className="text-sm font-semibold text-white">Advanced Filters</h3>
+            <div className="flex items-center gap-2">
+              <SlidersHorizontal className="w-4 h-4 text-violet-400" />
+              <h3 className="text-sm font-semibold text-white">Advanced Filters</h3>
+            </div>
+            <button 
+              onClick={onClose}
+              className="p-1 hover:bg-white/10 rounded-full text-gray-500 hover:text-white transition-colors"
+            >
+              <X className="w-4 h-4" />
+            </button>
           </div>
-          <button 
-            onClick={onClose}
-            className="p-1 hover:bg-white/10 rounded-full text-gray-500 hover:text-white transition-colors"
-          >
-            <X className="w-4 h-4" />
-          </button>
-        </div>
 
           {/* Scrollable Body containing filters AND action buttons */}
           <div className="flex-1 overflow-y-auto pr-2 custom-scrollbar space-y-8">
-          {/* Activity Date Range */}
-          <div className="space-y-3">
-            <label className="flex items-center gap-2 text-xs font-semibold text-[var(--fg-muted)] uppercase tracking-wider">
-              <Calendar className="w-4 h-4" />
-              Activity Date Range
-            </label>
-            <p className="text-[10px] text-[var(--fg-subtle)] italic -mt-2 ml-6">Filters by applied date, interview steps, or decision dates.</p>
-            <div className="grid grid-cols-2 gap-2">
-              <div className="space-y-1">
-                <span className="text-[10px] text-[var(--fg-subtle)] ml-1 font-medium">From</span>
-                <input
-                  type="date"
-                  value={localCriteria.appliedDateStart}
-                  onChange={(e) => handleUpdate({ appliedDateStart: e.target.value })}
-                  className="w-full bg-[var(--input-bg)] border border-[var(--border-color)] rounded-lg px-2 py-2 text-[var(--fg)] text-xs focus:outline-none focus:ring-1 focus:ring-violet-500 transition-all style-date"
-                />
-              </div>
-              <div className="space-y-1">
-                <span className="text-[10px] text-[var(--fg-subtle)] ml-1 font-medium">To</span>
-                <input
-                  type="date"
-                  value={localCriteria.appliedDateEnd}
-                  onChange={(e) => handleUpdate({ appliedDateEnd: e.target.value })}
-                  className="w-full bg-[var(--input-bg)] border border-[var(--border-color)] rounded-lg px-2 py-2 text-[var(--fg)] text-xs focus:outline-none focus:ring-1 focus:ring-violet-500 transition-all style-date"
-                />
-              </div>
-            </div>
-          </div>
-
-          {/* Closing Soon Threshold */}
-          <div className={`space-y-3 p-4 rounded-xl border border-[var(--border-color)] transition-all ${
-            localCriteria.showOnlyClosingSoon ? 'bg-violet-500/10 border-violet-500/40' : 'bg-[var(--surface-hover)] border-[var(--border-color)]'
-          }`}>
-            <div className="flex items-center justify-between">
+            {/* Activity Date Range */}
+            <div className="space-y-3">
               <label className="flex items-center gap-2 text-xs font-semibold text-[var(--fg-muted)] uppercase tracking-wider">
-                <Clock className={`w-4 h-4 ${localCriteria.showOnlyClosingSoon ? 'text-violet-400' : ''}`} />
-                Closing Soon
+                <Calendar className="w-4 h-4" />
+                Activity Date Range
               </label>
-              <button
-                onClick={() => handleUpdate({ showOnlyClosingSoon: !localCriteria.showOnlyClosingSoon })}
-                className={`w-11 h-6 rounded-full relative transition-all duration-300 shadow-inner ${
-                  localCriteria.showOnlyClosingSoon ? 'bg-violet-500' : 'bg-[var(--border-color)]'
-                }`}
-              >
-                <div className={`absolute top-1 w-4 h-4 rounded-full bg-white shadow-sm transition-all duration-300 ease-in-out ${
-                  localCriteria.showOnlyClosingSoon ? 'right-1' : 'left-1'
-                }`} />
-              </button>
-            </div>
-            
-            <div className={`space-y-4 transition-all duration-300 ${localCriteria.showOnlyClosingSoon ? 'opacity-100' : 'opacity-30 pointer-events-none grayscale'}`}>
-              <div className="flex items-center justify-between">
-                <span className="text-[11px] text-[var(--fg-muted)] font-medium">Filter within:</span>
-                <div className="flex items-center gap-2">
+              <p className="text-[10px] text-[var(--fg-subtle)] italic -mt-2 ml-6">Filters by applied date, interview steps, or decision dates.</p>
+              <div className="grid grid-cols-2 gap-2">
+                <div className="space-y-1">
+                  <span className="text-[10px] text-[var(--fg-subtle)] ml-1 font-medium">From</span>
                   <input
-                    type="number"
-                    value={localCriteria.closingSoonDays}
-                    onChange={(e) => handleUpdate({ closingSoonDays: parseInt(e.target.value) || 0 })}
-                    className="w-14 bg-[var(--input-bg)] border border-[var(--border-color)] rounded-md px-2 py-1 text-center text-[var(--fg)] text-xs font-bold focus:outline-none focus:border-violet-500"
+                    type="date"
+                    value={localCriteria.appliedDateStart}
+                    onChange={(e) => handleUpdate({ appliedDateStart: e.target.value })}
+                    className="w-full bg-[var(--input-bg)] border border-[var(--border-color)] rounded-lg px-2 py-2 text-[var(--fg)] text-xs focus:outline-none focus:ring-1 focus:ring-violet-500 transition-all style-date"
                   />
-                  <span className="text-[11px] text-[var(--fg-subtle)]">days</span>
+                </div>
+                <div className="space-y-1">
+                  <span className="text-[10px] text-[var(--fg-subtle)] ml-1 font-medium">To</span>
+                  <input
+                    type="date"
+                    value={localCriteria.appliedDateEnd}
+                    onChange={(e) => handleUpdate({ appliedDateEnd: e.target.value })}
+                    className="w-full bg-[var(--input-bg)] border border-[var(--border-color)] rounded-lg px-2 py-2 text-[var(--fg)] text-xs focus:outline-none focus:ring-1 focus:ring-violet-500 transition-all style-date"
+                  />
                 </div>
               </div>
-              <div className="relative group">
-                <input
-                  type="range"
-                  min="1"
-                  max="30"
-                  value={localCriteria.closingSoonDays}
-                  onChange={(e) => handleUpdate({ closingSoonDays: parseInt(e.target.value) })}
-                  className="w-full accent-violet-500 h-2 bg-[var(--border-color)] rounded-lg appearance-none cursor-pointer hover:bg-[var(--surface)] transition-all"
-                />
-              </div>
-              <p className="text-[10px] text-[var(--fg-subtle)] italic leading-tight font-medium">Shows jobs with deadlines within the next {localCriteria.closingSoonDays} days.</p>
             </div>
-          </div>
 
-          {/* Stale Threshold */}
-          <div className={`space-y-3 p-4 rounded-xl border border-[var(--border-color)] transition-all ${
-            localCriteria.showOnlyStale ? 'bg-amber-500/10 border-amber-500/40' : 'bg-[var(--surface-hover)] border-[var(--border-color)]'
-          }`}>
-            <div className="flex items-center justify-between">
-              <label className="flex items-center gap-2 text-xs font-semibold text-[var(--fg-muted)] uppercase tracking-wider">
-                <Clock className={`w-4 h-4 rotate-180 ${localCriteria.showOnlyStale ? 'text-amber-400' : ''}`} />
-                Stale Applications
-              </label>
-              <button
-                onClick={() => handleUpdate({ showOnlyStale: !localCriteria.showOnlyStale })}
-                className={`w-11 h-6 rounded-full relative transition-all duration-300 shadow-inner ${
-                  localCriteria.showOnlyStale ? 'bg-amber-500' : 'bg-[var(--border-color)]'
-                }`}
-              >
-                <div className={`absolute top-1 w-4 h-4 rounded-full bg-white shadow-sm transition-all duration-300 ease-in-out ${
-                  localCriteria.showOnlyStale ? 'right-1' : 'left-1'
-                }`} />
-              </button>
-            </div>
-            
-            <div className={`space-y-4 transition-all duration-300 ${localCriteria.showOnlyStale ? 'opacity-100' : 'opacity-30 pointer-events-none grayscale'}`}>
+            {/* Closing Soon Threshold */}
+            <div className={`space-y-3 p-4 rounded-xl border border-[var(--border-color)] transition-all ${
+              localCriteria.showOnlyClosingSoon ? 'bg-violet-500/10 border-violet-500/40' : 'bg-[var(--surface-hover)] border-[var(--border-color)]'
+            }`}>
               <div className="flex items-center justify-between">
-                <span className="text-[11px] text-[var(--fg-muted)] font-medium">Last update over:</span>
-                <div className="flex items-center gap-2">
-                  <input
-                    type="number"
-                    value={localCriteria.staleDays}
-                    onChange={(e) => handleUpdate({ staleDays: parseInt(e.target.value) || 0 })}
-                    className="w-14 bg-[var(--input-bg)] border border-[var(--border-color)] rounded-md px-2 py-1 text-center text-[var(--fg)] text-xs font-bold focus:outline-none focus:border-amber-500"
-                  />
-                  <span className="text-[11px] text-[var(--fg-subtle)]">days ago</span>
-                </div>
-              </div>
-              <div className="relative group">
-                <input
-                  type="range"
-                  min="1"
-                  max="90"
-                  value={localCriteria.staleDays}
-                  onChange={(e) => handleUpdate({ staleDays: parseInt(e.target.value) })}
-                  className="w-full accent-amber-500 h-2 bg-[var(--border-color)] rounded-lg appearance-none cursor-pointer hover:bg-[var(--surface)] transition-all"
-                />
-              </div>
-              <p className="text-[10px] text-[var(--fg-subtle)] italic leading-tight font-medium">Shows jobs with no updates for more than {localCriteria.staleDays} days.</p>
-            </div>
-          </div>
-
-          {/* Status Filter */}
-          <div className="space-y-3">
-            <label className="flex items-center gap-2 text-xs font-semibold text-[var(--fg-muted)] uppercase tracking-wider">
-              <CheckCircle2 className="w-4 h-4" />
-              Status
-            </label>
-            <div className="flex flex-wrap gap-2">
-              {availableStatuses.map((status) => (
+                <label className="flex items-center gap-2 text-xs font-semibold text-[var(--fg-muted)] uppercase tracking-wider">
+                  <Clock className={`w-4 h-4 ${localCriteria.showOnlyClosingSoon ? 'text-violet-400' : ''}`} />
+                  Closing Soon
+                </label>
                 <button
-                  key={status}
-                  onClick={() => toggleStatus(status)}
-                  className={`px-3 py-1.5 rounded-full text-[11px] font-semibold transition-all border ${
-                    localCriteria.statuses.includes(status)
+                  onClick={() => handleUpdate({ showOnlyClosingSoon: !localCriteria.showOnlyClosingSoon })}
+                  className={`w-11 h-6 rounded-full relative transition-all duration-300 shadow-inner ${
+                    localCriteria.showOnlyClosingSoon ? 'bg-violet-500' : 'bg-[var(--border-color)]'
+                  }`}
+                >
+                  <div className={`absolute top-1 w-4 h-4 rounded-full bg-white shadow-sm transition-all duration-300 ease-in-out ${
+                    localCriteria.showOnlyClosingSoon ? 'right-1' : 'left-1'
+                  }`} />
+                </button>
+              </div>
+              
+              <div className={`space-y-4 transition-all duration-300 ${localCriteria.showOnlyClosingSoon ? 'opacity-100' : 'opacity-30 pointer-events-none grayscale'}`}>
+                <div className="flex items-center justify-between">
+                  <span className="text-[11px] text-[var(--fg-muted)] font-medium">Filter within:</span>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="number"
+                      value={localCriteria.closingSoonDays}
+                      onChange={(e) => handleUpdate({ closingSoonDays: parseInt(e.target.value) || 0 })}
+                      className="w-14 bg-[var(--input-bg)] border border-[var(--border-color)] rounded-md px-2 py-1 text-center text-[var(--fg)] text-xs font-bold focus:outline-none focus:border-violet-500"
+                    />
+                    <span className="text-[11px] text-[var(--fg-subtle)]">days</span>
+                  </div>
+                </div>
+                <div className="relative group">
+                  <input
+                    type="range"
+                    min="1"
+                    max="30"
+                    value={localCriteria.closingSoonDays}
+                    onChange={(e) => handleUpdate({ closingSoonDays: parseInt(e.target.value) })}
+                    className="w-full accent-violet-500 h-2 bg-[var(--border-color)] rounded-lg appearance-none cursor-pointer hover:bg-[var(--surface)] transition-all"
+                  />
+                </div>
+                <p className="text-[10px] text-[var(--fg-subtle)] italic leading-tight font-medium">Shows jobs with deadlines within the next {localCriteria.closingSoonDays} days.</p>
+              </div>
+            </div>
+
+            {/* Stale Threshold */}
+            <div className={`space-y-3 p-4 rounded-xl border border-[var(--border-color)] transition-all ${
+              localCriteria.showOnlyStale ? 'bg-amber-500/10 border-amber-500/40' : 'bg-[var(--surface-hover)] border-[var(--border-color)]'
+            }`}>
+              <div className="flex items-center justify-between">
+                <label className="flex items-center gap-2 text-xs font-semibold text-[var(--fg-muted)] uppercase tracking-wider">
+                  <Clock className={`w-4 h-4 rotate-180 ${localCriteria.showOnlyStale ? 'text-amber-400' : ''}`} />
+                  Stale Applications
+                </label>
+                <button
+                  onClick={() => handleUpdate({ showOnlyStale: !localCriteria.showOnlyStale })}
+                  className={`w-11 h-6 rounded-full relative transition-all duration-300 shadow-inner ${
+                    localCriteria.showOnlyStale ? 'bg-amber-500' : 'bg-[var(--border-color)]'
+                  }`}
+                >
+                  <div className={`absolute top-1 w-4 h-4 rounded-full bg-white shadow-sm transition-all duration-300 ease-in-out ${
+                    localCriteria.showOnlyStale ? 'right-1' : 'left-1'
+                  }`} />
+                </button>
+              </div>
+              
+              <div className={`space-y-4 transition-all duration-300 ${localCriteria.showOnlyStale ? 'opacity-100' : 'opacity-30 pointer-events-none grayscale'}`}>
+                <div className="flex items-center justify-between">
+                  <span className="text-[11px] text-[var(--fg-muted)] font-medium">Last update over:</span>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="number"
+                      value={localCriteria.staleDays}
+                      onChange={(e) => handleUpdate({ staleDays: parseInt(e.target.value) || 0 })}
+                      className="w-14 bg-[var(--input-bg)] border border-[var(--border-color)] rounded-md px-2 py-1 text-center text-[var(--fg)] text-xs font-bold focus:outline-none focus:border-amber-500"
+                    />
+                    <span className="text-[11px] text-[var(--fg-subtle)]">days ago</span>
+                  </div>
+                </div>
+                <div className="relative group">
+                  <input
+                    type="range"
+                    min="1"
+                    max="90"
+                    value={localCriteria.staleDays}
+                    onChange={(e) => handleUpdate({ staleDays: parseInt(e.target.value) })}
+                    className="w-full accent-amber-500 h-2 bg-[var(--border-color)] rounded-lg appearance-none cursor-pointer hover:bg-[var(--surface)] transition-all"
+                  />
+                </div>
+                <p className="text-[10px] text-[var(--fg-subtle)] italic leading-tight font-medium">Shows jobs with no updates for more than {localCriteria.staleDays} days.</p>
+              </div>
+            </div>
+
+            {/* Status Filter */}
+            <div className="space-y-3">
+              <label className="flex items-center gap-2 text-xs font-semibold text-[var(--fg-muted)] uppercase tracking-wider">
+                <CheckCircle2 className="w-4 h-4" />
+                Status
+              </label>
+              <div className="flex flex-wrap gap-2">
+                {availableStatuses.map((status) => (
+                  <button
+                    key={status}
+                    onClick={() => toggleStatus(status)}
+                    className={`px-3 py-1.5 rounded-full text-[11px] font-semibold transition-all border ${
+                      localCriteria.statuses.includes(status)
+                        ? 'bg-violet-500 text-white border-violet-500 shadow-lg shadow-violet-500/20'
+                        : 'bg-[var(--surface-hover)] border-[var(--border-color)] text-[var(--fg-muted)] hover:bg-[var(--surface)]'
+                    }`}
+                  >
+                    {status}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Star Filter */}
+            <div className="space-y-3">
+              <label className="flex items-center gap-2 text-xs font-semibold text-[var(--fg-muted)] uppercase tracking-wider">
+                <Star className="w-4 h-4" />
+                Starred Status
+              </label>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => handleUpdate({ starStatus: localCriteria.starStatus === 'starred' ? 'all' : 'starred' })}
+                  className={`flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-xl text-[11px] font-semibold transition-all border ${
+                    localCriteria.starStatus === 'starred'
                       ? 'bg-violet-500 text-white border-violet-500 shadow-lg shadow-violet-500/20'
                       : 'bg-[var(--surface-hover)] border-[var(--border-color)] text-[var(--fg-muted)] hover:bg-[var(--surface)]'
                   }`}
                 >
-                  {status}
+                  <Star className={`w-3.5 h-3.5 ${localCriteria.starStatus === 'starred' ? 'fill-current' : ''}`} />
+                  Starred
                 </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Star Filter */}
-          <div className="space-y-3">
-            <label className="flex items-center gap-2 text-xs font-semibold text-[var(--fg-muted)] uppercase tracking-wider">
-              <Star className="w-4 h-4" />
-              Starred Status
-            </label>
-            <div className="flex gap-2">
-              <button
-                onClick={() => handleUpdate({ starStatus: localCriteria.starStatus === 'starred' ? 'all' : 'starred' })}
-                className={`flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-xl text-[11px] font-semibold transition-all border ${
-                  localCriteria.starStatus === 'starred'
-                    ? 'bg-violet-500 text-white border-violet-500 shadow-lg shadow-violet-500/20'
-                    : 'bg-[var(--surface-hover)] border-[var(--border-color)] text-[var(--fg-muted)] hover:bg-[var(--surface)]'
-                }`}
-              >
-                <Star className={`w-3.5 h-3.5 ${localCriteria.starStatus === 'starred' ? 'fill-current' : ''}`} />
-                Starred
-              </button>
-              <button
-                onClick={() => handleUpdate({ starStatus: localCriteria.starStatus === 'unstarred' ? 'all' : 'unstarred' })}
-                className={`flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-xl text-[11px] font-semibold transition-all border ${
-                  localCriteria.starStatus === 'unstarred'
-                    ? 'bg-violet-500 text-white border-violet-500 shadow-lg shadow-violet-500/20'
-                    : 'bg-[var(--surface-hover)] border-[var(--border-color)] text-[var(--fg-muted)] hover:bg-[var(--surface)]'
-                }`}
-              >
-                <StarOff className="w-3.5 h-3.5" />
-                Unstarred
-              </button>
-            </div>
-          </div>
-          </div>
-
+                <button
+                  onClick={() => handleUpdate({ starStatus: localCriteria.starStatus === 'unstarred' ? 'all' : 'unstarred' })}
+                  className={`flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-xl text-[11px] font-semibold transition-all border ${
+                    localCriteria.starStatus === 'unstarred'
+                      ? 'bg-violet-500 text-white border-violet-500 shadow-lg shadow-violet-500/20'
+                      : 'bg-[var(--surface-hover)] border-[var(--border-color)] text-[var(--fg-muted)] hover:bg-[var(--surface)]'
+                  }`}
+                >
+                  <StarOff className="w-3.5 h-3.5" />
+                  Unstarred
+                </button>
+              </div>
             </div>
 
             {/* Footer - Part of scrollable content to ensure reachability */}
             <div className="mt-8 pt-5 border-t border-[var(--border-color)] flex items-center justify-between">
-          <button
-            onClick={onClear}
-            className="flex items-center gap-2 text-xs font-bold text-[var(--fg-subtle)] hover:text-red-500 transition-colors"
-          >
-            <Trash2 className="w-4 h-4" />
-            Reset All
-          </button>
-          <button
-            onClick={onClose}
-            className="bg-violet-600 hover:bg-violet-500 text-white px-6 py-2.5 rounded-xl text-xs font-bold transition-all shadow-lg hover:scale-105 active:scale-95"
-          >
-            Apply Filters
-          </button>
+              <button
+                onClick={onClear}
+                className="flex items-center gap-2 text-xs font-bold text-[var(--fg-subtle)] hover:text-red-500 transition-colors"
+              >
+                <Trash2 className="w-4 h-4" />
+                Reset All
+              </button>
+              <button
+                onClick={onClose}
+                className="bg-violet-600 hover:bg-violet-500 text-white px-6 py-2.5 rounded-xl text-xs font-bold transition-all shadow-lg hover:scale-105 active:scale-95"
+              >
+                Apply Filters
+              </button>
+            </div>
           </div>
         </div>
       </div>
