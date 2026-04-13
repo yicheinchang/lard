@@ -61,9 +61,12 @@ export const FilterPopover: React.FC<FilterPopoverProps> = ({
         onClick={onClose}
       />
       
-      {/* Popover */}
-      <div className="absolute right-0 top-full mt-2 w-[320px] md:w-[380px] glass bg-[#0f0f18] border border-white/10 rounded-2xl shadow-2xl z-50 p-5 animate-slide-up origin-top-right">
-        <div className="flex items-center justify-between mb-5">
+      {/* Popover Container */}
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 pointer-events-none md:absolute md:inset-auto md:right-0 md:top-full md:mt-2 md:p-0 md:block">
+        {/* The Actual Popover Box */}
+        <div className="w-full max-w-[380px] md:w-[380px] glass bg-[#0f0f18] border border-white/10 rounded-2xl shadow-2xl p-5 animate-slide-up origin-top-right flex flex-col max-h-[90dvh] md:max-h-[85vh] pointer-events-auto">
+          {/* Header */}
+          <div className="flex items-center justify-between mb-5 shrink-0">
           <div className="flex items-center gap-2">
             <SlidersHorizontal className="w-4 h-4 text-violet-400" />
             <h3 className="text-sm font-semibold text-white">Advanced Filters</h3>
@@ -76,7 +79,8 @@ export const FilterPopover: React.FC<FilterPopoverProps> = ({
           </button>
         </div>
 
-        <div className="space-y-6 max-h-[70vh] overflow-y-auto pr-1 custom-scrollbar">
+          {/* Scrollable Content */}
+          <div className="flex-1 overflow-y-auto pr-1 custom-scrollbar space-y-6">
           {/* Activity Date Range */}
           <div className="space-y-3">
             <label className="flex items-center gap-2 text-xs font-semibold text-[var(--fg-muted)] uppercase tracking-wider">
@@ -256,9 +260,10 @@ export const FilterPopover: React.FC<FilterPopoverProps> = ({
               </button>
             </div>
           </div>
-        </div>
+          </div>
 
-        <div className="mt-8 pt-5 border-t border-[var(--border-color)] flex items-center justify-between">
+          {/* Footer - Always Visible */}
+          <div className="mt-8 pt-5 border-t border-[var(--border-color)] flex items-center justify-between shrink-0">
           <button
             onClick={onClear}
             className="flex items-center gap-2 text-xs font-bold text-[var(--fg-subtle)] hover:text-red-500 transition-colors"
@@ -272,6 +277,7 @@ export const FilterPopover: React.FC<FilterPopoverProps> = ({
           >
             Apply Filters
           </button>
+          </div>
         </div>
       </div>
     </>
