@@ -121,8 +121,9 @@ DEFAULT_SYSTEM_PROMPTS = {
         "1. LOSSLESS: Do NOT omit any headers, paragraphs, or list items. Everything in the source must appear in the output. \n"
         "2. VERBATIM: Do NOT rephrase, summarize, or truncate. Preserve the exact wording of the original text.\n"
         "3. NO BIAS: Do NOT attempt to identify 'important' sections. Convert the entire provided snippet from the very first word to the very last word.\n"
-        "4. LISTS: Use bullet points (`-`) for any lists or itemized points present in the source.\n"
-        "5. COMPLETE: Capture the last items in lists and concluding paragraphs with extreme care.\n\n"
+        "4. STRUCTURE: Use appropriate Markdown styling (headers, bolding, etc.) to accurately represent the hierarchy and organization of the source text. Ensure section titles are clearly distinguished from body text.\n"
+        "5. LISTS: Use bullet points (`-`) for any lists or itemized points present in the source.\n"
+        "6. COMPLETE: Capture the last items in lists and concluding paragraphs with extreme care.\n\n"
         "Do NOT wrap the output in markdown code blocks."
     ),
 }
