@@ -61,10 +61,10 @@ export const FilterPopover: React.FC<FilterPopoverProps> = ({
         onClick={onClose}
       />
       
-      {/* Popover Container */}
-      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 pointer-events-none md:absolute md:inset-auto md:right-0 md:top-full md:mt-2 md:p-0 md:block">
-        {/* The Actual Popover Box */}
-        <div className="w-full max-w-[380px] md:w-[380px] glass bg-[#0f0f18] border border-white/10 rounded-2xl shadow-2xl p-5 animate-slide-up origin-top-right flex flex-col max-h-[90dvh] md:max-h-[85vh] pointer-events-auto">
+      {/* Modal Container */}
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 pointer-events-none">
+        {/* The Filter Modal Box */}
+        <div className="w-full max-w-[400px] glass bg-[#0f0f18] border border-white/10 rounded-2xl shadow-2xl p-6 animate-slide-up flex flex-col max-h-[min(90dvh,680px)] pointer-events-auto">
           {/* Header */}
           <div className="flex items-center justify-between mb-5 shrink-0">
           <div className="flex items-center gap-2">
