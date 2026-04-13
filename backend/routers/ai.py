@@ -124,7 +124,16 @@ def _extract_content(html: str, url: str | None = None) -> tuple[str, dict | Non
         return False
 
     if _is_noisy_page(text) and structured_data and structured_data.get("description"):
-        logger.info(f"Noise/CSR detected (Length: {len(text)}, Link Density: {len(re.findall(r'\[.*?\]\(.*?\)', text))/len(text):.2f}). Falling back to JSON-LD description.")
+        # Fix: Prevent division by zero if text is empty by providing a fallback density of 0.0
+        # Also fix: ensure we calculate density as (link characters / total characters) to match _is_noisy_page
+        text_len = len(text)
+        if text_len > 0:
+            link_chars = sum(len(m) for m in re.findall(r'\[.*?\]\(.*?\)', text))
+            density = link_chars / text_len
+        else:
+            density = 0.0
+            
+        logger.info(f"Noise/CSR detected (Length: {text_len}, Link Density: {density:.2f}). Falling back to JSON-LD description.")
         text = f"# Job Description (Extracted from Metadata)\n\n{structured_data['description']}"
 
     return text, structured_data
@@ -153,9 +162,16 @@ async def _run_extraction_core(request: Request, url: str | None = None, text: s
         try:
             # Add browser-standard headers to avoid being blocked by anti-bot systems
             headers = {
-                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
-                "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8",
+                "User-Agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36",
+                "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
                 "Accept-Language": "en-US,en;q=0.9",
+                "Accept-Encoding": "gzip, deflate, br",
+                "Upgrade-Insecure-Requests": "1",
+                "Sec-Fetch-Dest": "document",
+                "Sec-Fetch-Mode": "navigate",
+                "Sec-Fetch-Site": "none",
+                "Sec-Fetch-User": "?1",
+                "Cache-Control": "max-age=0",
             }
             async with httpx.AsyncClient(follow_redirects=True) as client:
                 resp = await client.get(url, timeout=20, headers=headers)
