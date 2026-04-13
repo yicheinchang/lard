@@ -61,12 +61,14 @@ DEFAULT_SYSTEM_PROMPTS = {
         "Return ONLY the valid JSON matching the schema.\n\n"
     ),
     "qa_validator_json": (
-        "You are an expert fidelity QA agent. You are validating a generated Markdown description against a source fragment from structured JSON-LD data (which may be HTML, Plain Text, or Markdown). "
+        "You are an expert fidelity QA agent. You are validating a generated Markdown description against a source fragment from structured JSON-LD data. "
+        "\n\nPRIMARY OBJECTIVE: Verify that the text content was preserved verbatim and that no information was lost or invented.\n\n"
         "RULES:\n"
-        "1. AI HALLUCINATION: set is_valid=False if the LLM invented information not in the RAW SOURCE. Text content must remain VERBATIM.\n"
-        "2. COMPLETENESS: set is_complete=False if any text content is lost. Pay extreme attention to list items (<li>) and the LAST items/sentences of the source fragment.\n"
-        "3. FORMATTING: Formatting (headers/bolding) is flexible, but NO raw HTML tags should leak into the Markdown.\n"
-        "4. OUTPUT: If either flag is False, you MUST provide a detailed failure_reason explaining exactly what is missing or incorrect."
+        "1. AI HALLUCINATION: Set `is_valid=False` ONLY if the LLM invented information not in the original source. \n"
+        "2. COMPLETENESS: Set `is_complete=False` if any section, paragraph, or list item from the source is missing or truncated in the generated text.\n"
+        "3. FORMATTING LENIENCE: Ignore stylistic differences. Usage of different list markers (* vs -), header levels, or bolding variance is acceptable as long as the text is present and the structure is logical.\n"
+        "4. NO HTML: Ensure no raw HTML tags leaked into the output.\n\n"
+        "If is_valid or is_complete is False, you MUST provide a detailed failure_reason explaining exactly what text is missing or incorrect."
     ),
     "qa_validator_text": (
         "You are an expert semantic QA agent. You are validating a generated job description against a full-page raw text source. "
@@ -113,14 +115,14 @@ DEFAULT_SYSTEM_PROMPTS = {
         "Resumes contain personal experience and skills which indicate a person applying for a job, NOT the job itself."
     ),
     "json_description": (
-        "You are an expert at extracting job details from Schema.org JSON-LD data. "
-        "Reformat the COMPLETE job/position description from the provided JSON fragment into clean, professional **Markdown**. "
-        "PRESERVE VERBATIM text. Use `###` headers for section titles (e.g., `### Responsibilities`), `**` for bolding, and `-` for bullet points in lists. "
-        "Include existing sections (e.g., 'About the Role', 'Responsibilities', 'Qualifications' etc.) ONLY if they are explicitly present in the source. "
-        "Do NOT rephrase, do NOT add your own labels or categories, and do NOT invent new headers or categories. "
-        "CRITICAL: Ensure the description is COMPLETE. Do NOT truncate lists or skip items. "
-        "Verify that the LAST items in any 'Responsibilities' or 'Requirements' lists are captured verbatim. "
-        "Do not make up information if it is not present in the text.\n"
-        "CRITICAL: Do NOT wrap the output in ```markdown blocks.\n\n"
+        "You are an expert high-fidelity Markdown converter. "
+        "Your ONLY task is to take the provided JSON description field (usually HTML or raw text) and reformat it into clean, professional Markdown. "
+        "\n\nCRITICAL RULES:\n"
+        "1. LOSSLESS: Do NOT omit any headers, paragraphs, or list items. Everything in the source must appear in the output. \n"
+        "2. VERBATIM: Do NOT rephrase, summarize, or truncate. Preserve the exact wording of the original text.\n"
+        "3. NO BIAS: Do NOT attempt to identify 'important' sections. Convert the entire provided snippet from the very first word to the very last word.\n"
+        "4. LISTS: Use bullet points (`-`) for any lists or itemized points present in the source.\n"
+        "5. COMPLETE: Capture the last items in lists and concluding paragraphs with extreme care.\n\n"
+        "Do NOT wrap the output in markdown code blocks."
     ),
 }
