@@ -99,11 +99,32 @@ def _extract_content(html: str, url: str | None = None) -> tuple[str, dict | Non
     result = converter.convert(doc_stream)
     text = result.document.export_to_markdown()
 
-    # 3. CSR Fallback Strategy
-    # If Docling produced very little text (likely an SPA/CSR page), 
-    # but we have a good JSON-LD description, we use the JSON description as the text source.
-    if len(text.strip()) < 500 and structured_data and structured_data.get("description"):
-        logger.info("Empty/Short Markdown detected on likely CSR page. Falling back to JSON-LD description.")
+    # 3. Robust CSR/Noise Detection Heuristic
+    # Most corporate Job Portals (BMS, etc.) use CSR/SPA. Even if they don't serve the full body,
+    # they often serve several thousand characters of language selectors and navigation noise.
+    # We detect this via Link Density (percentage of characters used in Markdown links).
+    
+    import re
+    def _is_noisy_page(t: str) -> bool:
+        t_clean = t.strip()
+        if not t_clean: return True
+        if len(t_clean) < 500: return True # Extremely short is always noise/loading
+        
+        # Calculate Link Density: characters inside [text](url) vs total characters
+        # Matches Markdown links: [label](url)
+        link_pattern = re.compile(r'\[.*?\]\(.*?\)')
+        links = link_pattern.findall(t_clean)
+        link_chars = sum(len(m) for m in links)
+        density = link_chars / len(t_clean)
+        
+        # If text is < 6000 chars and > 60% links, it is likely navigation boilerplate (CSR noise)
+        if len(t_clean) < 6000 and density > 0.6:
+            return True
+            
+        return False
+
+    if _is_noisy_page(text) and structured_data and structured_data.get("description"):
+        logger.info(f"Noise/CSR detected (Length: {len(text)}, Link Density: {len(re.findall(r'\[.*?\]\(.*?\)', text))/len(text):.2f}). Falling back to JSON-LD description.")
         text = f"# Job Description (Extracted from Metadata)\n\n{structured_data['description']}"
 
     return text, structured_data
