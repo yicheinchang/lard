@@ -1,6 +1,6 @@
 {
   "name": "lard-frontend",
-  "version": "0.58.10",
+  "version": "0.58.11",
   "private": true,
   "scripts": {
     "dev": "next dev",

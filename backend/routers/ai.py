@@ -261,10 +261,16 @@ async def _extract_stream_generator(request: Request, url: str | None = None, te
     ai_task = asyncio.create_task(run_ai())
     try:
         while True:
-            item = await q.get()
-            if item is None:
-                break
-            yield item
+            try:
+                # Wait for data from the queue with a 15s timeout to send heartbeats
+                # This prevents BodyTimeoutError in proxies (like Next.js's undici fetch)
+                item = await asyncio.wait_for(q.get(), timeout=15.0)
+                if item is None:
+                    break
+                yield item
+            except asyncio.TimeoutError:
+                # Send SSE comment as heartbeat to keep the connection alive
+                yield ": heartbeat\n\n"
     finally:
         if not ai_task.done():
             ai_task.cancel()

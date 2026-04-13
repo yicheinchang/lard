@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 
 export const dynamic = 'force-dynamic';
+export const maxDuration = 300; // 5 minutes
 
 /**
  * Next.js API Proxy Route Handler
@@ -84,9 +85,17 @@ async function handleRequest(req: NextRequest, { params }: { params: Promise<{ p
       headers: responseHeaders,
     });
   } catch (error: any) {
-    console.error(`[NextProxy] Error (${req.method} /api/${path}):`, error);
+    console.error(`[NextProxy] Error (${req.method} /api/${path}):`, {
+      message: error.message,
+      stack: error.stack,
+      cause: error.cause
+    });
     return NextResponse.json(
-      { error: 'Backend Connection Failed', message: error.message }, 
+      { 
+        error: 'Backend Connection Failed', 
+        message: error.message,
+        details: error.cause?.message || 'No additional cause info'
+      }, 
       { status: 502 }
     );
   }

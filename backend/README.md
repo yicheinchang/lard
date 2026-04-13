@@ -117,7 +117,7 @@ Regardless of strategy, the following core features ensure 100% extraction fidel
 
 ### 1. Sequential Fallback Strategy
 1. **Check**: Rapid identification of Document Type (Job Post vs other).
-2. **Extract**: Dual-mode extraction (JSON-LD first, raw text fallback).
+2. **Extract**: Dual-mode extraction (JSON-LD first, raw text fallback). Includes a **15s heartbeat mechanism** to prevent client-side/proxy timeouts (BodyTimeoutError) during long processing.
 3. **Specialized Validation**:
     *   **JSON-Fidelity Validator**: Direct entity/HTML check for structured data.
     *   **Text-Source Validator**: Comprehensive completeness & boundary check for raw text.
