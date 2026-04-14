@@ -22,13 +22,45 @@ export const ChatAssistant: React.FC<{
   ]);
   const [input, setInput] = useState('');
   const [isTyping, setIsTyping] = useState(false);
+  const [isAiReady, setIsAiReady] = useState<boolean | null>(null);
+  const [isInitializing, setIsInitializing] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
-  }, [messages, isTyping]);
+  }, [messages, isTyping, isInitializing]);
+
+  // AI Readiness Polling
+  useEffect(() => {
+    let pollInterval: NodeJS.Timeout;
+
+    const checkStatus = async () => {
+      try {
+        const res = await api.get('/ai/status');
+        if (res.data.ready) {
+          setIsAiReady(true);
+          setIsInitializing(false);
+          clearInterval(pollInterval);
+        } else {
+          setIsAiReady(false);
+          // Only show "Initializing" if the user has tried to send something or if it's been open a while
+          // Actually, let's just show it if it's not ready.
+          setIsInitializing(true);
+        }
+      } catch (err) {
+        console.error("Failed to check AI status:", err);
+      }
+    };
+
+    if (isOpen && isAiReady !== true) {
+      checkStatus();
+      pollInterval = setInterval(checkStatus, 5000);
+    }
+
+    return () => clearInterval(pollInterval);
+  }, [isOpen, isAiReady]);
 
   if (!isOpen) return null;
 
@@ -97,6 +129,16 @@ export const ChatAssistant: React.FC<{
             </div>
           </div>
         ))}
+        {isInitializing && (
+          <div className="flex gap-3">
+             <div className="w-8 h-8 rounded-full flex items-center justify-center shrink-0 bg-[#1a1a24] border border-white/10 animate-pulse">
+              <Bot className="w-4 h-4 text-violet-400" />
+            </div>
+            <div className="bg-violet-600/10 rounded-2xl p-3 text-xs text-violet-300 border border-violet-500/20 italic">
+              Initializing AI libraries... First start can take 5-10 minutes. I&apos;ll be ready shortly!
+            </div>
+          </div>
+        )}
         {isTyping && (
           <div className="flex gap-3">
              <div className="w-8 h-8 rounded-full flex items-center justify-center shrink-0 bg-[#1a1a24] border border-white/10">

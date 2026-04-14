@@ -1,5 +1,5 @@
-# 🗺️ Lard - Lazy AI-Powered Resume Database (v0.58.11)
-Last Updated: 2026-04-13T23:56:00Z
+# 🗺️ Lard - Lazy AI-Powered Resume Database (v0.59.0)
+Last Updated: 2026-04-14T01:17:00Z
 
 This document provides a summary of the project's architecture, tech stack, and key logic to give AI coding agents instant context.
 
@@ -60,8 +60,9 @@ This document provides a summary of the project's architecture, tech stack, and 
   - `assistant.py`: LangGraph-based conversational agent logic. Uses lazy loading for the vector store manager.
   - `llm_factory.py`: Multi-provider support (Ollama, OpenAI, Anthropic).
   - `chains.py`: Specific LangChain sequences (e.g., for extraction).
-  - `graph.py`: LangGraph state machine definitions. Uses a `get_agent_app()` lazy loader to defer graph compilation and heavy library imports.
-  - `logger.py`: Standardized AI agent console logging for troubleshooting (AGNT prefix, 80-char limit). Provides provider/model info and per-agent task/result monitoring.
+  - `graph.py`: LangGraph state machine definitions.
+  - `status.py`: Synchronization primitives (Threading Events) for tracking heavy AI library loading during background startup.
+  - `logger.py`: Standardized AI agent console logging.
 - `uploads/`: Local storage for uploaded job documents.
 - `test/`: Separate test scripts for backend API and logic verification.
 - `run.sh`: Unified startup script. Development mode uses a targeted `uvicorn` reloader that excludes large directories (like `.venv`) to minimize file system scanning and CPU usage.
@@ -242,11 +243,11 @@ Global configuration persisted on the server (`app_settings.json`).
 - `DELETE /api/jobs/steps/{step_id}`: Permanently remove an interview step (triggers status recalculation).
 
 ### AI (`/api/ai`)
-- `POST /ai/chat`: LangGraph-driven interactive chat with RAG.
-- `POST /ai/extract-url`: Scrape and extract job data from a webpage.
+- `GET /ai/status`: Check if heavy AI libraries are fully loaded.
+- `POST /ai/chat`: LangGraph-driven interactive chat with RAG. Blocks/waits for AI ready state.
+- `POST /ai/extract-url`: Scrape and extract job data from a webpage. Blocks/waits for AI ready state.
 - `POST /ai/extract-text`: Process raw text into a structured job.
-- `POST /ai/extract-file-stream`: Process uploaded file (PDF, Markdown, Plain Text) into a structured job via SSE.
-- `POST /ai/extract-pdf-stream`: Alias for `extract-file-stream` for backward compatibility.
+- `POST /ai/extract-file-stream`: Process uploaded file into a structured job via SSE. Sends "Initializing" message if backend is still loading.
 
 ### Settings (`/api/settings`)
 - `GET /settings`: Retrieve global app configuration.
@@ -285,6 +286,7 @@ The workspace uses a formalized rule system in `.agents/rules/workspace-role.md`
 - **Codebase Map Sync**: Mandatory updates to this document to maintain architectural context.
 - **Extreme Backend Startup Optimization**: Sub-10s cold start even with heavy AI dependencies via:
     - **Background Eager Loading**: AI libraries (LangChain/PyTorch) and LangGraph workflows preloaded in background threads during FastAPI `lifespan`.
+    - **Synchronized Initialization**: Incoming AI requests (Extraction, Chat) automatically wait for the background loading to complete using a global `Threading.Event`, preventing 500 errors caused by partial library imports.
     - **Global Embedding Cache**: HuggingFace instances cached to prevent PyTorch reloads.
     - **Decoupled Prompts**: Raw system prompts isolated in `backend/ai/prompts.py` to prevent library hangs during initial config.
     - **Targeted Reloader**: `uvicorn` watches only source directories, explicitly excluding `.venv` and `node_modules`.

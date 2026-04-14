@@ -22,6 +22,9 @@ def _preload_ai_components():
         print("INFO:     AI libraries preloaded successfully.")
     except Exception as e:
         print(f"ERROR:    Failed to preload AI libraries: {e}")
+    finally:
+        from ai.status import set_ai_ready
+        set_ai_ready()
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):

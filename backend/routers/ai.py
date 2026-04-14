@@ -10,6 +10,7 @@ import logging
 import io
 from config import load_app_settings
 from ai.logger import agnt_log
+from ai.status import is_ai_ready, wait_for_ai_ready
 
 logger = logging.getLogger(__name__)
 
@@ -33,6 +34,25 @@ def _check_ai_enabled():
     s = load_app_settings()
     if not s.get("ai_enabled", True):
         raise HTTPException(status_code=403, detail="AI assistant is disabled. Enable it in Settings.")
+
+async def _ensure_ai_ready(progress_callback=None):
+    """Wait for AI libraries to be fully loaded if they aren't ready yet."""
+    if not is_ai_ready():
+        msg = "Initializing AI libraries (First start takes 5-10 mins). Please wait..."
+        logger.info(msg)
+        if progress_callback:
+            await progress_callback({"event": "progress", "msg": msg})
+        
+        # Block until ready (run wait in thread to avoid blocking loop)
+        await asyncio.to_thread(wait_for_ai_ready)
+        
+        if progress_callback:
+            await progress_callback({"event": "progress", "msg": "AI Libraries Loaded! Proceeding..."})
+
+@router.get("/status")
+async def get_ai_status():
+    """Check if AI libraries are ready."""
+    return {"ready": is_ai_ready()}
 
 def _find_job_posting(data):
     """Deep search for a JobPosting node in structured data dictionaries or lists."""
@@ -154,6 +174,7 @@ class TextExtractRequest(BaseModel):
 async def _run_extraction_core(request: Request, url: str | None = None, text: str | None = None, progress_callback = None):
     """Core logic to run the extraction graph. Used by both streaming and atomic endpoints."""
     _check_ai_enabled()
+    await _ensure_ai_ready(progress_callback)
     
     structured_data = None
     if url:
@@ -405,8 +426,9 @@ class ChatRequest(BaseModel):
     job_id: int | None = None
 
 @router.post("/chat")
-def chat_with_assistant(req: ChatRequest):
+async def chat_with_assistant(req: ChatRequest):
     _check_ai_enabled()
+    await _ensure_ai_ready()
     try:
         from ai.assistant import get_assistant_agent
         from langchain_core.messages import HumanMessage
