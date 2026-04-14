@@ -85,7 +85,7 @@ async function handleRequest(req: NextRequest, { params }: { params: Promise<{ p
       headers: responseHeaders,
     });
   } catch (error: any) {
-    console.error(`[NextProxy] Error (${req.method} /api/${path}):`, {
+    console.error(`[NextProxy] Error (${req.method} /${path}):`, {
       message: error.message,
       stack: error.stack,
       cause: error.cause
