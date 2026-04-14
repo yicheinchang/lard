@@ -1,5 +1,5 @@
-# 🗺️ Lard - Lazy AI-Powered Resume Database (v0.61.1)
-Last Updated: 2026-04-14T15:27:00Z
+# 🗺️ Lard - Lazy AI-Powered Resume Database (v0.62.0)
+Last Updated: 2026-04-14T19:00:00Z
 
 This document provides a summary of the project's architecture, tech stack, and key logic to give AI coding agents instant context.
 
@@ -77,7 +77,7 @@ This document provides a summary of the project's architecture, tech stack, and 
 
   - `JobDetailView.tsx`: Core component for job application management. Features a **Centered Floating Modal** with a backdrop-blur overlay and a **Full-Screen Toggle**. Consists of three tabs:
       *   **Interview Pipeline** (Default): Timeline events with full CRUD and inline editing.
-      *   **Job Details**: Metadata management and document attachments.
+      *   **Job Details**: Metadata management and document attachments. Features a **Zoomable Description** with levels from `prose-sm` to `prose-2xl` and a quick-reset toggle.
       *   **Application Notes**: Dedicated Markdown editor (`MdEditor`) for research and interview prep.
   - `DocumentPreview.tsx`: Overlay for high-fidelity viewing of PDF, Markdown, and plain text documents.
   - `Ticker.tsx`: News-ticker style progress bar for real-time AI extraction status.

@@ -6,7 +6,7 @@ import MdEditor from 'react-markdown-editor-lite';
 import MarkdownIt from 'markdown-it';
 import 'react-markdown-editor-lite/lib/index.css';
 import { Job, getStepTypes, StepType, addInterviewStep, updateInterviewStep, deleteInterviewStep, updateJobStream, updateJob, deleteJobDocument, getCompanies, InterviewStep, uploadJobDocumentStream } from '../lib/api';
-import { X, Calendar, User, Mail, Plus, Circle, FileText, Edit2, Save, Paperclip, Trash2, ExternalLink, Link as LinkIcon, StickyNote, Send, AlertTriangle, CircleDollarSign, Star, Maximize2, Minimize2 } from 'lucide-react';
+import { X, Calendar, User, Mail, Plus, Circle, FileText, Edit2, Save, Paperclip, Trash2, ExternalLink, Link as LinkIcon, StickyNote, Send, AlertTriangle, CircleDollarSign, Star, Maximize2, Minimize2, ZoomIn, ZoomOut, RotateCcw } from 'lucide-react';
 import { ConfirmDialog } from './ConfirmDialog';
 import { DocumentPreview } from './DocumentPreview';
 import { ProcessingOverlay } from './ProcessingOverlay';
@@ -24,6 +24,7 @@ export const JobDetailView: React.FC<JobDetailViewProps> = ({ job, onClose, onJo
   const { setDirty } = useView();
   const [isAnimationFinished, setIsAnimationFinished] = useState(false);
   const [isFullScreen, setIsFullScreen] = useState(false);
+  const [descFontSizeLevel, setDescFontSizeLevel] = useState(0);
 
   // Remove resizing logic for modal transition
 
@@ -794,7 +795,38 @@ export const JobDetailView: React.FC<JobDetailViewProps> = ({ job, onClose, onJo
             <div className="flex flex-col lg:flex-row gap-8">
               <div className="flex-1 space-y-6">
                 <div className="flex items-center justify-between border-b border-[var(--border-color)] pb-2">
-                  <h3 className="text-lg font-semibold text-[var(--fg)] opacity-90">Description</h3>
+                  <div className="flex items-center gap-4">
+                    <h3 className="text-lg font-semibold text-[var(--fg)] opacity-90">Description</h3>
+                    {!isEditingInfo && (
+                      <div className="flex items-center gap-1 bg-[var(--surface-hover)] p-0.5 rounded-lg border border-[var(--border-color)]">
+                        <button 
+                          onClick={() => setDescFontSizeLevel(prev => Math.max(prev - 1, 0))}
+                          className={`p-1 rounded-md transition-colors ${descFontSizeLevel === 0 ? 'text-[var(--fg-subtle)] opacity-30 cursor-not-allowed' : 'text-[var(--fg-muted)] hover:text-violet-500 hover:bg-violet-500/10'}`}
+                          title="Decrease Font Size"
+                          disabled={descFontSizeLevel === 0}
+                        >
+                          <ZoomOut className="w-3.5 h-3.5" />
+                        </button>
+                        <button 
+                          onClick={() => setDescFontSizeLevel(prev => Math.min(prev + 1, 4))}
+                          className={`p-1 rounded-md transition-colors ${descFontSizeLevel === 4 ? 'text-[var(--fg-subtle)] opacity-30 cursor-not-allowed' : 'text-[var(--fg-muted)] hover:text-violet-500 hover:bg-violet-500/10'}`}
+                          title="Increase Font Size"
+                          disabled={descFontSizeLevel === 4}
+                        >
+                          <ZoomIn className="w-3.5 h-3.5" />
+                        </button>
+                        {descFontSizeLevel > 0 && (
+                          <button 
+                            onClick={() => setDescFontSizeLevel(0)}
+                            className="p-1 rounded-md text-[var(--fg-muted)] hover:text-red-400 hover:bg-red-400/10 transition-colors ml-0.5 border-l border-[var(--border-color)] pl-1.5"
+                            title="Reset Font Size"
+                          >
+                            <RotateCcw className="w-3.5 h-3.5" />
+                          </button>
+                        )}
+                      </div>
+                    )}
+                  </div>
                   {!isEditingInfo && (
                     <button onClick={() => { setEditFormData(job); setIsEditingInfo(true); }} className="text-violet-500 flex items-center gap-1.5 text-sm hover:text-violet-400 transition-colors">
                       <Edit2 className="w-4 h-4" /> Edit
@@ -814,9 +846,15 @@ export const JobDetailView: React.FC<JobDetailViewProps> = ({ job, onClose, onJo
                       canView={{ menu: true, md: true, html: true, both: true, fullScreen: true, hideMenu: true }}
                     />
                   </div>
-                ) : (
+                 ) : (
                   job.description ? (
-                    <div className="prose dark:prose-invert prose-sm max-w-none text-[var(--fg-muted)] prose-headings:text-[var(--fg)] prose-strong:text-[var(--fg)] prose-li:text-[var(--fg-muted)]">
+                    <div className={`prose dark:prose-invert ${
+                      descFontSizeLevel === 0 ? 'prose-sm' : 
+                      descFontSizeLevel === 1 ? 'prose-base' : 
+                      descFontSizeLevel === 2 ? 'prose-lg' : 
+                      descFontSizeLevel === 3 ? 'prose-xl' : 
+                      'prose-2xl'
+                    } max-w-none text-[var(--fg-muted)] prose-headings:text-[var(--fg)] prose-strong:text-[var(--fg)] prose-li:text-[var(--fg-muted)] transition-all duration-200`}>
                       <ReactMarkdown>{job.description}</ReactMarkdown>
                     </div>
                   ) : (
