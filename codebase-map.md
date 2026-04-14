@@ -1,5 +1,5 @@
-# 🗺️ Lard - Lazy AI-Powered Resume Database (v0.59.0)
-Last Updated: 2026-04-14T01:17:00Z
+# 🗺️ Lard - Lazy AI-Powered Resume Database (v0.60.0)
+Last Updated: 2026-04-14T14:49:00Z
 
 This document provides a summary of the project's architecture, tech stack, and key logic to give AI coding agents instant context.
 
@@ -16,7 +16,7 @@ This document provides a summary of the project's architecture, tech stack, and 
 - **Framework**: Next.js 16 (App Router, React 19)
 - **Styling**: Tailwind CSS 4
 - **Language**: TypeScript
-- **Icons**: Lucide React
+- **Icons**: Lucide React & Custom Brand Logo (`/logo.png`)
 - **API Pattern**: Next.js API Proxy (Route Handlers) & Server Actions
 - **API Client**: Axios (Proxied) & Fetch (Proxied SSE)
 

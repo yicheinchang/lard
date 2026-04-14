@@ -75,12 +75,14 @@ function Sidebar() {
       {/* Logo Area */}
       <div className={`flex items-center ${sidebarCollapsed ? 'justify-center p-4' : 'px-6 pt-6 pb-2'} mb-2`}>
         {sidebarCollapsed ? (
-          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-violet-600 to-fuchsia-600 flex items-center justify-center">
-            <Briefcase className="w-4 h-4 text-white" />
-          </div>
+          <img 
+            src="/logo.png" 
+            className="w-[30px] h-[30px] object-contain rounded-lg" 
+            alt="Lard Logo" 
+          />
         ) : (
           <h2 className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-violet-400 to-fuchsia-400 flex items-center gap-2">
-            <Sparkles className="w-5 h-5 text-violet-400" />
+            <img src="/logo.png" className="w-[36px] h-[36px] object-contain" alt="Lard Logo" />
             Lard
           </h2>
         )}
@@ -162,7 +164,7 @@ function MobileHeader() {
   return (
     <div className="sm:hidden flex items-center justify-between p-4 border-b border-[var(--border-color)] glass sticky top-0 z-30">
       <h2 className="text-lg font-bold bg-clip-text text-transparent bg-gradient-to-r from-violet-400 to-fuchsia-400 flex items-center gap-2">
-        <Sparkles className="w-5 h-5 text-violet-400" />
+        <img src="/logo.png" className="w-[36px] h-[36px] object-contain" alt="Lard Logo" />
         Lard
       </h2>
       <button 
@@ -204,6 +206,7 @@ function MobileDrawer() {
       <aside className="absolute inset-y-0 left-0 w-72 bg-[var(--bg)] border-r border-[var(--border-color)] flex flex-col shadow-2xl animate-slide-right">
         <div className="p-6 flex items-center justify-between border-b border-[var(--border-color)]">
           <h2 className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-violet-400 to-fuchsia-400 flex items-center gap-2">
+            <img src="/logo.png" className="w-[36px] h-[36px] object-contain" alt="Lard Logo" />
             Lard
           </h2>
           <button onClick={() => setIsMobileMenuOpen(false)} className="p-2 hover:bg-[var(--surface-hover)] rounded-full transition-all">
