@@ -17,7 +17,14 @@ async function handleRequest(req: NextRequest, { params }: { params: Promise<{ p
   
   const url = new URL(req.url);
   const searchParams = url.searchParams.toString();
-  const targetUrl = `${INTERNAL_BACKEND_URL}/${path}${searchParams ? `?${searchParams}` : ''}`;
+  
+  // Smart Prefixing: Prepend 'api/' if not already present and not an upload
+  let targetPath = path;
+  if (!path.startsWith('api/') && !path.startsWith('uploads/')) {
+    targetPath = `api/${path}`;
+  }
+  
+  const targetUrl = `${INTERNAL_BACKEND_URL}/${targetPath}${searchParams ? `?${searchParams}` : ''}`;
 
   // Clone headers and set host for the backend
   const headers = new Headers(req.headers);
@@ -85,7 +92,7 @@ async function handleRequest(req: NextRequest, { params }: { params: Promise<{ p
       headers: responseHeaders,
     });
   } catch (error: any) {
-    console.error(`[NextProxy] Error (${req.method} /${path}):`, {
+    console.error(`[NextProxy] Error (${req.method} /${targetPath}):`, {
       message: error.message,
       stack: error.stack,
       cause: error.cause

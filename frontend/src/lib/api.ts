@@ -17,7 +17,7 @@ import {
 } from './actions';
 
 const api = axios.create({
-  baseURL: '/api/proxy/api',
+  baseURL: '/api/proxy',
 });
 
 export interface StepType {
@@ -198,7 +198,7 @@ export const createJobStream = async (job: Partial<Job>, file: File | null, onPr
     formData.append('file', file);
   }
 
-  const response = await fetch(`/api/proxy/api/jobs/stream`, {
+  const response = await fetch(`/api/proxy/jobs/stream`, {
     method: 'POST',
     body: formData,
   });
@@ -235,7 +235,7 @@ export const createJobStream = async (job: Partial<Job>, file: File | null, onPr
 };
 
 export const updateJobStream = async (id: number, jobUpdate: Partial<Job>, onProgress: (event: string, msg: string, data?: any) => void) => {
-  const response = await fetch(`/api/proxy/api/jobs/${id}/stream`, {
+  const response = await fetch(`/api/proxy/jobs/${id}/stream`, {
     method: 'PUT',
     headers: {
       'Content-Type': 'application/json',
@@ -337,7 +337,7 @@ export const uploadJobDocumentStream = async (jobId: number, file: File, docType
   formData.append('file', file);
   formData.append('doc_type', docType);
 
-  const response = await fetch(`/api/proxy/api/jobs/${jobId}/documents/stream`, {
+  const response = await fetch(`/api/proxy/jobs/${jobId}/documents/stream`, {
     method: 'POST',
     body: formData,
   });
