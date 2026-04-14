@@ -20,14 +20,16 @@ function Sidebar() {
     const handleMouseMove = (e: MouseEvent) => {
       if (!isResizing) return;
       
-      // Increased max to 280 based on new 160 default
-      const newWidth = Math.min(Math.max(e.clientX, 0), 280); 
+      const SNAP_MIDPOINT = 112;
+      const EXPANDED_WIDTH = 160;
+      const COLLAPSED_WIDTH = 64;
       
-      if (newWidth < 75) {
+      if (e.clientX < SNAP_MIDPOINT) {
         setSidebarCollapsed(true);
+        setSidebarWidth(COLLAPSED_WIDTH);
       } else {
         setSidebarCollapsed(false);
-        setSidebarWidth(newWidth);
+        setSidebarWidth(EXPANDED_WIDTH);
       }
     };
 
