@@ -28,7 +28,7 @@ export const JobDetailView: React.FC<JobDetailViewProps> = ({ job, onClose, onJo
 
   // Remove resizing logic for modal transition
 
-  const [activeTab, setActiveTab] = useState<'info' | 'pipeline' | 'notes'>('pipeline');
+  const [activeTab, setActiveTab] = useState<'info' | 'process' | 'notes'>('process');
   const mdParser = new MarkdownIt();
   const [stepTypes, setStepTypes] = useState<StepType[]>([]);
   const [newStepName, setNewStepName] = useState('');
@@ -614,10 +614,10 @@ export const JobDetailView: React.FC<JobDetailViewProps> = ({ job, onClose, onJo
         {/* Tabs */}
         <div className="flex px-4 md:px-8 border-b border-[var(--border-color)] shrink-0">
           <button
-            className={`py-3 px-4 text-sm font-medium border-b-2 transition-colors ${activeTab === 'pipeline' ? 'border-violet-500 text-violet-500' : 'border-transparent text-[var(--fg-muted)] hover:text-[var(--fg)]'}`}
-            onClick={() => setActiveTab('pipeline')}
+            className={`py-3 px-4 text-sm font-medium border-b-2 transition-colors ${activeTab === 'process' ? 'border-violet-500 text-violet-500' : 'border-transparent text-[var(--fg-muted)] hover:text-[var(--fg)]'}`}
+            onClick={() => setActiveTab('process')}
           >
-            Interview Pipeline
+            Interview Process
           </button>
           <button
             className={`py-3 px-4 text-sm font-medium border-b-2 transition-colors ${activeTab === 'info' ? 'border-violet-500 text-violet-500' : 'border-transparent text-[var(--fg-muted)] hover:text-[var(--fg)]'}`}
@@ -629,7 +629,7 @@ export const JobDetailView: React.FC<JobDetailViewProps> = ({ job, onClose, onJo
 
         {/* Content Area */}
         <div className="flex-1 overflow-y-auto p-4 md:p-8 custom-scrollbar">
-          {activeTab === 'pipeline' && (
+          {activeTab === 'process' && (
             <div className="max-w-3xl">
               <div className="flex items-center justify-between mb-6">
                 <h3 className="text-lg font-semibold text-[var(--fg)] opacity-90">Timeline</h3>

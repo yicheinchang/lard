@@ -416,7 +416,7 @@ export default function Home() {
           </h1>
           <p className="text-sm mt-1" style={{ color: 'var(--fg-muted)' }}>
             {activeView === 'kanban'
-              ? 'Track your applications through the pipeline'
+              ? 'Monitor your job applications and hiring progress effortlessly'
               : `${jobs.length} total applications`
             }
           </p>
