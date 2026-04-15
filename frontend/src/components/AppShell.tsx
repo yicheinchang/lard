@@ -88,7 +88,7 @@ function Sidebar() {
               <img src="/logo.png" className="w-[36px] h-[36px] object-contain" alt="Lard Logo" />
               Lard
             </h2>
-            <p className="text-[10px] text-[var(--fg-subtle)] font-medium mt-1 leading-tight whitespace-normal">Lazy AI-powered Resume Database</p>
+            <p className="text-[10px] text-[var(--fg-subtle)] font-medium mt-1 leading-tight whitespace-normal text-center">Lazy AI-powered Resume Database</p>
           </>
         )}
       </div>
