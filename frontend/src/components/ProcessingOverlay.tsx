@@ -40,13 +40,13 @@ export const ProcessingOverlay: React.FC<ProcessingOverlayProps> = ({
       <div className="bg-[var(--bg)] border border-[var(--border-color)] w-full max-w-sm rounded-2xl p-6 shadow-2xl animate-scale-up glass relative overflow-hidden">
         {/* Header */}
         <div className="text-center mb-6">
-          <div className="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-violet-500/10 mb-4">
+          <div className="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-primary/10 mb-4">
             {hasError ? (
               <AlertCircle className="w-6 h-6 text-red-400" />
             ) : isCompleted ? (
               <CheckCircle2 className="w-6 h-6 text-green-400" />
             ) : (
-              <Loader2 className="w-6 h-6 text-violet-400 animate-spin" />
+              <Loader2 className="w-6 h-6 text-primary animate-spin" />
             )}
           </div>
           <h2 className="text-xl font-bold text-[var(--fg)] mb-1">{title}</h2>
@@ -61,7 +61,7 @@ export const ProcessingOverlay: React.FC<ProcessingOverlayProps> = ({
                 {task.status === 'completed' ? (
                   <CheckCircle2 className="w-4 h-4 text-green-500" />
                 ) : task.status === 'loading' ? (
-                  <Loader2 className="w-4 h-4 text-violet-400 animate-spin" />
+                  <Loader2 className="w-4 h-4 text-primary animate-spin" />
                 ) : task.status === 'error' ? (
                   <AlertCircle className="w-4 h-4 text-red-500" />
                 ) : (
@@ -70,7 +70,7 @@ export const ProcessingOverlay: React.FC<ProcessingOverlayProps> = ({
               </div>
               <span className={`text-sm transition-colors duration-300 ${
                 task.status === 'completed' ? 'text-[var(--fg-muted)] line-through decoration-violet-500/30' :
-                task.status === 'loading' ? 'text-violet-400 font-medium' :
+                task.status === 'loading' ? 'text-primary font-medium' :
                 task.status === 'error' ? 'text-red-400' :
                 'text-[var(--fg-subtle)]'
               }`}>

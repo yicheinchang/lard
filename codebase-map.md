@@ -1,5 +1,5 @@
-# 🗺️ Lard - Lazy AI-Powered Resume Database (v0.62.2)
-Last Updated: 2026-04-15T15:35:00Z
+# 🗺️ Lard - Lazy AI-Powered Resume Database (v0.62.3)
+Last Updated: 2026-04-15T15:46:00Z
 
 This document provides a summary of the project's architecture, tech stack, and key logic to give AI coding agents instant context.
 
@@ -125,7 +125,7 @@ The system enforces strict status integrity in `JobDetailView.tsx` and `page.tsx
 The `ChatAssistant` is a global component accessible from any page. It maintains its own state and can be toggled via a floating action button or keyboard shortcuts.
 
 ### 5. Dynamic Theme Store
-The UI uses Tailwind CSS 4 with `globals.css`: Global CSS containing theme variables, glassmorphism utilities, and the `@plugin "@tailwindcss/typography"` registration for Markdown rendering. These variables are updated dynamically by the `SettingsContext`, supporting instant theme switching between Dark/Light and customizable accent colors. Key components like `JobDetailView` and `KanbanBoard` are fully theme-aware, ensuring readability in both Light and Dark modes. **Standardized Brand Colors**: Primary action buttons across all views (Dashboard, Settings, Details) use the `--primary` brand color with high-contrast white text for consistent accessibility.
+The UI uses Tailwind CSS 4 with `globals.css`: Global CSS containing theme variables, glassmorphism utilities, and the `@plugin "@tailwindcss/typography"` registration for Markdown rendering. These variables are updated dynamically by the `SettingsContext`, supporting instant theme switching between Dark/Light and customizable accent colors. Key components like `JobDetailView` and `KanbanBoard` are fully theme-aware, ensuring readability in both Light and Dark modes. **Standardized Brand Colors**: Primary action buttons across all views (Dashboard, Settings, Details, Filters) use the `--primary` brand color with high-contrast white text for consistent accessibility. **Sticky UI Components**: Modals and Filter Popovers use fixed footers to keep action buttons accessible without scrolling.
 
 ---
 

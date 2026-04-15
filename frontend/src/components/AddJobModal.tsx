@@ -451,10 +451,10 @@ export const AddJobModal: React.FC<AddJobModalProps> = ({ isOpen, onClose, onAdd
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in overflow-y-auto">
-      <div className="glass bg-[#0a0a0f] w-full max-w-2xl rounded-2xl p-6 shadow-2xl relative animate-slide-up border-violet-500/20 my-auto max-h-[90vh] flex flex-col">
+      <div className="glass bg-[var(--bg)] w-full max-w-2xl rounded-2xl p-6 shadow-2xl relative animate-slide-up border-primary/20 my-auto max-h-[90vh] flex flex-col">
 
-        <button onClick={onClose} className="absolute right-4 top-4 text-gray-500 hover:text-white transition-colors z-10">
-          ✕
+        <button onClick={onClose} className="absolute right-4 top-4 text-gray-500 hover:text-[var(--fg)] transition-colors z-10 p-1 hover:bg-black/5 dark:hover:bg-white/10 rounded-full">
+          <X className="w-5 h-5" />
         </button>
 
         <h2 className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-violet-400 to-fuchsia-400 mb-6 flex items-center gap-2 shrink-0">
@@ -502,7 +502,7 @@ export const AddJobModal: React.FC<AddJobModalProps> = ({ isOpen, onClose, onAdd
               <button
                 type="button"
                 onClick={handleToggleAi}
-                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors duration-300 focus:outline-none ${effectiveAiEnabled ? 'bg-violet-600' : 'bg-white/10'}`}
+                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors duration-300 focus:outline-none ${effectiveAiEnabled ? 'bg-primary' : 'bg-[var(--border-color)]'}`}
                 aria-label="Toggle AI auto-fill"
               >
                 <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform duration-300 ${effectiveAiEnabled ? 'translate-x-6' : 'translate-x-1'}`} />
@@ -527,18 +527,18 @@ export const AddJobModal: React.FC<AddJobModalProps> = ({ isOpen, onClose, onAdd
                   onRemoveFile={handleRemoveFile}
                 />
 
-                <button
-                  type="button"
-                  onClick={() => {
-                    if (isExtracting) {
-                      setShowCancelExtractionConfirm(true);
-                    } else {
-                      handleExtract();
-                    }
-                  }}
-                  disabled={!isExtracting && !canExtract}
-                  className={`w-full ${isExtracting ? 'bg-violet-600/20 border border-violet-500/30' : 'bg-violet-600 hover:bg-violet-500'} text-white px-4 py-2.5 rounded-lg font-medium transition-all flex items-center justify-center gap-2 overflow-hidden min-h-[44px]`}
-                >
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (isExtracting) {
+                        setShowCancelExtractionConfirm(true);
+                      } else {
+                        handleExtract();
+                      }
+                    }}
+                    disabled={!isExtracting && !canExtract}
+                    className={`w-full ${isExtracting ? 'bg-primary/20 border border-primary/30' : 'bg-primary hover:bg-primary-hover'} text-white px-4 py-2.5 rounded-lg font-medium transition-all flex items-center justify-center gap-2 overflow-hidden min-h-[44px] shadow-lg shadow-primary/10`}
+                  >
                   {isExtracting ? (
                     <div className="flex items-center gap-3 w-full px-2 animate-fade-in">
                       <Loader2 className="w-4 h-4 animate-spin text-violet-400 shrink-0" />
@@ -757,7 +757,7 @@ export const AddJobModal: React.FC<AddJobModalProps> = ({ isOpen, onClose, onAdd
             type="submit"
             form="add-job-form"
             disabled={isSubmitting || !formData.company?.trim() || !formData.role?.trim()}
-            className="bg-white text-black hover:bg-gray-200 px-6 py-2 rounded-lg font-medium transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="bg-primary hover:bg-primary-hover text-white px-6 py-2 rounded-lg font-medium transition-all flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-primary/20 hover:scale-105 active:scale-95"
           >
             {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Add Job'}
           </button>
