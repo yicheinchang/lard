@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Sparkles, Loader2, Link as LinkIcon, Building2, Briefcase, Plus, ChevronDown, ChevronUp, FileText, Upload, Zap, Paperclip, AlertTriangle } from 'lucide-react';
+import { Sparkles, Loader2, Link as LinkIcon, Building2, Briefcase, Plus, ChevronDown, ChevronUp, FileText, Upload, Zap, Paperclip, AlertTriangle, X } from 'lucide-react';
 import { extractJobFromUrl, extractJobFromPdf, createJobStream, checkJobDuplicate, getCompanies, Job } from '../lib/api';
 import { useSettings } from '@/lib/SettingsContext';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
