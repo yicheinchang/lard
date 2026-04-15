@@ -412,7 +412,7 @@ export default function Home() {
       <header className="flex flex-col xl:flex-row justify-between items-start xl:items-center mb-6 gap-4 shrink-0">
         <div>
           <h1 className="text-2xl lg:text-3xl font-bold tracking-tight" style={{ color: 'var(--fg)' }}>
-            {activeView === 'kanban' ? 'Pipeline Dashboard' : 'All Applications'}
+            {activeView === 'kanban' ? 'Application Tracking' : 'All Applications'}
           </h1>
           <p className="text-sm mt-1" style={{ color: 'var(--fg-muted)' }}>
             {activeView === 'kanban'
@@ -510,7 +510,7 @@ export default function Home() {
 
           <button 
             onClick={handleAddClick}
-            className="bg-[var(--fg)] hover:scale-105 active:scale-95 text-[var(--bg)] px-4 py-2 rounded-xl font-semibold transition-all flex items-center gap-2 shadow-lg text-sm"
+            className="bg-primary hover:bg-primary-hover hover:scale-105 active:scale-95 text-white px-4 py-2 rounded-xl font-semibold transition-all flex items-center gap-2 shadow-lg shadow-primary/20 text-sm"
           >
             <Plus className="w-4 h-4" />
             <span className="hidden sm:inline">Add Application</span>

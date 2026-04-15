@@ -1,5 +1,5 @@
-# 🗺️ Lard - Lazy AI-Powered Resume Database (v0.62.1)
-Last Updated: 2026-04-14T19:16:00Z
+# 🗺️ Lard - Lazy AI-Powered Resume Database (v0.62.2)
+Last Updated: 2026-04-15T15:35:00Z
 
 This document provides a summary of the project's architecture, tech stack, and key logic to give AI coding agents instant context.
 
@@ -73,7 +73,7 @@ This document provides a summary of the project's architecture, tech stack, and 
   - `AppShell.tsx`: Main layout wrapper featuring a **Binary Snap Sidebar** (Fixed 160px expanded / 64px collapsed). Includes **Mobile Responsive Header** and **Hamburger Menu Drawer**.
   - `KanbanBoard.tsx`: Responsive drag-and-drop pipeline visualization. Features **Min-Width enforcement** (250px) for desktop with horizontal scrolling and a **Tabbed Mobile UI** (below 1024px) for focused single-column tracking. Supports independent vertical scrolling and dynamic counts.
   - `TableView.tsx`: Density-rich list view of applications. Includes **Hover-activated Tooltips** for company and role cells to prevent truncation.
-  - `JobCard.tsx`: Individual job item in the Kanban board. Features **Hover-activated Tooltips** and **Status text protection** (nowrap) for clean readability at any width.
+  - `JobCard.tsx`: Individual job item in the Kanban board. Features **Hover-activated Tooltips** and **Status text protection** (nowrap) for clean readability at any width. **Mobile Responsive**: Action buttons (Advance, Mark as...) are always visible on touch devices/small screens while remaining hover-only on desktop.
 
   - `JobDetailView.tsx`: Core component for job application management. Features a **Centered Floating Modal** with a backdrop-blur overlay and a **Full-Screen Toggle**. Consists of three tabs:
       *   **Interview Pipeline** (Default): Timeline events with full CRUD and inline editing.
@@ -125,7 +125,7 @@ The system enforces strict status integrity in `JobDetailView.tsx` and `page.tsx
 The `ChatAssistant` is a global component accessible from any page. It maintains its own state and can be toggled via a floating action button or keyboard shortcuts.
 
 ### 5. Dynamic Theme Store
-The UI uses Tailwind CSS 4 with `globals.css`: Global CSS containing theme variables, glassmorphism utilities, and the `@plugin "@tailwindcss/typography"` registration for Markdown rendering. These variables are updated dynamically by the `SettingsContext`, supporting instant theme switching between Dark/Light and customizable accent colors. Key components like `JobDetailView` and `KanbanBoard` are fully theme-aware, ensuring readability in both Light and Dark modes.
+The UI uses Tailwind CSS 4 with `globals.css`: Global CSS containing theme variables, glassmorphism utilities, and the `@plugin "@tailwindcss/typography"` registration for Markdown rendering. These variables are updated dynamically by the `SettingsContext`, supporting instant theme switching between Dark/Light and customizable accent colors. Key components like `JobDetailView` and `KanbanBoard` are fully theme-aware, ensuring readability in both Light and Dark modes. **Standardized Brand Colors**: Primary action buttons across all views (Dashboard, Settings, Details) use the `--primary` brand color with high-contrast white text for consistent accessibility.
 
 ---
 

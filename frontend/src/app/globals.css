@@ -180,7 +180,7 @@ input[type="date"].style-date::-webkit-calendar-picker-indicator {
 /* ── Theme-aware utility overrides ────────────────────────────────── */
 
 /* Light-theme adjustments for hard-coded dark classes used in components */
-[data-theme="light"] .text-white { color: var(--fg); }
+ /* Removed text-white override to maintain readability on primary buttons */
 [data-theme="light"] .text-gray-300 { color: var(--fg-muted); }
 [data-theme="light"] .text-gray-400 { color: var(--fg-muted); }
 [data-theme="light"] .text-gray-500 { color: var(--fg-subtle); }
@@ -200,7 +200,7 @@ input[type="date"].style-date::-webkit-calendar-picker-indicator {
 [data-theme="light"] .bg-black\/60 { background-color: rgba(0,0,0,0.25); }
 [data-theme="light"] .bg-black\/80 { background-color: rgba(0,0,0,0.05); }
 [data-theme="light"] .hover\:bg-white\/5:hover { background-color: rgba(0,0,0,0.06); }
-[data-theme="light"] .hover\:text-white:hover { color: var(--fg); }
+ /* Removed hover:text-white override */
 [data-theme="light"] .bg-\[\#0a0a0f\] { background-color: var(--bg); }
 [data-theme="light"] .bg-\[\#1a1a24\] { background-color: var(--surface-alt); }
 [data-theme="light"] .from-\[\#0a0a0f\] { --tw-gradient-from: var(--bg); }
@@ -227,14 +227,7 @@ input[type="date"].style-date::-webkit-calendar-picker-indicator {
 /* Light-mode sidebar text */
 [data-theme="light"] .text-violet-300 { color: #7c3aed; }
 
-/* Ensure Add button keeps its contrast in light mode */
-[data-theme="light"] .bg-white.text-black {
-  background-color: var(--fg);
-  color: var(--bg);
-}
-[data-theme="light"] .bg-white.text-black:hover {
-  background-color: #333;
-}
+
 
 /* ── Markdown Editor Theme Overrides ──────────────────────────────── */
 .rc-md-editor {

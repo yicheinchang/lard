@@ -637,7 +637,7 @@ export const JobDetailView: React.FC<JobDetailViewProps> = ({ job, onClose, onJo
                   <button
                     disabled={!job.applied_date}
                     onClick={() => setIsAdding(!isAdding)}
-                    className={`text-sm bg-violet-600 hover:bg-violet-500 text-white px-3 py-1.5 rounded-lg flex items-center gap-2 transition-colors disabled:opacity-40 disabled:cursor-not-allowed`}
+                    className={`text-sm bg-primary hover:bg-primary-hover text-white px-3 py-1.5 rounded-lg flex items-center gap-2 transition-colors disabled:opacity-40 disabled:cursor-not-allowed`}
                   >
                     <Plus className="w-4 h-4" /> Add Step
                   </button>
@@ -674,7 +674,7 @@ export const JobDetailView: React.FC<JobDetailViewProps> = ({ job, onClose, onJo
                       className="bg-[var(--input-bg)] border border-[var(--border-color)] rounded-lg px-3 py-2 flex-grow text-[var(--fg)] text-sm focus:outline-none focus:border-violet-500 style-date"
                     />
                   </div>
-                  <button onClick={handleAddStep} className="bg-violet-600 hover:bg-violet-500 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors">Save</button>
+                  <button onClick={handleAddStep} className="bg-primary hover:bg-primary-hover text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors">Save</button>
                 </div>
               )}
 
@@ -749,7 +749,7 @@ export const JobDetailView: React.FC<JobDetailViewProps> = ({ job, onClose, onJo
                             />
                             <div className="flex justify-end gap-2">
                               <button onClick={() => setEditingStepId(null)} className="text-xs px-3 py-1.5 text-[var(--fg-muted)] hover:text-[var(--fg)] transition-colors">Cancel</button>
-                              <button onClick={() => saveStep(step.id)} className="text-xs font-medium bg-violet-600 hover:bg-violet-500 text-white px-3 py-1.5 rounded-lg transition-colors flex items-center gap-1">
+                              <button onClick={() => saveStep(step.id)} className="text-xs font-medium bg-primary hover:bg-primary-hover text-white px-3 py-1.5 rounded-lg transition-colors flex items-center gap-1">
                                 <Save className="w-3.5 h-3.5" /> Save
                               </button>
                             </div>

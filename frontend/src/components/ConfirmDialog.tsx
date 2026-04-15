@@ -27,10 +27,10 @@ interface ConfirmDialogProps {
 
 const variantStyles = {
   default: {
-    button: 'bg-violet-600 hover:bg-violet-500 text-white',
+    button: 'bg-primary hover:bg-primary-hover text-white',
     icon: <AlertTriangle className="w-6 h-6 text-violet-400" />,
-    border: 'border-violet-500/30',
-    glow: 'shadow-violet-500/10',
+    border: 'border-primary/30',
+    glow: 'shadow-primary/10',
   },
   danger: {
     button: 'bg-red-600 hover:bg-red-500 text-white',
@@ -104,7 +104,7 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
       className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in"
       onClick={(e) => { if (e.target === e.currentTarget) handleCancel(); }}
     >
-      <div className={`glass bg-[#0f0f18] w-full max-w-md rounded-2xl p-6 shadow-2xl ${styles.glow} animate-slide-up ${styles.border}`}>
+      <div className={`glass bg-[var(--bg)] w-full max-w-md rounded-2xl p-6 shadow-2xl ${styles.glow} animate-slide-up ${styles.border}`}>
         <div className="flex items-start gap-4">
           <div className="mt-0.5 shrink-0">
             {styles.icon}
@@ -129,7 +129,7 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
               value={textValue}
               onChange={(e) => setTextValue(e.target.value)}
               list={textOptions && textOptions.length > 0 ? "confirm-text-options" : undefined}
-              className="w-full bg-black/40 border border-white/10 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-violet-500 text-input-dropdown"
+              className="w-full bg-[var(--input-bg)] border border-white/10 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-violet-500 text-input-dropdown"
               placeholder="e.g. Phone Screen"
             />
             {textOptions && textOptions.length > 0 && (

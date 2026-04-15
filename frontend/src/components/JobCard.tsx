@@ -163,7 +163,7 @@ export const JobCard: React.FC<JobCardProps> = ({ job, onUpdateStatus, onClick, 
           </span>
 
           {hasActions && (
-            <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-all translate-x-2 group-hover:translate-x-0">
+            <div className="flex items-center gap-0.5 opacity-100 lg:opacity-0 lg:group-hover:opacity-100 transition-all translate-x-0 lg:translate-x-2 lg:group-hover:translate-x-0">
               {isInterviewing ? (
                 <>
                   <button onClick={(e) => openConfirm('Offered', e)} className="text-emerald-400 hover:text-emerald-300 hover:bg-emerald-500/10 p-1.5 rounded-md transition-colors" title="Mark as Offered">

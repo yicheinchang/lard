@@ -501,7 +501,7 @@ export function SettingsPage() {
         <button
           onClick={() => handleSave()}
           disabled={saving}
-          className="bg-violet-600 hover:bg-violet-500 disabled:opacity-50 text-white px-6 py-2.5 rounded-xl font-semibold transition-all hover:scale-105 active:scale-95 flex items-center gap-2 shadow-lg shadow-violet-600/20 text-sm"
+          className="bg-primary hover:bg-primary-hover disabled:opacity-50 text-white px-6 py-2.5 rounded-xl font-semibold transition-all hover:scale-105 active:scale-95 flex items-center gap-2 shadow-lg shadow-primary/20 text-sm"
         >
           {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
           {saveStatus === 'saved' ? (
