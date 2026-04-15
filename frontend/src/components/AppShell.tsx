@@ -75,7 +75,7 @@ function Sidebar() {
         onMouseDown={startResizing}
       />
       {/* Logo Area */}
-      <div className={`flex items-center ${sidebarCollapsed ? 'justify-center p-4' : 'px-6 pt-6 pb-2'} mb-2`}>
+      <div className={`flex flex-col ${sidebarCollapsed ? 'items-center justify-center p-4' : 'px-6 pt-6 pb-2'} mb-2`}>
         {sidebarCollapsed ? (
           <img 
             src="/logo.png" 
@@ -83,13 +83,13 @@ function Sidebar() {
             alt="Lard Logo" 
           />
         ) : (
-          <div className="flex flex-col px-6 pt-6 pb-2">
+          <>
             <h2 className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-violet-400 to-fuchsia-400 flex items-center gap-2">
               <img src="/logo.png" className="w-[36px] h-[36px] object-contain" alt="Lard Logo" />
               Lard
             </h2>
-            <p className="text-[10px] text-[var(--fg-subtle)] font-medium mt-1 leading-tight">Lazy AI-powered Resume Database</p>
-          </div>
+            <p className="text-[10px] text-[var(--fg-subtle)] font-medium mt-1 leading-tight whitespace-normal">Lazy AI-powered Resume Database</p>
+          </>
         )}
       </div>
 
