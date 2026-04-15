@@ -1,5 +1,5 @@
-# 🗺️ Lard - Lazy AI-Powered Resume Database (v0.62.4)
-Last Updated: 2026-04-15T15:49:00Z
+# 🗺️ Lard - Lazy AI-Powered Resume Database (v0.62.5)
+Last Updated: 2026-04-15T15:57:00Z
 
 This document provides a summary of the project's architecture, tech stack, and key logic to give AI coding agents instant context.
 
