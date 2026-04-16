@@ -22,7 +22,8 @@ backend/.venv/
 backend/*.log
 backend/app_settings.json
 backend/test/
-backend/tmp/
+backend/tmp/*
+!backend/tmp/.gitkeep
 
 # Frontend
 frontend/node_modules/
