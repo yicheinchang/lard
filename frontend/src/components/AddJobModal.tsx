@@ -123,6 +123,7 @@ export const AddJobModal: React.FC<AddJobModalProps> = ({ isOpen, onClose, onAdd
   const [showSimilarConfirm, setShowSimilarConfirm] = useState(false);
   const [showCancelExtractionConfirm, setShowCancelExtractionConfirm] = useState(false);
   const [hallucinationWarning, setHallucinationWarning] = useState<string | null>(null);
+  const [contextLimitReached, setContextLimitReached] = useState(false);
   const abortControllerRef = useRef<AbortController | null>(null);
 
   // Document upload state (for manual attachments)
@@ -316,6 +317,12 @@ export const AddJobModal: React.FC<AddJobModalProps> = ({ isOpen, onClose, onAdd
       } else {
         setHallucinationWarning(null);
       }
+
+      if (data.extracted.context_limit_reached) {
+        setContextLimitReached(true);
+      } else {
+        setContextLimitReached(false);
+      }
     }
   };
 
@@ -334,6 +341,7 @@ export const AddJobModal: React.FC<AddJobModalProps> = ({ isOpen, onClose, onAdd
     setSelectedFile(null);
     setError('');
     setHallucinationWarning(null);
+    setContextLimitReached(false);
     setIsUploadingDoc(false);
     setUploadError(null);
     setUploadTasks(initialUploadTasks);
@@ -702,6 +710,20 @@ export const AddJobModal: React.FC<AddJobModalProps> = ({ isOpen, onClose, onAdd
                       </button>
                     )}
                   </div>
+
+                  {contextLimitReached && (
+                    <div className="p-3 bg-violet-500/10 border border-violet-500/30 rounded-xl animate-fade-in mb-3">
+                      <div className="flex items-start gap-2.5">
+                        <Zap className="w-5 h-5 text-violet-400 shrink-0 mt-0.5" />
+                        <div className="flex-1 space-y-1">
+                          <p className="text-xs font-bold text-violet-400 uppercase tracking-wide">Context Limit Reached</p>
+                          <p className="text-[11px] text-violet-200/70 leading-relaxed italic">
+                             This job posting exceeds the AI context window. Verbatim extraction and QA validation are limited to the first {useSettings().settings?.llm_config?.num_ctx ? useSettings().settings.llm_config.num_ctx * 3 : 24576} characters.
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
 
                   {hallucinationWarning && (
                     <div className="p-3 bg-amber-500/10 border border-amber-500/30 rounded-xl animate-fade-in mb-3">

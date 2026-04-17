@@ -27,6 +27,9 @@ class AgentState(TypedDict):
     previous_json_results: dict | None
     active_source: str | None # "JSON-LD" or "TEXT"
     description_verified: bool | None # True if validated by JSON fidelity check
+    text_truncated: bool
+    json_truncated: bool
+    context_limit_reached: bool
 
 def _is_valid_value(val: Any) -> bool:
     """
@@ -337,23 +340,60 @@ async def _run_multi_agent_json_extraction(structured_data: dict, text: str, req
     for field, res in results_list:
         if res:
             results.update(res)
-        else:
-            results[field] = None
-            
     return results
+
+def _calculate_context_limit(settings: dict) -> int:
+    """Calculate the character limit based on num_ctx * 3."""
+    num_ctx = settings.get("llm_config", {}).get("num_ctx", 8192)
+    try:
+        limit = int(num_ctx) * 3
+    except (ValueError, TypeError):
+        limit = 8192 * 3
+    return limit
 
 async def check_job_post_node(state: AgentState):
     """
     New node to confirm if the input is a job post (Multi-Agent mode only).
     Single-agent mode embeds this check into its main prompt to save calls.
+    ALSO PERFORMS CENTRALIZED TRUNCATION SENSITIVE TO num_ctx.
     """
     request = state.get("request")
     if request and await request.is_disconnected():
         return state
 
+    settings = load_app_settings()
+    limit = _calculate_context_limit(settings)
+    progress_cb = state.get("progress_callback")
+    
+    # ── Centralized Truncation ─────────────────────────────────────────
+    # We truncate once here. All downstream nodes inherit this state.
+    text_truncated = False
+    json_truncated = False
+    
+    # 1. Truncate Raw Text
+    raw_text = state.get("text", "")
+    if len(raw_text) > limit:
+        state["text"] = raw_text[:limit]
+        text_truncated = True
+        agnt_log("Graph", task="Central Truncation", result=f"RAW_TEXT truncated to {limit} chars")
+
+    # 2. Truncate JSON-LD Description (most common token sink)
+    structured_data = state.get("structured_data")
+    if structured_data and isinstance(structured_data, dict):
+        desc = structured_data.get("description")
+        if desc and isinstance(desc, str) and len(desc) > limit:
+            structured_data["description"] = desc[:limit]
+            json_truncated = True
+            agnt_log("Graph", task="Central Truncation", result=f"JSON_LD description truncated to {limit} chars")
+
+    # Initial context limit state
+    state["text_truncated"] = text_truncated
+    state["json_truncated"] = json_truncated
+    state["context_limit_reached"] = False # Default, will be updated in extract_node based on path
+
     # If JSON-LD structured data is found, it's definitely a job post
-    if state.get("structured_data"):
-        return {"error": None}
+    if structured_data:
+        return {"error": None, "text_truncated": text_truncated, "json_truncated": json_truncated, "structured_data": structured_data}
 
     # Log LLM Info once
     llm_logged = state.get("llm_logged", False)
@@ -361,15 +401,13 @@ async def check_job_post_node(state: AgentState):
         log_llm_info()
         llm_logged = True
 
-    settings = load_app_settings()
     mode = settings.get("extraction_mode", "single")
     
     # Requirement: In single-agent strategy, this feature is embedded in the agent prompt.
     if mode == "single":
         agnt_log("Verifier", task="Job Post Verification", result="SKIP: Embedded in Single-Agent Extractor")
-        return {"error": None, "llm_logged": llm_logged}
+        return {"error": None, "llm_logged": llm_logged, "text_truncated": text_truncated, "json_truncated": json_truncated}
 
-    progress_cb = state.get("progress_callback")
     if progress_cb:
         await progress_cb({"event": "progress", "msg": "AI: Verifying content (Job Post Confirmation)..."})
 
@@ -377,13 +415,14 @@ async def check_job_post_node(state: AgentState):
     llm = get_llm(num_ctx=settings["llm_config"].get("num_ctx"))
     checker = get_job_post_check_prompt(settings) | llm.with_structured_output(JobPostCheck)
 
-    # Log calling
+    # Log calling - use min(8000, limit) for identification as per plan
+    verification_limit = min(8000, limit)
     agnt_log("Verifier", task="Checking Job Post Content", input_data=str(state["text"])[:50])
 
     try:
-        # Check first 8000 chars for identification
+        # Check first portion for identification
         res = await asyncio.wait_for(
-            checker.ainvoke({"text": state["text"][:8000]}),
+            checker.ainvoke({"text": state["text"][:verification_limit]}),
             timeout=120
         )
         if not res.is_job_post or res.likelihood < 0.8:
@@ -419,6 +458,28 @@ async def extract_node(state: AgentState):
     
     # Track source in state for routing to the correct specialized validator
     state_update = {"active_source": active_source}
+
+    # Context-Aware Flagging Strategy
+    # Warn only if the used source was truncated
+    context_limit_reached = False
+    if active_source == "JSON-LD":
+        context_limit_reached = state.get("json_truncated", False)
+    else:
+        # TEXT mode (Primary or Fallback)
+        context_limit_reached = state.get("text_truncated", False)
+        # If we had JSON but fell back, a truncation in JSON description also matters
+        if is_json_ld and state.get("json_truncated"):
+             context_limit_reached = True
+
+    if context_limit_reached:
+        state_update["context_limit_reached"] = True
+        agnt_log("Graph", task="Warning", result="Active source exceeded context limit")
+        if progress_cb:
+            # Emit SSE Warning
+            await progress_cb({
+                "event": "progress", 
+                "msg": "Warning: Job content exceeds AI context window. Validation completeness check will be limited."
+            })
 
     try:
         from ai.chains import (
@@ -682,7 +743,7 @@ async def json_validator_node(state: AgentState):
     try:
         result = await asyncio.wait_for(
             validator.ainvoke({
-                "source_text": str(raw_source)[:30000], 
+                "source_text": str(raw_source), 
                 "generated_description": str(description),
                 "custom_guidance": f"ADDITIONAL QA GUIDANCE:\n{custom_guidance}" if custom_guidance else ""
             }),
@@ -766,7 +827,7 @@ async def text_validator_node(state: AgentState):
     try:
         result = await asyncio.wait_for(
             validator.ainvoke({
-                "source_text": str(state["text"])[:30000], 
+                "source_text": str(state["text"]), 
                 "generated_description": str(description),
                 "custom_guidance": f"ADDITIONAL QA GUIDANCE:\n{custom_guidance}" if custom_guidance else ""
             }),

@@ -1,5 +1,5 @@
-# 🗺️ Lard - Lazy AI-Powered Resume Database (v0.62.8)
-Last Updated: 2026-04-15T16:23:00Z
+# 🗺️ Lard - Lazy AI-Powered Resume Database (v0.62.9)
+Last Updated: 2026-04-17T19:20:00Z
 
 This document provides a summary of the project's architecture, tech stack, and key logic to give AI coding agents instant context.
 
@@ -85,7 +85,7 @@ This document provides a summary of the project's architecture, tech stack, and 
   - `ProcessingOverlay.tsx`: Full-screen overlay for tracking long-running AI tasks with SSE updates. Feature: **Auto-closes 1.5s after success** and theme-aware styling.
   - `AutoSaveIndicator.tsx`: Small, non-blocking status indicator for background AI vectorization during note taking.
   - `tooltip-box`: Theme-aware CSS utility in `globals.css` ensuring readable tooltips in both light and dark modes.
-  - `AddJobModal.tsx`: Core form for new applications. Includes AI Auto-fill, Potential Hallucination Warning System, and **validation guards for required fields** (Company/Role).
+  - `AddJobModal.tsx`: Core form for new applications. Includes AI Auto-fill, Potential Hallucination Warning System, **Context Limit Warning System**, and **validation guards for required fields** (Company/Role).
   - `ConfirmDialog.tsx`: Multi-functional modal replacing native prompts. Supports **Date Inputs**, **File Uploads**, and **Combobox Text Inputs** (with custom `<datalist>`). Includes variant-based styling (`danger`, `success`, `default`).
   - `ChatAssistant.tsx`: Global drawer for the AI agent.
   - `SettingsPage.tsx`: Integrated configuration for LLMs and themes. Features a collapsible **Advanced AI Prompt Settings** subsection with:
@@ -304,16 +304,16 @@ Settings are not just environment variables. They are persisted in `backend/app_
 ### 7. AI Extraction & Preprocessing
 The system uses a multi-stage pipeline to extract job details from URLs, PDFs, and text:
 - **AI Extraction**: Multi-agent extraction pipeline (LangGraph) with a Sequential Fallback strategy. Uses **Docling** with in-memory **DocumentStream** processing for layout-aware Markdown conversion (eliminating temporary HTML files during URL extraction) and **extruct** for robust JSON-LD metadata extraction.
-- **Job Post Verification**: LangGraph-based `check_job_post_node` that confirms content is a job posting before extraction. Bypassed if JSON-LD is found. Supports Single-Agent embedding (verification result in main output) and Multi-Agent specialized nodes. Features a **fail-fast** strategy that halts the workflow immediately on negative results or technical verification errors. Customizable via the Settings UI.
+- **Job Post Verification**: LangGraph-based `check_job_post_node` that confirms content is a job posting before extraction. Bypassed if JSON-LD is found. Supports Single-Agent embedding (verification result in main output) and Multi-Agent specialized nodes. Features a **fail-fast** strategy that halts the workflow immediately on negative results. **Centralized Truncation**: Performs silent input slicing for both Raw Text and JSON-LD descriptions based on the dynamic `num_ctx * 3` limit, ensuring consistent context management across all downstream nodes.
 - **Contextual Metadata**: Extracts Company, Role, Location, Salary, Job ID, and Dates.
 - **JSON-LD First Strategy**: Prioritizes `application/ld+json` script tags (Schema.org `JobPosting`) for metadata extraction to ensure maximum accuracy on enterprise portals. Strictly uses `identifier` for Job ID extraction.
 - **Optimized JSON-LD Multi-Agent Routing**: If JSON-LD is found and multi-agent mode is enabled, the system bypasses massive payload overhead by slicing the JSON and distributing specific fragments (e.g., `baseSalary`) only to the relevant agents. Missing fragments bypass the LLM completely, optimizing speed and reducing token limits.
 - **Streaming & Progress UI**: Extraction tasks use Server-Sent Events (SSE). The frontend `Ticker.tsx` displays real-time status updates (e.g., "Extracting Salary Range...", "Finalizing Description..."). Implements a **15s SSE heartbeat mechanism** (comments) and increased Next.js proxy timeouts to ensure stability during long LLM processing on hardware-limited systems.
 - **AI Validation & Completeness**: Uses:
-    - **json_validator_node**: Specialized validator for JSON-LD data. Checks metadata for placeholders and performs a fidelity QA on the HTML-to-Markdown description conversion. Analyzes up to 30,000 characters.
-    - **text_validator_node**: Specialized validator for raw text data. Performs comprehensive QA on the isolated job description, checking for completeness, hallucinations, and boundary accuracy. Analyzes up to 30,000 characters. Includes a **Fast Pass** mechanism: if a description was already verified by the JSON fidelity pass, it bypasses the text re-validation to prevent false-positive rejections on noisy pages.
+    - **json_validator_node**: Specialized validator for JSON-LD data. Checks metadata for placeholders and performs a fidelity QA on the HTML-to-Markdown description conversion.
+    - **text_validator_node**: Specialized validator for raw text data. Performs comprehensive QA on the isolated job description, checking for completeness, hallucinations, and boundary accuracy. Includes a **Fast Pass** mechanism: if a description was already verified by the JSON fidelity pass, it bypasses the text re-validation to prevent false-positive rejections on noisy pages.
 - **Guided AI Retries**: If validation fails, the specific feedback from the QA validator is injected into the next extraction prompt (Attempts 2 and 3), guiding the LLM to fix specifically identified issues like truncation or hallucinations. Features **robust variable injection** for `validation_feedback` and `custom_guidance` to support user-defined prompt overrides.
-- **Fail-Safe UI Warning**: If validation still fails after 3 retries, the system preserves the output but sets `hallucination_detected: True` and `hallucination_reasons` (using the final QA block), which triggers a warning banner in the frontend `AddJobModal.tsx`.
+- **Fail-Safe UI Warnings**: If validation still fails after 3 retries, the system preserves the output but sets `hallucination_detected: True` and `hallucination_reasons` (using the final QA block), which triggers an amber warning banner. **Context-Aware Flagging**: If the active data source (JSON or Text) was truncated during the centralized pre-processing, the system sets `context_limit_reached: True`, triggering a violet Zap warning banner in the frontend `AddJobModal.tsx` to inform the user of limited validation completeness.
 - **Cancellation & Safety**: Explicit support for `AbortController`. If a user cancels in the UI, the backend immediately terminates the background AI processing.
 - **Selective Pass Logic**: Skips structured JSON extraction for the description field, using a direct verbatim retrieval prompt for speed and reliability, and defaults to generous 600s timeouts on hardware-limited setups.
 - **Resilient Network Client**: Uses browser-standard headers to bypass anti-bot measures.

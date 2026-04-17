@@ -93,7 +93,7 @@ def _create_description_prompt(settings: dict | None = None):
     base = escape_braces(get_base_prompt("extraction_description", settings))
     return ChatPromptTemplate.from_messages([
         ("system", base + "{validation_feedback}{custom_guidance}"),
-        ("user", "CONTENT TO PROCESS:\n\"\"\"\n{text}\n\"\"\"")
+        ("user", "CONTENT TO PROCESS:\n\"\"\"\n{text}\n\"\"\"\n\nProduce the verbatim Markdown description now. Do NOT include any preamble or commentary:")
     ])
 
 # Helper to create extraction prompt
@@ -169,7 +169,7 @@ def _create_description_json_prompt(settings: dict | None = None):
     base = escape_braces(get_base_prompt("json_description", settings))
     return ChatPromptTemplate.from_messages([
         ("system", base + "{validation_feedback}{custom_guidance}"),
-        ("user", "JSON FRAGMENT TO PROCESS (Markdown Output Required):\n\"\"\"\n{json_fragment}\n\"\"\"")
+        ("user", "JSON FRAGMENT TO PROCESS (Markdown Output Required):\n\"\"\"\n{json_fragment}\n\"\"\"\n\nProduce the verbatim Markdown description now. Do NOT include any preamble or commentary:")
     ])
 
 # --- Aliases for Graph Compatibility ---
