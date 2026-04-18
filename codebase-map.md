@@ -1,5 +1,5 @@
-# 🗺️ Lard - Lazy AI-Powered Resume Database (v0.63.0)
-Last Updated: 2026-04-18T04:05:00Z
+# 🗺️ Lard - Lazy AI-Powered Resume Database (v0.64.0)
+Last Updated: 2026-04-18T04:13:30Z
 
 This document provides a summary of the project's architecture, tech stack, and key logic to give AI coding agents instant context.
 
@@ -105,7 +105,7 @@ The frontend is a **Single Page Application (SPA)** built with Next.js 16, utili
 
 ### 1. View Orchestration & Global State
 The `AppShell` provides the persistent UI (sidebar and chat), while `src/app/page.tsx` acts as the main view switcher and global data manager.
-- `page.tsx` centrally handles global state for `searchQuery`, `sortKey`, and `sortDir`.
+- `page.tsx` centrally handles global state for `searchQuery`, `sortKey`, and `sortDir`. **Expanded Search**: Real-time filtering now includes Company, Role, Location, Job ID, Description, and both Application/Interview Notes.
 - Transitioning between Dashboard (Kanban) and Table view is handled via the `ViewContext`, but the dataset filtering and sorting remain unified and preserved across views.
 
 ### 2. Job Detail System

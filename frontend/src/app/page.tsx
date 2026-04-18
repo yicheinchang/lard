@@ -73,7 +73,11 @@ export default function Home() {
         const matchesSearch = (
           job.company?.toLowerCase().includes(q) ||
           job.role?.toLowerCase().includes(q) ||
-          (job.location || '').toLowerCase().includes(q)
+          (job.location || '').toLowerCase().includes(q) ||
+          (job.company_job_id || '').toLowerCase().includes(q) ||
+          (job.description || '').toLowerCase().includes(q) ||
+          (job.notes || '').toLowerCase().includes(q) ||
+          (job.steps || []).some(step => (step.notes || '').toLowerCase().includes(q))
         );
         if (!matchesSearch) return false;
       }
