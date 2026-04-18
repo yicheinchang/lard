@@ -1,5 +1,5 @@
-# 🗺️ Lard - Lazy AI-Powered Resume Database (v0.62.10)
-Last Updated: 2026-04-18T03:18:00Z
+# 🗺️ Lard - Lazy AI-Powered Resume Database (v0.63.0)
+Last Updated: 2026-04-18T04:05:00Z
 
 This document provides a summary of the project's architecture, tech stack, and key logic to give AI coding agents instant context.
 
@@ -303,10 +303,10 @@ Settings are not just environment variables. They are persisted in `backend/app_
 
 ### 7. AI Extraction & Preprocessing
 The system uses a multi-stage pipeline to extract job details from URLs, PDFs, and text:
-- **AI Extraction**: Multi-agent extraction pipeline (LangGraph) with a Sequential Fallback strategy. Uses **Docling** with in-memory **DocumentStream** processing for layout-aware Markdown conversion (eliminating temporary HTML files during URL extraction) and **extruct** for robust JSON-LD metadata extraction.
-- **Job Post Verification**: LangGraph-based `check_job_post_node` that confirms content is a job posting before extraction. Bypassed if JSON-LD is found. Supports Single-Agent embedding (verification result in main output) and Multi-Agent specialized nodes. Features a **fail-fast** strategy that halts the workflow immediately on negative results. **Centralized Truncation**: Performs silent input slicing for both Raw Text and JSON-LD descriptions based on the dynamic `num_ctx * 3` limit, ensuring consistent context management across all downstream nodes.
+- **AI Extraction**: Multi-agent extraction pipeline (LangGraph) with a Sequential Fallback strategy. Uses **Docling** with in-memory **DocumentStream** processing for layout-aware Markdown conversion and **extruct** for robust JSON-LD metadata extraction.
+- **Job Post Verification**: LangGraph-based `check_job_post_node` that confirms content is a job posting. Bypassed if JSON-LD is found. Features a **fail-fast** strategy that halts the workflow on negative results. **Resilient Decoupling**: Uses browser-standard headers with **Gzip/Deflate only** (Brotli disabled for reliability) to ensure consistent content decoding across all corporate portals.
 - **Contextual Metadata**: Extracts Company, Role, Location, Salary, Job ID, and Dates.
-- **JSON-LD First Strategy**: Prioritizes `application/ld+json` script tags (Schema.org `JobPosting`) for metadata extraction to ensure maximum accuracy on enterprise portals. Strictly uses `identifier` for Job ID extraction.
+- **JSON-LD First Strategy**: Prioritizes `application/ld+json` script tags for metadata. Features **Robust Identification Helpers**: Automatically maps non-standard corporate fields (e.g., `jobBenefits` for salary, `positionID` for Job ID) to the internal schema, minimizing unnecessary full-text fallbacks.
 - **Optimized JSON-LD Multi-Agent Routing**: If JSON-LD is found and multi-agent mode is enabled, the system bypasses massive payload overhead by slicing the JSON and distributing specific fragments (e.g., `baseSalary`) only to the relevant agents. Missing fragments bypass the LLM completely, optimizing speed and reducing token limits.
 - **Streaming & Progress UI**: Extraction tasks use Server-Sent Events (SSE). The frontend `Ticker.tsx` displays real-time status updates (e.g., "Extracting Salary Range...", "Finalizing Description..."). Implements a **15s SSE heartbeat mechanism** (comments) and increased Next.js proxy timeouts to ensure stability during long LLM processing on hardware-limited systems.
 - **AI Validation & Completeness**: Uses:

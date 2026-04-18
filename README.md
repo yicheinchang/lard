@@ -104,4 +104,4 @@ For detailed architecture, API endpoints, and optimization details, refer to:
 
 ---
 Built with ❤️ by Antigravity.
-Current version: v0.56.7
+Current version: v0.63.0

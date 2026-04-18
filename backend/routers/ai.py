@@ -81,6 +81,7 @@ def _clean_json_ld(data: dict) -> dict:
         "jobLocation", "baseSalary", "salaryRange", "identifier", "validThrough",
         "responsibilities", "skills", "qualifications", "educationRequirements",
         "experienceRequirements", "occupationalCategory", "industry", "workHours",
+        "jobBenefits", "estimatedSalary", "salary", "alternateName",
         "@type", "@id"
     }
     
@@ -186,7 +187,7 @@ async def _run_extraction_core(request: Request, url: str | None = None, text: s
                 "User-Agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36",
                 "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
                 "Accept-Language": "en-US,en;q=0.9",
-                "Accept-Encoding": "gzip, deflate, br",
+                "Accept-Encoding": "gzip, deflate",
                 "Upgrade-Insecure-Requests": "1",
                 "Sec-Fetch-Dest": "document",
                 "Sec-Fetch-Mode": "navigate",

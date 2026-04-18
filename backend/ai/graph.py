@@ -308,6 +308,22 @@ def _get_json_ld_company(structured_data: dict) -> Any:
         
     return None
 
+def _get_json_ld_salary(structured_data: dict) -> Any:
+    """Robustly find salary information in Schema.org JobPosting data."""
+    # Standard keys
+    for key in ["baseSalary", "salaryRange", "salary", "estimatedSalary", "jobBenefits"]:
+        val = structured_data.get(key)
+        if val: return val
+    return None
+
+def _get_json_ld_identifier(structured_data: dict) -> Any:
+    """Robustly find job identifier in Schema.org JobPosting data."""
+    # Standard keys
+    for key in ["identifier", "jobID", "job_id", "positionID"]:
+        val = structured_data.get(key)
+        if val: return val
+    return None
+
 async def _run_multi_agent_json_extraction(structured_data: dict, text: str, request: Any = None, progress_cb: Callable = None, state: dict = None):
     settings = load_app_settings()
     # Concurrency limit (Dynamic from settings)
@@ -322,8 +338,8 @@ async def _run_multi_agent_json_extraction(structured_data: dict, text: str, req
         ("company", JobCompany, get_json_field_prompt("company", settings), _get_json_ld_company(structured_data)),
         ("role", JobRole, get_json_field_prompt("role", settings), structured_data.get("title")),
         ("location", JobLocation, get_json_field_prompt("location", settings), structured_data.get("jobLocation")),
-        ("salary_range", JobSalary, get_json_field_prompt("salary_range", settings), structured_data.get("baseSalary")),
-        ("company_job_id", JobId, get_json_field_prompt("company_job_id", settings), structured_data.get("identifier")),
+        ("salary_range", JobSalary, get_json_field_prompt("salary_range", settings), _get_json_ld_salary(structured_data)),
+        ("company_job_id", JobId, get_json_field_prompt("company_job_id", settings), _get_json_ld_identifier(structured_data)),
         ("job_posted_date", PostedDate, get_json_field_prompt("job_posted_date", settings), structured_data.get("datePosted")),
         ("application_deadline", DeadlineDate, get_json_field_prompt("application_deadline", settings), structured_data.get("validThrough")),
         ("description", JobDescription, description_json_prompt, structured_data.get("description")),
