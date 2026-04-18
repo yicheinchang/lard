@@ -1,5 +1,6 @@
 import asyncio
 import json
+import html
 import operator
 from typing import TypedDict, Any, Annotated, Callable
 from ai.llm_factory import get_llm
@@ -247,7 +248,7 @@ async def _run_field_json_extraction(field, schema, prompt, text, fragment, requ
             if field == "description":
                 raw_chain = prompt | llm
                 inputs = {
-                    "json_fragment": json.dumps(fragment, indent=2),
+                    "json_fragment": html.unescape(fragment) if isinstance(fragment, str) else json.dumps(fragment, indent=2),
                     "validation_feedback": "",
                     "custom_guidance": custom_guidance
                 }
@@ -734,7 +735,7 @@ async def json_validator_node(state: AgentState):
                 res = find_description(item)
                 if res: return res
         return ""
-    raw_source = find_description(state["structured_data"])
+    raw_source = html.unescape(find_description(state["structured_data"]))
     
     custom_guidance = settings.get("custom_prompts", {}).get("qa_json", "")
     agnt_log("JSON Validator", task="Validating Fidelity", input_data=str(description)[:50])
