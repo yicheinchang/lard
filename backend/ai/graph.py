@@ -583,7 +583,6 @@ async def extract_node(state: AgentState):
                 
                 inputs = {
                     "json_ld_data": json.dumps(structured_data, indent=2),
-                    "raw_text": text,
                     "custom_guidance": "",
                     "validation_feedback": ""
                 }
@@ -789,7 +788,8 @@ async def json_validator_node(state: AgentState):
 
     # 4. FINAL ROUTING: Did metadata fail?
     if missing_reasons:
-        agnt_log("JSON Validator", task="FALLBACK", result=f"Missing {len(missing_reasons)} metadata fields. Switching to TEXT.")
+        missing_list = ", ".join([r.split(" ")[3] for r in missing_reasons])
+        agnt_log("JSON Validator", task="FALLBACK", result=f"Missing {len(missing_reasons)} fields: [{missing_list}]. Switching to TEXT.")
         return {
             "use_text_fallback": True, 
             "description_verified": description_verified,

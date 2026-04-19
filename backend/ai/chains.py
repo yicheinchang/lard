@@ -21,17 +21,17 @@ def get_base_prompt(key: str, settings: dict | None = None) -> str:
 # --- Single Agent (Base Baseline) ---
 
 class JobDetails(BaseModel):
-    is_job_post: bool = Field(description="True if the provided content is likely a job description or position advertisement.")
-    likelihood: float = Field(description="The confidence level that the content is a job post, from 0.0 to 1.0.")
-    company: str | None = Field(default=None, description="The name of the company. MUST use key 'company'.")
-    role: str | None = Field(default=None, description="The job title or role. MUST use key 'role'.")
-    location: str | None = Field(default=None, description="The job location (e.g., 'Cambridge, MA').")
-    salary_range: str | None = Field(default=None, description="The salary range, if specified (e.g., '$100k-$150k').")
-    company_job_id: str | None = Field(default=None, description="The internal Job ID. Use URL ONLY if text does not contain it.")
-    job_posted_date: str | None = Field(default=None, description="The date the job was posted (YYYY-MM-DD or null).")
-    application_deadline: str | None = Field(default=None, description="The application deadline (YYYY-MM-DD or null).")
-    description: str | None = Field(default=None, description="The FULL job description, extracted VERBATIM from the source and formatted in clean Markdown.")
-    detected_category: str | None = Field(default=None, description="Category (Job Post, Resume, etc).")
+    is_job_post: bool = Field(description="Boolean: True if content is a job advertisement.")
+    likelihood: float = Field(description="Float (0.0-1.0): Confidence that this is a job post.")
+    company: str | None = Field(default=None, description="Name from hiringOrganization, brand, organization, or publisher.")
+    role: str | None = Field(default=None, description="Official title verbatim from 'title' field or main header.")
+    location: str | None = Field(default=None, description="City, State, Country from 'jobLocation' or header.")
+    salary_range: str | None = Field(default=None, description="From baseSalary or jobBenefits. Format: '$100k-$150k' or '$50/hr'.")
+    company_job_id: str | None = Field(default=None, description="From identifier, jobID, job_id, or positionID.")
+    job_posted_date: str | None = Field(default=None, description="From datePosted or text. Format: YYYY-MM-DD.")
+    application_deadline: str | None = Field(default=None, description="From validThrough or expires. Format: YYYY-MM-DD.")
+    description: str | None = Field(default=None, description="Full verbatim description in clean Markdown.")
+    detected_category: str | None = Field(default=None, description="Identify: 'Job Post', 'Resume', 'Blog', 'Error Page', etc.")
 
 # --- Multi-Agent (Granular Splits) ---
 
@@ -109,7 +109,7 @@ def get_json_ld_prompt(settings: dict | None = None):
     base = escape_braces(get_base_prompt("json_ld", settings))
     return ChatPromptTemplate.from_messages([
         ("system", base + "{validation_feedback}{custom_guidance}"),
-        ("user", "RAW JSON-LD DATA:\n{json_ld_data}\n\nRAW PAGE TEXT:\n{raw_text}")
+        ("user", "RAW JSON-LD DATA:\n{json_ld_data}")
     ])
 
 # Helper to create JSON-LD QA validation prompt
