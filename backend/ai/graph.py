@@ -656,8 +656,8 @@ async def extract_node(state: AgentState):
                     return {"extracted_data": None, "error": "Cancelled"}
                     
                 if progress_cb:
-                    msg = "AI: Extracting all details from text (Sequential Fallback)..." if use_text_fallback else "AI: Extracting details from text..."
-                    await progress_cb({"event": "extracting", "field": "all", "msg": msg})
+                    msg = "AI: JSON-LD incomplete. Falling back to Full Text extraction..." if use_text_fallback else "AI: Extracting details from text (Ollama)..."
+                    await progress_cb({"event": "progress", "msg": msg})
 
                 extractor = get_extraction_prompt(settings) | llm.with_structured_output(JobDetails)
                 cg = settings.get("custom_prompts", {}).get("single_agent", "")
@@ -750,8 +750,10 @@ async def json_validator_node(state: AgentState):
             missing_reasons.append(f"  - {key} ({reason})")
 
     if missing_reasons:
-        missing_list = ", ".join([r.split(" ")[3] for r in missing_reasons])
-        agnt_log("JSON Validator", task="INFO", result=f"Metadata missing/invalid: [{missing_list}]")
+        missing_list = [r.split(" ")[3] for r in missing_reasons]
+        missing_str = ", ".join(missing_list)
+        agnt_log("JSON Validator", task="FALLBACK", result=f"Switching to TEXT mode. Missing fields: [{missing_str}]")
+        return {"active_source": "TEXT", "use_text_fallback": True, "validation_feedback": None}
 
     # 3. LLM FIDELITY QA (Even if metadata failed, we want to 'Verify' the description)
     from ai.chains import get_json_validation_prompt, DescriptionValidation
@@ -805,17 +807,6 @@ async def json_validator_node(state: AgentState):
     except Exception as e:
         agnt_log("JSON Validator", task="ERROR", result=str(e))
         return {"retries": 1, "validation_feedback": f"Fidelity error: {e}"}
-
-    # 4. FINAL ROUTING: Did metadata fail?
-    if missing_reasons:
-        agnt_log("JSON Validator", task="FALLBACK", result="Switching to TEXT mode due to incomplete metadata.")
-        return {
-            "use_text_fallback": True, 
-            "description_verified": description_verified,
-            "previous_json_results": extracted,
-            "validation_feedback": f"FALLBACK_PHASE: Missing/Invalid fields in JSON-LD.",
-            "retries": -retries
-        }
 
     return {"extracted_data": extracted, "validation_feedback": None, "description_verified": True}
 
