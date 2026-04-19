@@ -77,26 +77,37 @@ async function handleRequest(req: NextRequest, { params }: { params: Promise<{ p
       });
     }
 
-    // Standard JSON or Binary response
-    const data = await response.blob();
-    
     // Transfer relevant headers back to the client
     const responseHeaders = new Headers(response.headers);
     // Remove headers that might conflict
     responseHeaders.delete('content-encoding');
     responseHeaders.delete('content-length');
 
-    return new NextResponse(data, {
+    // Use a stream if available for maximum efficiency, otherwise fallback to blob
+    const responseBody = response.body || await response.blob();
+
+    return new NextResponse(responseBody, {
       status: response.status,
       statusText: response.statusText,
       headers: responseHeaders,
     });
   } catch (error: any) {
+    // Check if the request was aborted by the user (refresh/navigate)
+    const isAborted = req.signal.aborted || 
+                     error.name === 'AbortError' || 
+                     error.message?.includes('aborted');
+
+    if (isAborted) {
+      console.info(`[NextProxy] Info: Request Aborted by Client (${req.method} /${targetPath})`);
+      return new NextResponse(null, { status: 499 }); // Client Closed Request
+    }
+
     console.error(`[NextProxy] Error (${req.method} /${targetPath}):`, {
       message: error.message,
       stack: error.stack,
       cause: error.cause
     });
+
     return NextResponse.json(
       { 
         error: 'Backend Connection Failed', 
