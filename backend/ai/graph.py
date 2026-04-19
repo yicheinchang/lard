@@ -530,7 +530,10 @@ async def extract_node(state: AgentState):
             # --- QA RETRY PATH: Only extract description with feedback ---
             results = state["extracted_data"].copy()
             if progress_cb:
-                await progress_cb({"event": "progress", "msg": f"AI: Regenerating Description (QA Retry {state.get('retries', 0)}/3)..."})
+                if use_text_fallback:
+                     await progress_cb({"event": "progress", "msg": f"AI: Fallback! Scaling up to Full Text extraction (Attempt {state.get('retries', 0)}/3)..."})
+                else:
+                     await progress_cb({"event": "progress", "msg": f"AI: Regenerating Description (QA Retry {state.get('retries', 0)}/3)..."})
             
             text_with_feedback = f"PREVIOUS ATTEMPT FAILED QA VALIDATION:\n{vf}\n\nORIGINAL TEXT:\n{text}" if vf else text
 
@@ -597,6 +600,16 @@ async def extract_node(state: AgentState):
                 chain = structured_data_validation_prompt | llm.with_structured_output(JobDetails)
                 
                 mapped_fragments = _map_json_ld_fragments(structured_data)
+                
+                # DIAGNOSTIC: Save clean fragments for troubleshooting
+                try:
+                    os.makedirs("data/tmp", exist_ok=True)
+                    with open("data/tmp/last_fragments.json", "w", encoding="utf-8") as f:
+                        json.dump(mapped_fragments, f, indent=2)
+                    agnt_log("Graph", task="Diagnostic", result="Saved fragments to data/tmp/last_fragments.json")
+                except Exception as e:
+                    print(f"Error saving diagnostic JSON: {e}")
+
                 inputs = {
                     "json_ld_data": json.dumps(mapped_fragments, indent=2),
                     "custom_guidance": "",
@@ -756,7 +769,7 @@ async def json_validator_node(state: AgentState):
         return {
             "active_source": "TEXT", 
             "use_text_fallback": True, 
-            "validation_feedback": f"JSON_METADATA_INCOMPLETE: {missing_str}",
+            "validation_feedback": f"FALLBACK_PHASE: Incomplete JSON-LD metadata. Missing: {missing_str}",
             "retries": retries + 1
         }
 
