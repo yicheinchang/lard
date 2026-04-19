@@ -733,6 +733,10 @@ async def json_validator_node(state: AgentState):
             reason = f"'{val}'" if val is not None else "Missing"
             missing_reasons.append(f"  - {key} ({reason})")
 
+    if missing_reasons:
+        missing_list = ", ".join([r.split(" ")[3] for r in missing_reasons])
+        agnt_log("JSON Validator", task="INFO", result=f"Metadata missing/invalid: [{missing_list}]")
+
     # 3. LLM FIDELITY QA (Even if metadata failed, we want to 'Verify' the description)
     from ai.chains import get_json_validation_prompt, DescriptionValidation
     progress_cb = state.get("progress_callback")
@@ -774,7 +778,7 @@ async def json_validator_node(state: AgentState):
             description_verified = True
         else:
             reason = result.failure_reason or "Fidelity error"
-            agnt_log("JSON Validator", task="QA_FAILURE", result=f"REJECTED: {reason}")
+            agnt_log("JSON Validator", task="QA_FAILURE", result=f"REJECTED: Fidelity check failed. Reason: {reason}")
             # If description itself is bad, we retry extraction (not necessarily fallback yet)
             if retries >= 2:
                 extracted["hallucination_detected"] = True
@@ -788,8 +792,7 @@ async def json_validator_node(state: AgentState):
 
     # 4. FINAL ROUTING: Did metadata fail?
     if missing_reasons:
-        missing_list = ", ".join([r.split(" ")[3] for r in missing_reasons])
-        agnt_log("JSON Validator", task="FALLBACK", result=f"Missing {len(missing_reasons)} fields: [{missing_list}]. Switching to TEXT.")
+        agnt_log("JSON Validator", task="FALLBACK", result="Switching to TEXT mode due to incomplete metadata.")
         return {
             "use_text_fallback": True, 
             "description_verified": description_verified,

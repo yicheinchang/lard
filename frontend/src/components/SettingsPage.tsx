@@ -363,7 +363,7 @@ export function SettingsPage() {
       if (activeSystemTab !== 'global') {
         setActiveSystemTab('global');
         setActiveSystemPrompt('extraction_base');
-      } else if (activeSystemPrompt !== 'extraction_base' && activeSystemPrompt !== 'json_ld' && activeSystemPrompt !== 'job_post_check' && activeSystemPrompt !== 'qa_validator') {
+      } else if (activeSystemPrompt !== 'extraction_base' && activeSystemPrompt !== 'json_ld' && activeSystemPrompt !== 'job_post_check' && activeSystemPrompt !== 'qa_validator' && activeSystemPrompt !== 'qa_validator_json' && activeSystemPrompt !== 'qa_validator_text') {
         // If we were on a field prompt and switched to single-mode, reset to extraction_base
         setActiveSystemPrompt('extraction_base');
       }
