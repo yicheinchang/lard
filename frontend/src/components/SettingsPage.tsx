@@ -208,9 +208,7 @@ export function SettingsPage() {
     json_posted: '',
     json_deadline: '',
     json_description: '',
-    job_post_check: '',
-    qa_validator_json: '',
-    qa_validator_text: ''
+    job_post_check: ''
   });
   const [factoryPrompts, setFactoryPrompts] = useState<AppSettings['system_prompts']>(DEFAULT_SYSTEM_PROMPTS);
 
@@ -226,7 +224,7 @@ export function SettingsPage() {
   const [showRebuildConfirm, setShowRebuildConfirm] = useState(false);
   const [showAdvancedPrompts, setShowAdvancedPrompts] = useState(false);
   const [showSystemPrompts, setShowSystemPrompts] = useState(false);
-  const [activePromptField, setActivePromptField] = useState<keyof typeof customPrompts.multi_agent | 'job_post_check'>('company');
+  const [activePromptField, setActivePromptField] = useState<keyof typeof customPrompts.multi_agent | 'job_post_check' | 'qa_json' | 'qa_text'>('company');
   const [activeSystemTab, setActiveSystemTab] = useState<'global' | 'text' | 'json'>('global');
   const [activeSystemPrompt, setActiveSystemPrompt] = useState<keyof AppSettings['system_prompts']>('extraction_base');
 
@@ -651,12 +649,19 @@ export function SettingsPage() {
               {llmProvider === 'openai' && (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 animate-fade-in">
                   <div>
-                    <Label>API Key</Label>
+                    <div className="flex items-center gap-2 mb-1.5">
+                      <Label>API Key</Label>
+                      {llmConfig.openai_api_key?.includes('(System)') && (
+                        <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-violet-500/20 text-violet-400 border border-violet-500/20">
+                          System Default
+                        </span>
+                      )}
+                    </div>
                     <TextInput
                       value={llmConfig.openai_api_key}
                       onChange={v => setLlmConfig(p => ({ ...p, openai_api_key: v }))}
                       placeholder="sk-…"
-                      type="password"
+                      type={llmConfig.openai_api_key?.includes('(System)') ? 'text' : 'password'}
                     />
                   </div>
                   <div>
@@ -674,12 +679,19 @@ export function SettingsPage() {
               {llmProvider === 'anthropic' && (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 animate-fade-in">
                   <div>
-                    <Label>API Key</Label>
+                    <div className="flex items-center gap-2 mb-1.5">
+                      <Label>API Key</Label>
+                      {llmConfig.anthropic_api_key?.includes('(System)') && (
+                        <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-violet-500/20 text-violet-400 border border-violet-500/20">
+                          System Default
+                        </span>
+                      )}
+                    </div>
                     <TextInput
                       value={llmConfig.anthropic_api_key}
                       onChange={v => setLlmConfig(p => ({ ...p, anthropic_api_key: v }))}
                       placeholder="sk-ant-…"
-                      type="password"
+                      type={llmConfig.anthropic_api_key?.includes('(System)') ? 'text' : 'password'}
                     />
                   </div>
                   <div>

@@ -75,17 +75,50 @@ Run the entire stack with a single command using Docker Compose.
 - Ollama running on the host (if using local models).
 
 ### 2. Configuration
-Copy the environment template:
+The application uses a unified configuration system. Copy the environment template to get started:
 ```bash
 cp .env.example .env
 ```
-Edit `.env` to add your OpenAI/Anthropic keys if needed.
-
 ### 3. Startup
+
+#### Option A: Docker Compose (Recommended)
 ```bash
 docker-compose up -d --build
 ```
 Access the application at **[http://localhost:8081](http://localhost:8081)**.
+
+#### Option B: Manual Docker Commands
+If `docker-compose` is unavailable, use these commands to set up networking and start the containers:
+
+```bash
+# 1. Create Network & Volume
+docker network create lard-net
+docker volume create lard-data-vol
+
+# 2. Build Images
+docker build -t lard-backend ./backend
+docker build -t lard-frontend ./frontend
+
+# 3. Run Backend
+docker run -d \
+  --name lard-backend \
+  --network lard-net \
+  --add-host=host.docker.internal:host-gateway \
+  -v lard-data-vol:/app/data \
+  -e RUNNING_IN_DOCKER=true \
+  -e LARD_DATA_DIR=/app/data \
+  -e LARD_OLLAMA_BASE_URL=http://host.docker.internal:11434 \
+  lard-backend
+
+# 4. Run Frontend
+docker run -d \
+  --name lard-frontend \
+  --network lard-net \
+  -p 3030:3000 \
+  -e INTERNAL_BACKEND_URL=http://lard-backend:8000 \
+  lard-frontend
+```
+Access the application at **[http://localhost:3030](http://localhost:3030)**.
 
 ### 4. Persistence
 All data is consolidated into a project-root **`/data`** directory, which is persisted across both local development and Docker.
@@ -94,6 +127,7 @@ All data is consolidated into a project-root **`/data`** directory, which is per
 - **Uploads**: `data/uploads/`
 - **ChromaDB**: `data/chroma_db/`
 - **AI Cache**: `data/huggingface/`
+- **AI Logs**: `data/tmp/`
 
 ---
 
@@ -104,4 +138,4 @@ For detailed architecture, API endpoints, and optimization details, refer to:
 
 ---
 Built with ❤️ by Antigravity.
-Current version: v0.63.0
+Current version: v0.64.2

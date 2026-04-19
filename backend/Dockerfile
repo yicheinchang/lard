@@ -40,8 +40,8 @@ COPY --from=builder /app/.venv /app/.venv
 # Copy application code
 COPY . .
 
-# Ensure the central data directory exists
-RUN mkdir -p /app/data
+# Ensure the central data directory exists and is owned by the app user
+RUN mkdir -p /app/data && chown -R app:app /app/data
 
 # The database and settings will be in the root of /app
 # We'll mount these via volumes in docker-compose

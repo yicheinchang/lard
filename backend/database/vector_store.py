@@ -37,9 +37,8 @@ def get_embedding_function(provider: str = None, cfg: dict = None):
         # Default: ChromaDB built-in all-MiniLM-L6-v2 via Sentence Transformers
         from langchain_huggingface import HuggingFaceEmbeddings
         model_name = "all-MiniLM-L6-v2"
-        cache_folder = os.path.join(DB_DIR, "models")
-        os.makedirs(cache_folder, exist_ok=True)
-        func = HuggingFaceEmbeddings(model_name=model_name, cache_folder=cache_folder)
+        # Now relies on HF_HOME environment variable set in config.py
+        func = HuggingFaceEmbeddings(model_name=model_name)
         
     _embedding_function_instance = func
     _embedding_provider_cache = cache_key

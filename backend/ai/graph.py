@@ -534,7 +534,9 @@ async def extract_node(state: AgentState):
                     extractor = structured_data_validation_prompt | llm.with_structured_output(JobDetails)
                     inputs = {
                         "json_ld_data": json.dumps(structured_data, indent=2),
-                        "validation_feedback": f"PREVIOUS ATTEMPT FAILED QA VALIDATION:\n{vf}\nPLEASE FIX THESE ISSUES.\n" if vf else ""
+                        "raw_text": text,
+                        "validation_feedback": f"PREVIOUS ATTEMPT FAILED QA VALIDATION:\n{vf}\nPLEASE FIX THESE ISSUES.\n" if vf else "",
+                        "custom_guidance": ""
                     }
                 else:
                     extractor = get_extraction_prompt(settings) | llm.with_structured_output(JobDetails)
@@ -581,6 +583,7 @@ async def extract_node(state: AgentState):
                 
                 inputs = {
                     "json_ld_data": json.dumps(structured_data, indent=2),
+                    "raw_text": text,
                     "custom_guidance": "",
                     "validation_feedback": ""
                 }

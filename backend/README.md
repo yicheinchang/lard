@@ -28,6 +28,32 @@ chmod +x run.sh
 ./run.sh prod
 ```
 
+## ⚙️ Configuration & Environment Variables
+
+The backend uses [pydantic-settings](https://docs.pydantic.dev/latest/concepts/pydantic_settings/) for robust configuration management.
+
+### Priority Hierarchy
+1. **User Overrides**: Values set in `data/app_settings.json` (via the Settings UI).
+2. **System Environment**: Variables prefixed with `LARD_` (e.g., `LARD_OPENAI_API_KEY`).
+3. **Environment File**: Values in the root `.env` file.
+4. **Factory Defaults**: Hardcoded safe defaults.
+
+### Key Environment Variables
+| Variable | Description | Default |
+| :--- | :--- | :--- |
+| `LARD_DATA_DIR` | Base directory for all data. | `../data` (local) / `/app/data` (Docker) |
+| `LARD_DB_DIR` | Directory for SQLite files. | `DATA_DIR/db` |
+| `LARD_UPLOADS_DIR` | Directory for uploaded documents. | `DATA_DIR/uploads` |
+| `LARD_CHROMA_DIR` | Directory for vector storage. | `DATA_DIR/chroma_db` |
+| `LARD_HF_HOME` | Centralized AI model cache. | `DATA_DIR/huggingface` |
+| `LARD_TMP_DIR` | Temporary diagnostic logs. | `DATA_DIR/tmp` |
+| `LARD_OLLAMA_BASE_URL` | Ollama API endpoint. | `http://host.docker.internal:11434` |
+
+### AI Model Management
+The backend explicitly manages model caching to prevent redundant downloads:
+- **`HF_HOME`**: Primary cache for all HuggingFace-related models (Embeddings, NLP).
+- **`DOCLING_ARTIFACTS_PATH`**: Specialized cache for Docling's layout and OCR models (subfolder of `HF_HOME`).
+
 ## 🧪 Testing
 
 The backend follows a script-based verification strategy. All test scripts are maintained in [backend/test](file:///home/Lard/backend/test).
@@ -144,4 +170,4 @@ The backend reaches a "Ready" state in **< 5 seconds** through:
 - `database/`: SQLAlchemy models and ChromaDB vector store.
 - `routers/`: API endpoint definitions (REST & SSE).
 - `test/`: Verification scripts and backend test suite.
-- `data/` (Root): Consolidated persistence for DB, Uploads, Chroma, and Settings.
+- `data/` (Root): Consolidated persistence for DB, Uploads, Chroma, Settings, and Tmp.

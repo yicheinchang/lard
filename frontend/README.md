@@ -22,6 +22,28 @@ To ensure the quality of the frontend, please perform the following checks after
 2. **Theme Consistency**: Toggle between Light and Dark modes to ensure all components adhere to the Tailwind CSS theme configuration.
 3. **Accessibility**: Run a Lighthouse audit or use a screen reader to verify that interactive elements are keyboard-accessible.
 
+## 🌐 Configuration & Gateway
+
+The frontend acts as the secure gateway for the **Lard** stack. It handles authentication (if configured), proxies streaming requests to the backend, and provides a unified Settings UI.
+
+### Environment Variables
+| Variable | Description | Default |
+| :--- | :--- | :--- |
+| `INTERNAL_BACKEND_URL` | The URL used by the server-side proxy to reach the FastAPI backend. | `http://localhost:8000` |
+| `FRONTEND_PORT` | The port the application listens on (used by Docker). | `8081` |
+
+### System Key Indicators
+To ensure transparency while maintaining security, the Settings UI includes visual indicators for API keys:
+- **System Default**: If a key is configured via environment variables (e.g., `LARD_OPENAI_API_KEY`), the UI displays a `System Default` badge and masks the value as `●●●●●●●● (System)`.
+- **User Override**: If a user enters a new key in the UI, it overrides the system default for that installation and is persisted securely on the server.
+
+---
+
+## 🏗️ Architecture
+
+- **API Proxy**: Located at `src/app/api/proxy/`, this route handler transparently forwards requests to the internal backend, supporting both standard JSON and Server-Sent Events (SSE).
+- **Settings Context**: Manages theme state and reactive updates for application preferences.
+
 ## Getting Started
 
 First, run the development server:

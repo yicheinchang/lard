@@ -44,7 +44,9 @@ const defaultSettings: AppSettings = {
       application_deadline: '',
       description: ''
     },
-    job_post_check: ''
+    job_post_check: '',
+    qa_json: '',
+    qa_text: ''
   },
   system_prompts: {
     extraction_base: '',
@@ -66,7 +68,9 @@ const defaultSettings: AppSettings = {
     json_posted: '',
     json_deadline: '',
     json_description: '',
-    job_post_check: ''
+    job_post_check: '',
+    qa_validator_json: '',
+    qa_validator_text: ''
   }
 };
 

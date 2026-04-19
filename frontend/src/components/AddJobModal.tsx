@@ -718,7 +718,7 @@ export const AddJobModal: React.FC<AddJobModalProps> = ({ isOpen, onClose, onAdd
                         <div className="flex-1 space-y-1">
                           <p className="text-xs font-bold text-violet-400 uppercase tracking-wide">Context Limit Reached</p>
                           <p className="text-[11px] text-violet-200/70 leading-relaxed italic">
-                             This job posting exceeds the AI context window. Verbatim extraction and QA validation are limited to the first {useSettings().settings?.llm_config?.num_ctx ? useSettings().settings.llm_config.num_ctx * 3 : 24576} characters.
+                             This job posting exceeds the AI context window. Verbatim extraction and QA validation are limited to the first {useSettings().settings?.llm_config?.num_ctx ? (useSettings().settings?.llm_config?.num_ctx as number) * 3 : 24576} characters.
                           </p>
                         </div>
                       </div>

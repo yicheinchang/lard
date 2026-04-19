@@ -8,7 +8,7 @@ import os
 import shutil
 import logging
 import io
-from config import load_app_settings
+from config import load_app_settings, settings
 from ai.logger import agnt_log
 from ai.status import is_ai_ready, wait_for_ai_ready
 
@@ -210,8 +210,8 @@ async def _run_extraction_core(request: Request, url: str | None = None, text: s
                 
                 # Log cleaned text for manual investigation
                 try:
-                    os.makedirs("tmp", exist_ok=True)
-                    with open("tmp/last_extracted_content.txt", "w", encoding="utf-8") as f:
+                    os.makedirs(settings.TMP_DIR, exist_ok=True)
+                    with open(os.path.join(settings.TMP_DIR, "last_extracted_content.txt"), "w", encoding="utf-8") as f:
                         f.write(text)
                 except Exception as log_err:
                     print(f"Failed to log extracted content: {log_err}")
@@ -224,8 +224,8 @@ async def _run_extraction_core(request: Request, url: str | None = None, text: s
         text = _preprocess_text(text)
         # Log input text for manual investigation
         try:
-            os.makedirs("tmp", exist_ok=True)
-            with open("tmp/last_extracted_content.txt", "w", encoding="utf-8") as f:
+            os.makedirs(settings.TMP_DIR, exist_ok=True)
+            with open(os.path.join(settings.TMP_DIR, "last_extracted_content.txt"), "w", encoding="utf-8") as f:
                 f.write(text)
         except Exception as log_err:
             print(f"Failed to log extracted content: {log_err}")

@@ -1,16 +1,27 @@
+# Persistence & Local Data
+data/
+backend/*.old
+backend/*.old.db
+backend/uploads.old/
+backend/chroma_db.old/
+backend/test/
+
+# Environment & Secrets
+.env
+.env.local
+**/app_settings.json
+
+# Dependencies & Build Artifacts
 **/node_modules
 **/.venv
 **/__pycache__
-**/*.db
-**/chroma_db
-**/uploads
-**/app_settings.json
-**/.git
 **/.next
 **/dist
 **/out
-.env
-.env.local
+**/*.tsbuildinfo
+
+# System & Tooling
+**/.git
+**/.DS_Store
+*.log
 docker-compose.override.yml
-import_times.log
-tmp/

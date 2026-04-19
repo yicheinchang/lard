@@ -104,15 +104,28 @@ def test_embedding_connection(payload: Optional[TestConfigPayload] = None):
 
 
 def _mask_secrets(data: dict) -> dict:
-    """Return a copy with API keys partially masked for frontend display."""
+    """Return a copy with API keys partially masked or marked as system-provided."""
     import copy
+    from config import settings
     d = copy.deepcopy(data)
+
+    env_keys = {
+        "openai_api_key": settings.OPENAI_API_KEY,
+        "anthropic_api_key": settings.ANTHROPIC_API_KEY,
+    }
+
     for section_key in ("llm_config", "embedding_config"):
         section = d.get(section_key, {})
         for key in section:
             if "api_key" in key and section[key]:
                 val = section[key]
-                if len(val) > 8:
+                # Check if this matches the system environment default
+                env_val = env_keys.get(key)
+                
+                if env_val and val == env_val:
+                    # Provide a hint that this is the system default
+                    section[key] = "●●●●●●●● (System)"
+                elif len(val) > 8:
                     section[key] = val[:4] + "…" + val[-4:]
                 else:
                     section[key] = "••••"

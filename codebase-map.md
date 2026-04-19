@@ -1,5 +1,5 @@
-# 🗺️ Lard - Lazy AI-Powered Resume Database (v0.64.1)
-Last Updated: 2026-04-19T00:19:55Z
+# 🗺️ Lard - Lazy AI-Powered Resume Database (v0.65.0)
+Last Updated: 2026-04-19T02:35:00Z
 
 This document provides a summary of the project's architecture, tech stack, and key logic to give AI coding agents instant context.
 
@@ -28,10 +28,11 @@ This document provides a summary of the project's architecture, tech stack, and 
   - `data/chroma_db/`: Vector Data.
   - `data/uploads/`: Original Documents.
   - `data/huggingface/`: AI Model Cache.
+  - `data/tmp/`: Temporary AI Diagnostic Logs.
 - **Containerization**: 
   - `backend`: Multi-stage Python 3.14 + `uv`. High isolation.
   - `frontend`: 3-stage Next.js Standalone. Secure API Proxying.
-- **Deployment Port**: 8081
+- **Deployment Port**: 3030 (Frontend) / 8000 (Backend)
 
 ---
 

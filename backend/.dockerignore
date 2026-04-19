@@ -1,11 +1,24 @@
-node_modules
+# Dependencies & Build
 .venv
 __pycache__
+*.py[oc]
+dist/
+build/
+*.egg-info
+
+# Persistence & Data (Baking in local data is discouraged)
+data/
 *.db
-chroma_db
-uploads
 app_settings.json
-.git
-.env
-import_times.log
+uploads/
+chroma_db/
 tmp/
+*.old
+*.old.db
+
+# Environment & System
+.env
+.git
+.DS_Store
+*.log
+test/

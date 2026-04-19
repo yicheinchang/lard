@@ -7,10 +7,11 @@ services:
     volumes:
       - lard-data:/app/data
     environment:
-      - DATABASE_URL=sqlite:////app/data/db/tracker.db
-      - OLLAMA_BASE_URL=http://host.docker.internal:11434
-      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
-      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
+      - LARD_DATA_DIR=/app/data
+      - LARD_OLLAMA_BASE_URL=http://host.docker.internal:11434
+      - LARD_OPENAI_API_KEY=${LARD_OPENAI_API_KEY:-}
+      - LARD_ANTHROPIC_API_KEY=${LARD_ANTHROPIC_API_KEY:-}
+      - RUNNING_IN_DOCKER=true
     extra_hosts:
       - "host.docker.internal:host-gateway"
     logging:

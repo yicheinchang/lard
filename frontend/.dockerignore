@@ -1,6 +1,28 @@
+# Dependencies & Build Artifacts
 node_modules
 .next
 out
-.git
+build
+*.tsbuildinfo
+next-env.d.ts
+
+# Data & Persistence (If accidentally present)
+data/
+*.db
+app_settings.json
+tmp/
+
+# Environment & Secrets
 .env
 .env.local
+.env.staging
+.env.production
+
+# System & Tooling
+.git
+.DS_Store
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.agent/
