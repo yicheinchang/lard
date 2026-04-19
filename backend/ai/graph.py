@@ -324,6 +324,19 @@ def _get_json_ld_identifier(structured_data: dict) -> Any:
         if val: return val
     return None
 
+def _map_json_ld_fragments(structured_data: dict) -> dict:
+    """Unified helper to map raw JSON-LD data into standardized fragments used by all modes."""
+    return {
+        "company": _get_json_ld_company(structured_data),
+        "role": structured_data.get("title"),
+        "location": structured_data.get("jobLocation"),
+        "salary_range": _get_json_ld_salary(structured_data),
+        "company_job_id": _get_json_ld_identifier(structured_data),
+        "job_posted_date": structured_data.get("datePosted"),
+        "application_deadline": structured_data.get("validThrough"),
+        "description": structured_data.get("description"),
+    }
+
 async def _run_multi_agent_json_extraction(structured_data: dict, text: str, request: Any = None, progress_cb: Callable = None, state: dict = None):
     settings = load_app_settings()
     # Concurrency limit (Dynamic from settings)
@@ -334,15 +347,17 @@ async def _run_multi_agent_json_extraction(structured_data: dict, text: str, req
         get_json_field_prompt, description_json_prompt
     )
     
+    fragments = _map_json_ld_fragments(structured_data)
+    
     metadata_tasks = [
-        ("company", JobCompany, get_json_field_prompt("company", settings), _get_json_ld_company(structured_data)),
-        ("role", JobRole, get_json_field_prompt("role", settings), structured_data.get("title")),
-        ("location", JobLocation, get_json_field_prompt("location", settings), structured_data.get("jobLocation")),
-        ("salary_range", JobSalary, get_json_field_prompt("salary_range", settings), _get_json_ld_salary(structured_data)),
-        ("company_job_id", JobId, get_json_field_prompt("company_job_id", settings), _get_json_ld_identifier(structured_data)),
-        ("job_posted_date", PostedDate, get_json_field_prompt("job_posted_date", settings), structured_data.get("datePosted")),
-        ("application_deadline", DeadlineDate, get_json_field_prompt("application_deadline", settings), structured_data.get("validThrough")),
-        ("description", JobDescription, description_json_prompt, structured_data.get("description")),
+        ("company", JobCompany, get_json_field_prompt("company", settings), fragments["company"]),
+        ("role", JobRole, get_json_field_prompt("role", settings), fragments["role"]),
+        ("location", JobLocation, get_json_field_prompt("location", settings), fragments["location"]),
+        ("salary_range", JobSalary, get_json_field_prompt("salary_range", settings), fragments["salary_range"]),
+        ("company_job_id", JobId, get_json_field_prompt("company_job_id", settings), fragments["company_job_id"]),
+        ("job_posted_date", PostedDate, get_json_field_prompt("job_posted_date", settings), fragments["job_posted_date"]),
+        ("application_deadline", DeadlineDate, get_json_field_prompt("application_deadline", settings), fragments["application_deadline"]),
+        ("description", JobDescription, description_json_prompt, fragments["description"]),
     ]
     
     # Launch all tasks concurrently
@@ -576,13 +591,14 @@ async def extract_node(state: AgentState):
                     log_llm_info()
                     llm_logged = True
 
-                agnt_log("Extractor (JSON-LD)", task="Mapping Fields", input_data=json.dumps(structured_data)[:50])
+                agnt_log("Extractor (JSON-LD)", task="Mapping Fields", input_data=str(structured_data.get("title"))[:50])
 
                 llm = get_llm(num_ctx=settings["llm_config"].get("num_ctx"))
                 chain = structured_data_validation_prompt | llm.with_structured_output(JobDetails)
                 
+                mapped_fragments = _map_json_ld_fragments(structured_data)
                 inputs = {
-                    "json_ld_data": json.dumps(structured_data, indent=2),
+                    "json_ld_data": json.dumps(mapped_fragments, indent=2),
                     "custom_guidance": "",
                     "validation_feedback": ""
                 }
@@ -859,7 +875,7 @@ async def text_validator_node(state: AgentState):
         
         if not result.is_valid or not result.is_complete:
             reason = result.failure_reason or "Boundary error"
-            agnt_log("Text Validator", task="QA_FAILURE", result=f"REJECTED: {reason}")
+            agnt_log("Text Validator", task="QA_FAILURE", result=f"REJECTED: Fidelity check failed. Reason: {reason}")
             if retries >= 2:
                 extracted["hallucination_detected"] = True
                 extracted["hallucination_reasons"] = f"QA Fail (Final): {reason}"

@@ -38,7 +38,10 @@ def get_embedding_function(provider: str = None, cfg: dict = None):
         from langchain_huggingface import HuggingFaceEmbeddings
         model_name = "all-MiniLM-L6-v2"
         # Now relies on HF_HOME environment variable set in config.py
-        func = HuggingFaceEmbeddings(model_name=model_name)
+        func = HuggingFaceEmbeddings(
+            model_name=model_name,
+            cache_folder=os.environ.get("HF_HOME")
+        )
         
     _embedding_function_instance = func
     _embedding_provider_cache = cache_key

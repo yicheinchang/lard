@@ -363,7 +363,7 @@ export function SettingsPage() {
       if (activeSystemTab !== 'global') {
         setActiveSystemTab('global');
         setActiveSystemPrompt('extraction_base');
-      } else if (activeSystemPrompt !== 'extraction_base' && activeSystemPrompt !== 'json_ld' && activeSystemPrompt !== 'job_post_check' && activeSystemPrompt !== 'qa_validator' && activeSystemPrompt !== 'qa_validator_json' && activeSystemPrompt !== 'qa_validator_text') {
+      } else if (activeSystemPrompt !== 'extraction_base' && activeSystemPrompt !== 'json_ld' && activeSystemPrompt !== 'qa_validator_json' && activeSystemPrompt !== 'qa_validator_text') {
         // If we were on a field prompt and switched to single-mode, reset to extraction_base
         setActiveSystemPrompt('extraction_base');
       }
@@ -901,7 +901,7 @@ export function SettingsPage() {
                             { id: 'job_posted_date', label: 'Posted' },
                             { id: 'application_deadline', label: 'Deadline' },
                             { id: 'description', label: 'Description' },
-                            { id: 'job_post_check', label: 'Job Check' },
+                            { id: 'job_post_check', label: 'Job Check', hide: extractionMode === 'single' },
                             { id: 'qa_json', label: 'JSON QA' },
                             { id: 'qa_text', label: 'Text QA' },
                           ].map(tab => (
@@ -1024,7 +1024,7 @@ export function SettingsPage() {
                         {activeSystemTab === 'global' && [
                           { id: 'extraction_base', label: 'Main (Single)', hide: extractionMode === 'multi' },
                           { id: 'json_ld', label: 'JSON-LD (Single)', hide: extractionMode === 'multi' },
-                          { id: 'job_post_check', label: 'Job Check' },
+                          { id: 'job_post_check', label: 'Job Check', hide: extractionMode === 'single' },
                           { id: 'qa_validator_json', label: 'JSON Validation' },
                           { id: 'qa_validator_text', label: 'Text Validation' },
                         ].filter(tab => !tab.hide).map(tab => (

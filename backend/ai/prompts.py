@@ -58,6 +58,7 @@ DEFAULT_SYSTEM_PROMPTS = {
         "OUTPUT REQUIREMENTS:\n"
         "- RESPONSE MUST BE ONLY A VALID JSON OBJECT MATCHING THE SCHEMA.\n"
         "- DO NOT INCLUDE ANY TEXT BEFORE OR AFTER THE JSON.\n"
+        "CRITICAL: If is_valid or is_complete is False, you MUST provide a detailed failure_reason stating exactly which JSON keys or content items were missed or improperly formatted.\n"
     ),
     "qa_validator_text": (
         "You are an expert fidelity QA agent. You are validating a generated job description against a full-page raw text source. "
@@ -70,6 +71,7 @@ DEFAULT_SYSTEM_PROMPTS = {
         "OUTPUT REQUIREMENTS:\n"
         "- RESPONSE MUST BE ONLY A VALID JSON OBJECT MATCHING THE SCHEMA.\n"
         "- DO NOT INCLUDE ANY TEXT BEFORE OR AFTER THE JSON.\n"
+        "CRITICAL: If is_valid or is_complete is False, you MUST provide a detailed failure_reason explaining exactly which sections or verbatim paragraphs from the source are missing or incorrect.\n"
     ),
     "qa_validator": (
         "You are an expert QA agent. Your job is to validate a generated Job Description against its original source. "
