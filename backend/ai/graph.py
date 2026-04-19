@@ -325,15 +325,15 @@ def _get_json_ld_identifier(structured_data: dict) -> Any:
     return None
 
 def _map_json_ld_fragments(structured_data: dict) -> dict:
-    """Unified helper to map raw JSON-LD data into standardized fragments used by all modes."""
+    """Unified helper to map raw JSON-LD data into standardized fragments using original Schema.org keys."""
     return {
-        "company": _get_json_ld_company(structured_data),
-        "role": structured_data.get("title"),
-        "location": structured_data.get("jobLocation"),
-        "salary_range": _get_json_ld_salary(structured_data),
-        "company_job_id": _get_json_ld_identifier(structured_data),
-        "job_posted_date": structured_data.get("datePosted"),
-        "application_deadline": structured_data.get("validThrough"),
+        "hiringOrganization": _get_json_ld_company(structured_data),
+        "title": structured_data.get("title"),
+        "jobLocation": structured_data.get("jobLocation"),
+        "baseSalary": _get_json_ld_salary(structured_data),
+        "identifier": _get_json_ld_identifier(structured_data),
+        "datePosted": structured_data.get("datePosted"),
+        "validThrough": structured_data.get("validThrough"),
         "description": structured_data.get("description"),
     }
 
@@ -350,14 +350,14 @@ async def _run_multi_agent_json_extraction(structured_data: dict, text: str, req
     fragments = _map_json_ld_fragments(structured_data)
     
     metadata_tasks = [
-        ("company", JobCompany, get_json_field_prompt("company", settings), fragments["company"]),
-        ("role", JobRole, get_json_field_prompt("role", settings), fragments["role"]),
-        ("location", JobLocation, get_json_field_prompt("location", settings), fragments["location"]),
-        ("salary_range", JobSalary, get_json_field_prompt("salary_range", settings), fragments["salary_range"]),
-        ("company_job_id", JobId, get_json_field_prompt("company_job_id", settings), fragments["company_job_id"]),
-        ("job_posted_date", PostedDate, get_json_field_prompt("job_posted_date", settings), fragments["job_posted_date"]),
-        ("application_deadline", DeadlineDate, get_json_field_prompt("application_deadline", settings), fragments["application_deadline"]),
-        ("description", JobDescription, description_json_prompt, fragments["description"]),
+        ("company", JobCompany, get_json_field_prompt("company", settings), fragments.get("hiringOrganization")),
+        ("role", JobRole, get_json_field_prompt("role", settings), fragments.get("title")),
+        ("location", JobLocation, get_json_field_prompt("location", settings), fragments.get("jobLocation")),
+        ("salary_range", JobSalary, get_json_field_prompt("salary_range", settings), fragments.get("baseSalary")),
+        ("company_job_id", JobId, get_json_field_prompt("company_job_id", settings), fragments.get("identifier")),
+        ("job_posted_date", PostedDate, get_json_field_prompt("job_posted_date", settings), fragments.get("datePosted")),
+        ("application_deadline", DeadlineDate, get_json_field_prompt("application_deadline", settings), fragments.get("validThrough")),
+        ("description", JobDescription, description_json_prompt, fragments.get("description")),
     ]
     
     # Launch all tasks concurrently
@@ -753,7 +753,12 @@ async def json_validator_node(state: AgentState):
         missing_list = [r.split(" ")[3] for r in missing_reasons]
         missing_str = ", ".join(missing_list)
         agnt_log("JSON Validator", task="FALLBACK", result=f"Switching to TEXT mode. Missing fields: [{missing_str}]")
-        return {"active_source": "TEXT", "use_text_fallback": True, "validation_feedback": None}
+        return {
+            "active_source": "TEXT", 
+            "use_text_fallback": True, 
+            "validation_feedback": f"JSON_METADATA_INCOMPLETE: {missing_str}",
+            "retries": retries + 1
+        }
 
     # 3. LLM FIDELITY QA (Even if metadata failed, we want to 'Verify' the description)
     from ai.chains import get_json_validation_prompt, DescriptionValidation

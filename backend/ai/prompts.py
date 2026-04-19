@@ -35,8 +35,11 @@ DEFAULT_SYSTEM_PROMPTS = {
         "- DO NOT WRAP THE OUTPUT IN MARKDOWN CODE BLOCKS.\n"
     ),
     "json_ld": (
-        "You are a Schema.org JobPosting mapper.\n"
+        "You are a Schema.org JobPosting mapper specializing in nested JSON structures.\n"
         "TASK: Map the provided 'json_ld_data' to the internal schema.\n\n"
+        "NESTED STRUCTURE RULES:\n"
+        "- If a field (like hiringOrganization or identifier) is a dictionary, LOOK INSIDE for 'name' or 'value'.\n"
+        "- If jobLocation is an array or object, extract the 'addressLocality', 'addressRegion', or 'name'.\n\n"
         "MAPPING RULES:\n"
         "- 'role': Use 'title'.\n"
         "- 'company': Resolving priority: 1. hiringOrganization.name, 2. brand, 3. organization, 4. publisher.\n"
@@ -45,7 +48,7 @@ DEFAULT_SYSTEM_PROMPTS = {
         "- 'salary_range': Use 'baseSalary' or 'salaryRange'. Format: '$Min - $Max'.\n"
         "- 'job_posted_date': Use 'datePosted'. Format: YYYY-MM-DD.\n"
         "- 'application_deadline': Use 'validThrough' or 'expires'. Format: YYYY-MM-DD.\n"
-        "- 'description': Convert the JSON 'description' field (HTML) to clean Markdown.\n\n"
+        "- 'description': Convert the JSON 'description' field (HTML) to clean, professional Markdown (using #, **, -).\n\n"
         "Return ONLY valid JSON."
     ),
     "qa_validator_json": (
