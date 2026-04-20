@@ -519,10 +519,10 @@ async def extract_node(state: AgentState):
             get_extraction_prompt, JobDetails,
             _create_description_prompt, get_json_ld_prompt
         )
-        settings = load_app_settings()
-        extraction_prompt = get_extraction_prompt(settings)
-        description_extraction_prompt = _create_description_prompt(settings)
-        structured_data_validation_prompt = get_json_ld_prompt(settings)
+        app_settings = load_app_settings()
+        extraction_prompt = get_extraction_prompt(app_settings)
+        description_extraction_prompt = _create_description_prompt(app_settings)
+        structured_data_validation_prompt = get_json_ld_prompt(app_settings)
 
         # RETRY MODE: Triggered by description QA validator (stays on current source)
         is_fallback_transition = vf.startswith("FALLBACK_PHASE:") if vf else False
@@ -540,14 +540,14 @@ async def extract_node(state: AgentState):
 
             if mode == "multi":
                 from ai.chains import JobDescription, description_extraction_prompt, description_json_prompt
-                sema = asyncio.Semaphore(settings.get("max_concurrency", 1))
+                sema = asyncio.Semaphore(app_settings.get("max_concurrency", 1))
                 if active_source == "JSON-LD":
                     _, desc_val = await _run_field_json_extraction("description", JobDescription, description_json_prompt, text_with_feedback, structured_data.get("description"), request, sema, progress_cb, state=state)
                 else:    
                     _, desc_val = await _run_field_extraction("description", JobDescription, description_extraction_prompt, text_with_feedback, url, request, sema, progress_cb, state=state)
                 results["description"] = desc_val.get("description") if desc_val else None
             else:
-                llm = get_llm(num_ctx=settings["llm_config"].get("num_ctx"))
+                llm = get_llm(num_ctx=app_settings["llm_config"].get("num_ctx"))
                 
                 if active_source == "JSON-LD":
                     extractor = structured_data_validation_prompt | llm.with_structured_output(JobDetails)
@@ -558,14 +558,14 @@ async def extract_node(state: AgentState):
                         "custom_guidance": ""
                     }
                 else:
-                    extractor = get_extraction_prompt(settings) | llm.with_structured_output(JobDetails)
+                    extractor = get_extraction_prompt(app_settings) | llm.with_structured_output(JobDetails)
                     inputs = { 
                         "text": text_with_feedback, 
                         "url": url or "Not provided",
                         "validation_feedback": f"PREVIOUS ATTEMPT FAILED QA VALIDATION:\n{vf}\nPLEASE FIX THESE ISSUES.\n" if vf else ""
                     }
                 
-                cg = settings.get("custom_prompts", {}).get("single_agent", "")
+                cg = app_settings.get("custom_prompts", {}).get("single_agent", "")
                 inputs["custom_guidance"] = f"ADDITIONAL USER INSTRUCTIONS:\n{cg}" if cg else ""
                 
                 result = await asyncio.wait_for(extractor.ainvoke(inputs), timeout=600)
@@ -597,7 +597,7 @@ async def extract_node(state: AgentState):
 
                 agnt_log("Extractor (JSON-LD)", task="Mapping Fields", input_data=str(structured_data.get("title"))[:50])
 
-                llm = get_llm(num_ctx=settings["llm_config"].get("num_ctx"))
+                llm = get_llm(num_ctx=app_settings["llm_config"].get("num_ctx"))
                 chain = structured_data_validation_prompt | llm.with_structured_output(JobDetails)
                 
                 mapped_fragments = _map_json_ld_fragments(structured_data)
@@ -625,7 +625,7 @@ async def extract_node(state: AgentState):
                     "validation_feedback": ""
                 }
                 
-                cg = settings.get("custom_prompts", {}).get("single_agent", "")
+                cg = app_settings.get("custom_prompts", {}).get("single_agent", "")
                 if cg: inputs["custom_guidance"] = f"ADDITIONAL USER INSTRUCTIONS:\n{cg}"
 
                 result = await asyncio.wait_for(chain.ainvoke(inputs), timeout=600)
