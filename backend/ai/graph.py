@@ -6,7 +6,7 @@ import operator
 from typing import TypedDict, Any, Annotated, Callable
 from ai.llm_factory import get_llm
 from ai.logger import agnt_log, log_llm_info
-from config import load_app_settings
+from config import load_app_settings, settings
 from ai.chains import (
     get_job_post_check_prompt, 
     get_extraction_prompt, 
@@ -602,12 +602,20 @@ async def extract_node(state: AgentState):
                 
                 mapped_fragments = _map_json_ld_fragments(structured_data)
                 
-                # DIAGNOSTIC: Save clean fragments for troubleshooting
+                # DIAGNOSTIC: Save JSON sources for troubleshooting
                 try:
-                    os.makedirs("data/tmp", exist_ok=True)
-                    with open("data/tmp/last_fragments.json", "w", encoding="utf-8") as f:
+                    tmp_dir = settings.TMP_DIR
+                    os.makedirs(tmp_dir, exist_ok=True)
+                    
+                    # 1. RAW: Original structured data
+                    with open(os.path.join(tmp_dir, "raw_json_ld.json"), "w", encoding="utf-8") as f:
+                        json.dump(structured_data, f, indent=2)
+                        
+                    # 2. CLEAN: Fragments actually sent to AI
+                    with open(os.path.join(tmp_dir, "last_fragments.json"), "w", encoding="utf-8") as f:
                         json.dump(mapped_fragments, f, indent=2)
-                    agnt_log("Graph", task="Diagnostic", result="Saved fragments to data/tmp/last_fragments.json")
+                        
+                    agnt_log("Graph", task="Diagnostic", result=f"Saved raw and clean JSON to {tmp_dir}")
                 except Exception as e:
                     print(f"Error saving diagnostic JSON: {e}")
 
