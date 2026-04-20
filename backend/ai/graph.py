@@ -531,10 +531,11 @@ async def extract_node(state: AgentState):
             # --- QA RETRY PATH: Only extract description with feedback ---
             results = state["extracted_data"].copy()
             if progress_cb:
+                retries = state.get('retries', 0)
                 if use_text_fallback:
-                     await progress_cb({"event": "progress", "msg": f"AI: Fallback! Scaling up to Full Text extraction (Attempt {state.get('retries', 0)}/3)..."})
+                     await progress_cb({"event": "progress", "msg": f"AI: Fallback! Scaling up to Full Text extraction (Attempt {retries + 1}/3)..."})
                 else:
-                     await progress_cb({"event": "progress", "msg": f"AI: Regenerating Description (QA Retry {state.get('retries', 0)}/3)..."})
+                     await progress_cb({"event": "progress", "msg": f"AI: Regenerating Description (Attempt {retries + 1}/3)..."})
             
             text_with_feedback = f"PREVIOUS ATTEMPT FAILED QA VALIDATION:\n{vf}\n\nORIGINAL TEXT:\n{text}" if vf else text
 
