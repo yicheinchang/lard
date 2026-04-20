@@ -1,7 +1,7 @@
 from langchain_core.prompts import ChatPromptTemplate
 from pydantic import BaseModel, Field
 
-from .prompts import DEFAULT_SYSTEM_PROMPTS
+from .prompts import DEFAULT_SYSTEM_PROMPTS, FIELD_FORMAT_DESCRIPTIONS
 import re
 
 def escape_braces(s: str) -> str:
@@ -21,43 +21,43 @@ def get_base_prompt(key: str, settings: dict | None = None) -> str:
 # --- Single Agent (Base Baseline) ---
 
 class JobDetails(BaseModel):
-    is_job_post: bool = Field(description="Boolean: True if content is a job advertisement.")
-    likelihood: float = Field(description="Float (0.0-1.0): Confidence that this is a job post.")
-    company: str | None = Field(default=None, description="Name from hiringOrganization, brand, organization, or publisher.")
-    role: str | None = Field(default=None, description="Official title verbatim from 'title' field or main header.")
-    location: str | None = Field(default=None, description="City, State, Country from 'jobLocation' or header.")
-    salary_range: str | None = Field(default=None, description="From baseSalary or jobBenefits. Format: '$100k-$150k' or '$50/hr'.")
-    company_job_id: str | None = Field(default=None, description="From identifier, jobID, job_id, or positionID.")
-    job_posted_date: str | None = Field(default=None, description="From datePosted or text. Format: YYYY-MM-DD.")
-    application_deadline: str | None = Field(default=None, description="From validThrough or expires. Format: YYYY-MM-DD.")
-    description: str | None = Field(default=None, description="Full verbatim description in clean Markdown.")
-    detected_category: str | None = Field(default=None, description="Identify: 'Job Post', 'Resume', 'Blog', 'Error Page', etc.")
+    is_job_post: bool = Field(description=FIELD_FORMAT_DESCRIPTIONS["is_job_post"])
+    likelihood: float = Field(description=FIELD_FORMAT_DESCRIPTIONS["likelihood"])
+    company: str | None = Field(default=None, description=FIELD_FORMAT_DESCRIPTIONS["company"])
+    role: str | None = Field(default=None, description=FIELD_FORMAT_DESCRIPTIONS["role"])
+    location: str | None = Field(default=None, description=FIELD_FORMAT_DESCRIPTIONS["location"])
+    salary_range: str | None = Field(default=None, description=FIELD_FORMAT_DESCRIPTIONS["salary_range"])
+    company_job_id: str | None = Field(default=None, description=FIELD_FORMAT_DESCRIPTIONS["company_job_id"])
+    job_posted_date: str | None = Field(default=None, description=FIELD_FORMAT_DESCRIPTIONS["job_posted_date"])
+    application_deadline: str | None = Field(default=None, description=FIELD_FORMAT_DESCRIPTIONS["application_deadline"])
+    description: str | None = Field(default=None, description=FIELD_FORMAT_DESCRIPTIONS["description"])
+    detected_category: str | None = Field(default=None, description=FIELD_FORMAT_DESCRIPTIONS["detected_category"])
 
 # --- Multi-Agent (Granular Splits) ---
 
 class JobCompany(BaseModel):
-    company: str = Field(description="The name of the company.")
+    company: str | None = Field(default=None, description=FIELD_FORMAT_DESCRIPTIONS["company"])
 
 class JobRole(BaseModel):
-    role: str = Field(description="The job title or role.")
+    role: str | None = Field(default=None, description=FIELD_FORMAT_DESCRIPTIONS["role"])
 
 class JobLocation(BaseModel):
-    location: str | None = Field(default=None, description="The job location (e.g., 'Cambridge, MA').")
+    location: str | None = Field(default=None, description=FIELD_FORMAT_DESCRIPTIONS["location"])
 
 class JobSalary(BaseModel):
-    salary_range: str | None = Field(default=None, description="The salary range, if specified.")
+    salary_range: str | None = Field(default=None, description=FIELD_FORMAT_DESCRIPTIONS["salary_range"])
 
 class JobId(BaseModel):
-    company_job_id: str | None = Field(default=None, description="The internal Job ID (e.g., REQ-1234, R09384, or a simple number). Use URL ONLY if text does not contain it.")
+    company_job_id: str | None = Field(default=None, description=FIELD_FORMAT_DESCRIPTIONS["company_job_id"])
 
 class PostedDate(BaseModel):
-    job_posted_date: str | None = Field(default=None, description="The date the job was posted (YYYY-MM-DD format preferred, or null).")
+    job_posted_date: str | None = Field(default=None, description=FIELD_FORMAT_DESCRIPTIONS["job_posted_date"])
 
 class DeadlineDate(BaseModel):
-    application_deadline: str | None = Field(default=None, description="The application deadline (YYYY-MM-DD format preferred, or null).")
+    application_deadline: str | None = Field(default=None, description=FIELD_FORMAT_DESCRIPTIONS["application_deadline"])
 
 class JobDescription(BaseModel):
-    description: str | None = Field(default=None, description="The FULL job description, extracted VERBATIM from the source and formatted in Markdown.")
+    description: str | None = Field(default=None, description=FIELD_FORMAT_DESCRIPTIONS["description"])
 
 # --- Verification (Multi-Agent Entry) ---
 

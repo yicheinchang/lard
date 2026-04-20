@@ -151,6 +151,7 @@ export function SettingsPage() {
   // Local form state (buffered so we can save explicitly)
   const [theme, setTheme] = useState<ThemeOption>('dark');
   const [aiEnabled, setAiEnabled] = useState(true);
+  const [debugMode, setDebugMode] = useState(true);
   const [llmProvider, setLlmProvider] = useState<LlmProvider>('ollama');
   const [llmConfig, setLlmConfig] = useState<LlmConfig>({
     ollama_base_url: '', ollama_model: '',
@@ -248,6 +249,7 @@ export function SettingsPage() {
     return (
       theme !== settings.theme ||
       aiEnabled !== settings.ai_enabled ||
+      debugMode !== settings.debug_mode ||
       llmProvider !== settings.llm_provider ||
       JSON.stringify(llmConfig) !== JSON.stringify(settings.llm_config) ||
       extractionMode !== settings.extraction_mode ||
@@ -257,7 +259,7 @@ export function SettingsPage() {
       JSON.stringify(customPrompts) !== JSON.stringify(settings.custom_prompts) ||
       JSON.stringify(systemPrompts) !== JSON.stringify(settings.system_prompts)
     );
-  }, [theme, aiEnabled, llmProvider, llmConfig, extractionMode, maxConcurrency, embeddingProvider, embeddingConfig, customPrompts, systemPrompts, settings]);
+  }, [theme, aiEnabled, debugMode, llmProvider, llmConfig, extractionMode, maxConcurrency, embeddingProvider, embeddingConfig, customPrompts, systemPrompts, settings]);
 
   // Update global navigation guard
   useEffect(() => {
@@ -304,6 +306,7 @@ export function SettingsPage() {
     if (!settings) return;
     setTheme(settings.theme);
     setAiEnabled(settings.ai_enabled);
+    setDebugMode(settings.debug_mode ?? true);
     setLlmProvider(settings.llm_provider);
     setLlmConfig(settings.llm_config);
     setExtractionMode(settings.extraction_mode);
@@ -387,6 +390,7 @@ export function SettingsPage() {
       await ctxUpdate({
         theme,
         ai_enabled: aiEnabled,
+        debug_mode: debugMode,
         llm_provider: llmProvider,
         llm_config: llmConfig,
         extraction_mode: extractionMode,
@@ -566,6 +570,25 @@ export function SettingsPage() {
               className={`relative inline-flex h-7 w-12 items-center rounded-full transition-colors duration-300 focus:outline-none shrink-0 ${aiEnabled ? 'bg-violet-600' : 'bg-[var(--border-color)]'}`}
             >
               <span className={`inline-block h-5 w-5 transform rounded-full bg-white shadow transition-transform duration-300 ${aiEnabled ? 'translate-x-6' : 'translate-x-1'}`} />
+            </button>
+          </div>
+
+          <div className="flex items-center justify-between p-4 rounded-xl" style={{ backgroundColor: 'var(--input-bg)', border: '1px solid var(--border-color)' }}>
+            <div className="flex items-center gap-3">
+              <RefreshCw className={`w-5 h-5 ${debugMode ? 'text-violet-400' : ''}`} style={!debugMode ? { color: 'var(--fg-subtle)' } : {}} />
+              <div>
+                <p className="text-sm font-medium" style={{ color: 'var(--fg)' }}>Debug Mode (Log LLM Prompts & Responses)</p>
+                <p className="text-xs" style={{ color: 'var(--fg-subtle)' }}>
+                  {debugMode ? 'Raw exact prompts and LLM replies are logged to the tmp folder.' : 'Verbose logging is off to save space.'}
+                </p>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => setDebugMode(!debugMode)}
+              className={`relative inline-flex h-7 w-12 items-center rounded-full transition-colors duration-300 focus:outline-none shrink-0 ${debugMode ? 'bg-violet-600' : 'bg-[var(--border-color)]'}`}
+            >
+              <span className={`inline-block h-5 w-5 transform rounded-full bg-white shadow transition-transform duration-300 ${debugMode ? 'translate-x-6' : 'translate-x-1'}`} />
             </button>
           </div>
 

@@ -96,6 +96,7 @@ export interface EmbeddingConfig {
 export interface AppSettings {
   theme: 'dark' | 'light' | 'system';
   ai_enabled: boolean;
+  debug_mode: boolean;
   llm_provider: 'ollama' | 'openai' | 'anthropic';
   llm_config: LlmConfig;
   embedding_provider: 'default' | 'ollama' | 'openai';

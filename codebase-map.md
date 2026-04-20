@@ -1,5 +1,5 @@
-# 🗺️ Lard - Lazy AI-Powered Resume Database (v0.66.4)
-Last Updated: 2026-04-20T03:50:00Z
+# 🗺️ Lard - Lazy AI-Powered Resume Database (v0.67.0)
+Last Updated: 2026-04-20T16:12:00Z
 
 This document provides a summary of the project's architecture, tech stack, and key logic to give AI coding agents instant context.
 
@@ -61,6 +61,7 @@ This document provides a summary of the project's architecture, tech stack, and 
   - `assistant.py`: LangGraph-based conversational agent logic. Uses lazy loading for the vector store manager.
   - `llm_factory.py`: Multi-provider support (Ollama, OpenAI, Anthropic).
   - `chains.py`: Specific LangChain sequences (e.g., for extraction).
+  - `debug.py`: Custom diagnostics, including the `DebugLLMCallbackHandler` to capture raw inputs/outputs to `data/tmp`.
   - `graph.py`: LangGraph state machine definitions.
   - `status.py`: Synchronization primitives (Threading Events) for tracking heavy AI library loading during background startup.
   - `logger.py`: Standardized AI agent console logging.
@@ -164,6 +165,7 @@ Global configuration persisted on the server (`app_settings.json`).
 - `system_prompts`: Base core AI prompts (Extraction, Validation, JSON-LD) fully editable from the UI.
 - `max_concurrency`: User-configurable parallelism for Multi-Agent extraction (Range: 1-10).
 - `num_ctx`: User-configurable LLM context window (Range: 1k-128k+, Default: 8192) applied universally across all AI operations.
+- `debug_mode`: Saves raw LLM input/output prompts to `data/tmp/` for deep troubleshooting.
 - **Ollama Verification**: Automatic server verification and model discovery for the Ollama provider. Includes an animated status pulse and a datalist-based model selector.
 
 ---

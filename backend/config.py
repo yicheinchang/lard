@@ -88,6 +88,7 @@ CHROMA_DIR = settings.CHROMA_DIR   # Helper for vector_store.py
 DEFAULT_APP_SETTINGS = {
     "theme": "dark",
     "ai_enabled": True,
+    "debug_mode": True,
     "llm_provider": settings.LLM_PROVIDER,
     "llm_config": {
         "ollama_base_url": settings.OLLAMA_BASE_URL,

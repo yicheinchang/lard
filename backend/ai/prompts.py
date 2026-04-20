@@ -2,6 +2,21 @@
 # This file contains only raw string constants to avoid heavy AI library imports
 # during initial application configuration and startup.
 
+FIELD_FORMAT_DESCRIPTIONS = {
+    "is_job_post": "Boolean: True if content is a job advertisement.",
+    "likelihood": "Float (0.0-1.0): Confidence that this is a job post.",
+    "company": "The name of the company.",
+    "role": "The job title or role.",
+    "location": "Format: City, State, Country.",
+    "salary_range": "Format: '$100k-$150k', '$50/hr', etc.",
+    "company_job_id": "The internal Job ID / Requisition string.",
+    "job_posted_date": "Format: YYYY-MM-DD.",
+    "application_deadline": "Format: YYYY-MM-DD.",
+    "description": "Full verbatim description in clean Markdown.",
+    "detected_category": "Identify: 'Job Post', 'Resume', 'Blog', 'Error Page', etc."
+}
+
+
 DEFAULT_SYSTEM_PROMPTS = {
     "extraction_base": (
         "You are a precision Job Data Extractor. Your task is to analyze the provided content and extract metadata into the required JSON schema.\n"
@@ -41,21 +56,16 @@ DEFAULT_SYSTEM_PROMPTS = {
     "json_ld": (
         "You are a specialized Job Data Extractor specializing in Schema.org JSON-LD parsing.\n\n"
         "TASK: Analyze the provided JSON-LD data and extract the required information.\n"
-        "CRITICAL OUTPUT REQUIREMENT: You must output a JSON object using the following exact key structure. Do not use any other keys.\n\n"
-        "Required Output Schema:\n"
-        "{\n"
-        "    \"company\": \"[Extracted Company Name]\",\n"
-        "    \"role\": \"[Extracted Job Title]\",\n"
-        "    \"location\": \"[Extracted City, ST]\",\n"
-        "    \"company_job_id\": \"[Extracted Identifier Value]\",\n"
-        "    \"salary_range\": \"[Extracted Salary Range in $ format]\",\n"
-        "    \"job_posted_date\": \"[Extracted Date in YYYY-MM-DD format]\",\n"
-        "    \"application_deadline\": \"[Extracted Application Deadline in YYYY-MM-DD format]\",\n"
-        "    \"description\": \"[The complete, verbatim description text and convert it to Markdown format]\",\n"
-        "    \"is_job_post\": true,\n"
-        "    \"likelihood\": 1.0\n"
-        "}\n\n"
-        "Analyze the following JSON-LD data and return only the resulting JSON object matching the schema above."
+        "CRITICAL INSTRUCTION: You must strictly adhere to the provided schema format.\n\n"
+        "EXTRACTION STRATEGY:\n"
+        "- company: Extract from 'hiringOrganization'.\n"
+        "- role: Extract from 'title'.\n"
+        "- location: Extract from 'jobLocation'. Extract and flatten '.addressLocality' and '.addressRegion'.\n"
+        "- company_job_id: Extract from 'identifier.value' or 'jobID'.\n"
+        "- salary_range: Use 'baseSalary' or 'salaryRange'. Format it like $Min - $Max.\n"
+        "- job_posted_date: Use 'datePosted'. Format it like YYYY-MM-DD.\n"
+        "- application_deadline: Use 'validThrough'. Format it like YYYY-MM-DD.\n"
+        "- description: Convert the 'description' (could be text or html) into clean VERBATIM Markdown. Do NOT summarize. Do not miss any strings."
     ),
     "qa_validator_json": (
         "You are an expert fidelity QA agent. You are validating a generated Markdown description against a source fragment from structured JSON-LD data. "

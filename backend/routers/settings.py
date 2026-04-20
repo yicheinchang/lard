@@ -26,6 +26,7 @@ def get_default_prompts():
 class SettingsUpdate(BaseModel):
     theme: Optional[str] = None
     ai_enabled: Optional[bool] = None
+    debug_mode: Optional[bool] = None
     llm_provider: Optional[str] = None
     llm_config: Optional[dict] = None
     embedding_provider: Optional[str] = None

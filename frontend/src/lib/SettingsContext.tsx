@@ -14,6 +14,7 @@ interface SettingsContextType {
 const defaultSettings: AppSettings = {
   theme: 'dark',
   ai_enabled: true,
+  debug_mode: true,
   llm_provider: 'ollama',
   llm_config: {
     ollama_base_url: 'http://host.docker.internal:11434',
