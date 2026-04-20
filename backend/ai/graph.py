@@ -780,6 +780,7 @@ async def json_validator_node(state: AgentState):
         return {
             "active_source": "TEXT", 
             "use_text_fallback": True, 
+            "previous_json_results": extracted,
             "validation_feedback": f"FALLBACK_PHASE: Incomplete JSON-LD metadata. Missing: {missing_str}",
             "retries": retries + 1
         }

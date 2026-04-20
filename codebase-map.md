@@ -1,5 +1,5 @@
-# 🗺️ Lard - Lazy AI-Powered Resume Database (v0.66.3)
-Last Updated: 2026-04-20T00:16:15Z
+# 🗺️ Lard - Lazy AI-Powered Resume Database (v0.66.4)
+Last Updated: 2026-04-20T03:50:00Z
 
 This document provides a summary of the project's architecture, tech stack, and key logic to give AI coding agents instant context.
 
@@ -318,7 +318,7 @@ The system uses a multi-stage pipeline to extract job details from URLs, PDFs, a
 - **Cancellation & Safety**: Explicit support for `AbortController`. If a user cancels in the UI, the backend immediately terminates the background AI processing.
 - **Selective Pass Logic**: Skips structured JSON extraction for the description field, using a direct verbatim retrieval prompt for speed and reliability, and defaults to generous 600s timeouts on hardware-limited setups.
 - **Resilient Network Client**: Uses browser-standard headers to bypass anti-bot measures.
-- **Sequential Fallback Strategy**: Implements a two-phase extraction pipeline. Attempt 1 (JSON-LD) targets structured data for speed and precision. If metadata fields (Company, Role, etc.) are missing, Attempt 2 (Full Text) is triggered. Features **Heuristic Noise Detection**: If the extracted text has high link density (>60%) and is under 6,000 characters (common in CSR/SPA loading states), the system automatically treats it as noise and swaps it for the high-quality JSON-LD description field to ensure metadata agents have "substantive" content to work with.
+- **Sequential Fallback Strategy**: Implements a two-phase extraction pipeline. Attempt 1 (JSON-LD) targets structured data for speed and precision. If metadata fields (Company, Role, etc.) are missing, Attempt 2 (Full Text) is triggered. **State Preservation**: Successes from JSON-LD are preserved via `previous_json_results` and merged with Text Agent results to prevent data loss. Features **Heuristic Noise Detection**: If the extracted text has high link density (>60%) and is under 6,000 characters (common in CSR/SPA loading states), the system automatically treats it as noise and swaps it for the high-quality JSON-LD description field to ensure metadata agents have "substantive" content to work with.
 - **Enhanced Entity Recognition**: Single-agent prompts are optimized to identify metadata in document headers/summaries, specifically targeting alphanumeric Job IDs (e.g., "REQ-12345").
 - **Multi-line Diagnostic Logging**: The AI logger supports full, non-truncated multi-line output for fallback reasons and QA failures, providing high transparency for prompt engineering and debugging.
 - **Prompt Safety & Escaping**: Implements an `escape_braces` utility in `chains.py` that automatically escapes literal curly braces in all system prompts before they are passed to LangChain. This prevents template variable errors when prompts contain literal JSON examples, ensuring compatibility across all extraction strategies (Single/Multi-Agent) and models (with or without Tool Calling).
