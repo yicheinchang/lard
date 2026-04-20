@@ -632,7 +632,8 @@ async def extract_node(state: AgentState):
                 result = await asyncio.wait_for(chain.ainvoke(inputs), timeout=600)
                 agnt_log("Extractor (JSON-LD)", task="RAW_AI_OUTPUT", result=str(result)[:200])
                 data = result.model_dump()
-                agnt_log("Extractor (JSON-LD)", result=f"SUCCESS: Data extracted. [Company: {data.get('company')}, Role: {data.get('role')}]")
+                outcome = "SUCCESS" if data.get("company") and data.get("role") else "INCOMPLETE"
+                agnt_log("Extractor (JSON-LD)", result=f"{outcome}: Data extracted. [Company: {data.get('company')}, Role: {data.get('role')}]")
                 state_update.update({"extracted_data": data, "error": None, "llm_logged": llm_logged})
                 return state_update
 
@@ -718,7 +719,8 @@ async def extract_node(state: AgentState):
                         if _is_valid_value(v):
                             final_results[k] = v
 
-                agnt_log("Extractor (Text)", result=f"SUCCESS: Data extracted. [Company: {final_results.get('company')}, Role: {final_results.get('role')}]")
+                outcome = "SUCCESS" if final_results.get("company") and final_results.get("role") else "INCOMPLETE"
+                agnt_log("Extractor (Text)", result=f"{outcome}: Data extracted. [Company: {final_results.get('company')}, Role: {final_results.get('role')}]")
                 state_update.update({"extracted_data": final_results, "error": None, "llm_logged": llm_logged})
                 return state_update
     except asyncio.TimeoutError:
