@@ -474,8 +474,8 @@ async def check_job_post_node(state: AgentState):
         return {"error": f"IDENTIFICATION_ERROR: AI failed to verify the document content. {str(e)}", "llm_logged": llm_logged}
 
 async def extract_node(state: AgentState):
-    settings = load_app_settings()
-    mode = settings.get("extraction_mode", "single")
+    app_settings = load_app_settings()
+    mode = app_settings.get("extraction_mode", "single")
     request = state.get("request")
     progress_cb = state.get("progress_callback")
     text = state.get("text")
@@ -519,7 +519,6 @@ async def extract_node(state: AgentState):
             get_extraction_prompt, JobDetails,
             _create_description_prompt, get_json_ld_prompt
         )
-        app_settings = load_app_settings()
         extraction_prompt = get_extraction_prompt(app_settings)
         description_extraction_prompt = _create_description_prompt(app_settings)
         structured_data_validation_prompt = get_json_ld_prompt(app_settings)
@@ -671,7 +670,7 @@ async def extract_node(state: AgentState):
             else:
                 # --- PATH B: Text Fallback (or Non-JSON Entry) ---
                 llm_logged = state.get("llm_logged", False)
-                llm = get_llm(num_ctx=settings["llm_config"].get("num_ctx"))
+                llm = get_llm(num_ctx=app_settings["llm_config"].get("num_ctx"))
                 if not llm_logged:
                     log_llm_info()
                     llm_logged = True
@@ -683,8 +682,8 @@ async def extract_node(state: AgentState):
                     msg = "AI: JSON-LD incomplete. Falling back to Full Text extraction..." if use_text_fallback else "AI: Extracting details from text (Ollama)..."
                     await progress_cb({"event": "progress", "msg": msg})
 
-                extractor = get_extraction_prompt(settings) | llm.with_structured_output(JobDetails)
-                cg = settings.get("custom_prompts", {}).get("single_agent", "")
+                extractor = get_extraction_prompt(app_settings) | llm.with_structured_output(JobDetails)
+                cg = app_settings.get("custom_prompts", {}).get("single_agent", "")
                 
                 # Determine correct label for validation_feedback
                 label = "TRANSITION FEEDBACK (FALLBACK TO TEXT):" if use_text_fallback else "PREVIOUS ATTEMPT FAILED QA VALIDATION:"
