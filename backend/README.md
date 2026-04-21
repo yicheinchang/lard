@@ -141,19 +141,14 @@ graph TD
 
 Regardless of strategy, the following core features ensure 100% extraction fidelity:
 
-### 1. Sequential Fallback Strategy
-1. **Check**: Rapid identification of Document Type (Job Post vs other).
-2. **Extract**: Dual-mode extraction (JSON-LD first, raw text fallback). Includes a **15s heartbeat mechanism** to prevent client-side/proxy timeouts (BodyTimeoutError) during long processing.
-3. **Specialized Validation**:
-    *   **JSON-Fidelity Validator**: Direct entity/HTML check for structured data.
-    *   **Text-Source Validator**: Comprehensive completeness & boundary check for raw text.
-4. **Sequential Fallback**: Automatic promotion from JSON to Text if fields are missing.
-
 ### 2. QA Validation Loop (Circuit Breaker)
-Each extraction is validated by a dedicated **Extraction Validation Node** with a 3-retry limit:
-- **Scope**: Targeted primarily at the Description field for verbatim accuracy and completeness.
-- **Feedback Injection**: If validation fails, the failure reason is injected into the prompt of the same extraction node for the next attempt.
-- **UI Flagging**: If the circuit breaker trips after 3 attempts, the final output is preserved but flagged for manual review in the frontend.
+Each extraction is validated by a specialized **Extraction Validation Node** with a 3-retry limit:
+- **json_validator_node**: Specialized validator for JSON-LD sources. Focuses on HTML fidelity and heuristic metadata completeness. Triggers a fallback to Text mode if key metadata (Company, Role, etc.) is missing or low-quality.
+- **text_validator_node**: Specialized validator for Raw Text sources. Focuses on boundary detection and semantic completeness.
+- **Fast Pass Logic**: If a description has already been verified by the JSON-LD fidelity pass, the system automatically bypasses the text-mode QA validation to preserve resources and prevent false-positive rejections.
+- **Feedback Injection**: If validation fails, the failure reason is injected into the prompt of the extraction node for the guided retry.
+- **UI Flagging**: If the circuit breaker trips after 3 attempts, the final output is preserved but flagged with an amber "Hallucination Detected" warning in the frontend.
+
 
 ---
 

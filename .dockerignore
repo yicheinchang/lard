@@ -24,4 +24,5 @@ backend/test/
 **/.git
 **/.DS_Store
 *.log
+assets/
 docker-compose.override.yml

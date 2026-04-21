@@ -1,6 +1,25 @@
-# 🐱 Lard - Lazy AI-powered Resume Database (Monorepo)
+# 🐱 Lard - Lazy AI-powered Resume Database (v0.67.4)
+
+![Lard Logo](assets/Lard-icon.png)
+
+### **Automated extraction • Interview tracking • RAG-powered Chat**
 
 An AI-powered, high-performance job application tracking system with automated data extraction, document management, and interview pipeline visualization.
+
+[Features](#🚀-key-features) • [Getting Started](#🛠️-getting-started) • [Docker](#🐳-docker-deployment-recommended) • [Docs](#📚-documentation)
+
+---
+
+## 📸 Application Showcase
+
+### Dashboard & Kanban Pipeline
+![Dashboard Screenshot](assets/Screenshot-dashboard.png)
+
+### Intelligent AI Extraction
+![Add Job Screenshot](assets/Screenshot-addJob.png)
+
+### Advanced Configuration
+![Settings Screenshot](assets/Screenshot-settings.png)
 
 ---
 
@@ -10,24 +29,27 @@ An AI-powered, high-performance job application tracking system with automated d
 - **Multi-Strategy Parsing**: Automated extraction from URLs, PDFs, and raw text.
 - **JSON-LD First**: Prioritizes structured Schema.org data for 100% extraction accuracy on modern job portals.
 - **Agentic Pipeline**: Supports both high-speed Single-Agent mode and high-fidelity Multi-Agent mode (parallel field extraction).
-- **Verbatim Descriptions**: Preserves original job description formatting and hierarchy in Markdown.
+- **Verbatim Descriptions**: Preserves original job description formatting and hierarchy in Markdown using specialized extraction agents and layout-aware parsing.
+- **Centralized Truncation**: Intelligently manages context window limits based on user-configurable `num_ctx`, ensuring stable extraction on hardware-limited systems.
+- **Robust Field Validation**: Specialized `json_validator_node` and `text_validator_node` perform targeted QA on the description field, with a **3-retry limit** that injects specific failure feedback into the next extraction attempt.
 
 ### 📊 Powerful Visualization
-- **Dynamic Kanban**: Drag-and-drop job hunt pipeline with 4 standard stages.
-- **Data Table**: High-fidelity list view with advanced sorting, filtering, and bulk actions.
-- **Interview Tracking**: Manage every step (Name, Date, Status, Notes) with status synchronization.
+- **Dynamic Kanban**: Drag-and-drop job hunt pipeline with 4 standard stages and a specialized **Tabbed Mobile UI** for single-column focus on small screens.
+- **Data Table**: High-fidelity list view with advanced sorting, filtering, and density-rich tooltips.
+- **Interview Tracking**: Manage every step with full CRUD, inline editing, and lifecycle guards (Applied/Interviewing status synchronization).
 
 ### ⚡ Extreme Performance
-- **Instant Backend Startup**: Reaches "Ready" state in **< 5 seconds** through lazy-loading and optimized reloader indexing.
+- **Instant Backend Startup**: Cold start in **< 5 seconds** via background eager loading and synchronized initialization using the `app_factory` pattern.
 - **Local Embedded Models**: Uses `all-MiniLM-L6-v2` for embeddings with a persistent local model cache.
-- **Dynamic Settings**: Change LLM providers (Ollama, OpenAI, Anthropic) or themes in real-time via the UI.
+- **Dynamic Settings**: Change LLM providers (Ollama, OpenAI, Anthropic), models, or themes in real-time without restarts.
 
 ---
 
 ## 📂 Project Structure
 
-- **`/backend`**: FastAPI ecosystem. Handles data persistence (SQLAlchemy + SQLite), vector search (ChromaDB), and AI orchestration (LangGraph). Isolated from public access.
-- **`/frontend`**: Next.js 15 + Tailwind CSS. Acts as the secure gateway via **API Proxying** and **Server Actions**.
+- **`/backend`**: FastAPI ecosystem. Handles data persistence (SQLAlchemy + SQLite), vector search (ChromaDB), and AI orchestration (LangGraph).
+- **`/frontend`**: Next.js 16 + React 19 + Tailwind CSS 4. Acts as the secure gateway via **API Proxying** and **Server Actions**.
+- **`/assets`**: Project icons, screenshots, and documentation media.
 
 ---
 
@@ -138,4 +160,4 @@ For detailed architecture, API endpoints, and optimization details, refer to:
 
 ---
 Built with ❤️ by Antigravity.
-Current version: v0.64.2
+Current version: v0.67.3

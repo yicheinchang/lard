@@ -1,5 +1,5 @@
-# 🗺️ Lard - Lazy AI-Powered Resume Database (v0.67.3)
-Last Updated: 2026-04-21T02:27:00Z
+# 🗺️ Lard - Lazy AI-Powered Resume Database (v0.67.4)
+Last Updated: 2026-04-21T14:05:00Z
 
 This document provides a summary of the project's architecture, tech stack, and key logic to give AI coding agents instant context.
 
@@ -41,6 +41,7 @@ This document provides a summary of the project's architecture, tech stack, and 
 ### Root
 - `/backend`: Core API and AI logic.
 - `/frontend`: Next.js web application.
+- `/assets`: Documentation images and brand assets.
 - `.agents/rules/`: Operational rules and roles for AI completion.
 
 ### Backend (`/backend`)
@@ -323,8 +324,9 @@ The system uses a multi-stage pipeline to extract job details from URLs, PDFs, a
 - **Sequential Fallback Strategy**: Implements a two-phase extraction pipeline. Attempt 1 (JSON-LD) targets structured data for speed and precision. If metadata fields (Company, Role, etc.) are missing, Attempt 2 (Full Text) is triggered. **State Preservation**: Successes from JSON-LD are preserved via `previous_json_results` and merged with Text Agent results to prevent data loss. Features **Heuristic Noise Detection**: If the extracted text has high link density (>60%) and is under 6,000 characters (common in CSR/SPA loading states), the system automatically treats it as noise and swaps it for the high-quality JSON-LD description field to ensure metadata agents have "substantive" content to work with.
 - **Enhanced Entity Recognition**: Single-agent prompts are optimized to identify metadata in document headers/summaries, specifically targeting alphanumeric Job IDs (e.g., "REQ-12345").
 - **Multi-line Diagnostic Logging**: The AI logger supports full, non-truncated multi-line output for fallback reasons and QA failures, providing high transparency for prompt engineering and debugging.
-- **Prompt Safety & Escaping**: Implements an `escape_braces` utility in `chains.py` that automatically escapes literal curly braces in all system prompts before they are passed to LangChain. This prevents template variable errors when prompts contain literal JSON examples, ensuring compatibility across all extraction strategies (Single/Multi-Agent) and models (with or without Tool Calling).
-- **Gemma 2B Prompt Optimizations**: Implements strict schema extraction rules and explicit formatting checkpoints in the `json_ld` default prompt to enforce lossless structure extraction and prevent data truncation.
+- **Extraction Prompt Safety**: Implements an `escape_braces` utility in `chains.py` that automatically escapes literal curly braces in all system prompts before they are passed to LangChain. This prevents template variable errors when prompts contain literal JSON examples, ensuring compatibility across all extraction strategies and models.
+- **Robust Field Validation**: Specialized `json_validator_node` and `text_validator_node` perform targeted QA on the description field, with a **3-retry limit** that injects specific failure feedback into the next extraction attempt.
+- **Fast Pass Logic**: If a description has already been verified by the JSON-LD fidelity pass, it skips redundant text-mode validation.
 
 ### 6. Document Ingestion
 Supports PDF and plain text. PDFs are parsed using `pypdf` and split into chunks before vectorization.

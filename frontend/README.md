@@ -1,80 +1,59 @@
-# 🐱 Lard - Frontend
+# 🐱 Lard - Frontend (v0.67.3)
 
-Next.js-based frontend for the **Lard** (Lazy AI-powered Resume Database) application.
-Serves as the **Secure Gateway** for the entire stack, utilizing an **API Proxy** for streaming and **Server Actions** for secure mutations.
+Next.js-based high-performance frontend for the **Lard** (Lazy AI-powered Resume Database) application.
 
-## 🧪 Verified Development
+## 🚀 Tech Stack & Core Architecture
 
-> [!IMPORTANT]
-> Because the AI assistant does not have access to a live browser, all frontend changes **must be manually verified** by the developer. Ensure that theme consistency (Light/Dark mode) and responsive layouts (Mobile/Desktop) are checked before marking a feature as stable.
+The frontend is built with a modern, high-isolation architecture designed for security and extreme performance.
 
-## 📊 Component Highlights
-
-### Responsive Kanban Board
-The Kanban board features a dual-layout system for optimal productivity:
-- **Desktop/Tablet**: High-density horizontal grid with a minimum column width of `250px`. Supports horizontal scrolling to prevent information squishing.
-- **Mobile/Narrow Screens**: Integrated **Tabbed UI** (Segmented Control) that triggers below `1024px`. Automatically switches to a single-column focus with real-time job counts per stage.
-
-## Manual Verification
-
-To ensure the quality of the frontend, please perform the following checks after any UI changes:
-1. **Responsive Design**: Verify the layout on mobile (375px), tablet (768px), and desktop (1440px) viewports.
-2. **Theme Consistency**: Toggle between Light and Dark modes to ensure all components adhere to the Tailwind CSS theme configuration.
-3. **Accessibility**: Run a Lighthouse audit or use a screen reader to verify that interactive elements are keyboard-accessible.
-
-## 🌐 Configuration & Gateway
-
-The frontend acts as the secure gateway for the **Lard** stack. It handles authentication (if configured), proxies streaming requests to the backend, and provides a unified Settings UI.
-
-### Environment Variables
-| Variable | Description | Default |
-| :--- | :--- | :--- |
-| `INTERNAL_BACKEND_URL` | The URL used by the server-side proxy to reach the FastAPI backend. | `http://localhost:8000` |
-| `FRONTEND_PORT` | The port the application listens on (used by Docker). | `8081` |
-
-### System Key Indicators
-To ensure transparency while maintaining security, the Settings UI includes visual indicators for API keys:
-- **System Default**: If a key is configured via environment variables (e.g., `LARD_OPENAI_API_KEY`), the UI displays a `System Default` badge and masks the value as `●●●●●●●● (System)`.
-- **User Override**: If a user enters a new key in the UI, it overrides the system default for that installation and is persisted securely on the server.
+- **Framework**: [Next.js 16](https://nextjs.org/) (App Router)
+- **Runtime**: [React 19](https://react.dev/)
+- **Styling**: [Tailwind CSS 4](https://tailwindcss.com/) (Using modern `@theme` variables)
+- **Icons**: [Lucide React](https://lucide.dev/)
+- **API Pattern**: 
+    - **Secure Proxying**: All client-side requests are proxied via `src/app/api/proxy/` to isolate the backend from public exposure.
+    - **Server Actions**: All mutations (Jobs, Steps, Settings) use Next.js Server Actions for secure, server-side execution.
+    - **Streaming (SSE)**: Long-running AI tasks (Extraction, Vectorization) are streamed via Server-Sent Events for real-time progress updates.
 
 ---
 
-## 🏗️ Architecture
+## 📊 Key UI Components & Logic
 
-- **API Proxy**: Located at `src/app/api/proxy/`, this route handler transparently forwards requests to the internal backend, supporting both standard JSON and Server-Sent Events (SSE).
-- **Settings Context**: Manages theme state and reactive updates for application preferences.
+### 1. Master-Detail Orchestration
+The UI uses a **Centered Modal pattern** (`JobDetailView.tsx`) rather than separate page routes. This ensures a blazingly fast SPA feel while maintaining deep contextual data management.
 
-## Getting Started
+### 2. Responsive Kanban Board
+Features a dual-layout strategy:
+- **Desktop**: High-density horizontal grid with min-width enforcement to prevent content squishing.
+- **Mobile (< 1024px)**: Automatically switches to a **Tabbed UI (Segmented Control)**, allowing users to focus on one stage at a time with real-time job counts.
 
-First, run the development server:
+### 3. Navigation Guards
+Managed via the `ViewContext.tsx`, the application protects against accidental data loss. If a user attempts to navigate away from an unsaved edit (Job Details, Interview Steps, or the "Add Step" form), a centralized interceptor prompts for confirmation.
 
+### 4. Advanced Prompt Engineering UI
+The Settings page includes a sophisticated sub-section for AI prompt management:
+- **Granular Baseline Resets**: Restore any of the 18+ system prompts to factory defaults individually.
+- **Context-Aware Filtering**: Automatically hides prompts irrelevant to the active Extraction Strategy (Single vs Multi-Agent).
+- **Additive Guidance**: Field-specific instruction tabs for fine-tuning extraction without modifying core prompts.
+
+---
+
+## 🧪 Development & Verification
+
+### Setup
 ```bash
+cd frontend
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+### Manual Verification Checklist
+As the AI assistant cannot access a browser, the following must be manually verified after any change:
+1. **Theme Consistency**: Verify both Light and Dark modes (handled via `SettingsContext`).
+2. **Responsive Layouts**: Check the Kanban tabbed UI on small screens and the sidebar collapse logic.
+3. **Guard Logic**: Confirm that unsaved changes trigger the navigation interceptor.
+4. **SSE Connectivity**: Ensure the `Ticker.tsx` and `ProcessingOverlay.tsx` receive real-time updates from the backend.
 
-You can start editing the page by modifying `src/app/page.tsx`. The page auto-updates as you edit the file.
-
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
-
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+---
+Built with ❤️ by Antigravity.
+Final version synchronized with v0.67.3.
