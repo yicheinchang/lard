@@ -157,7 +157,10 @@ All data is consolidated into a project-root **`/data`** directory, which is per
 For detailed architecture, API endpoints, and optimization details, refer to:
 - [Backend README](file:///home/Lard/backend/README.md)
 - [Codebase Map](file:///home/Lard/codebase-map.md)
+---
+## 📜 License
+This project is licensed under the **MIT License**. See the [LICENSE](LICENSE) file for more details.
 
 ---
 Built with ❤️ by Antigravity.
-Current version: v0.67.5
+Final version synchronized with v0.67.5.

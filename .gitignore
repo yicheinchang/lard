@@ -36,3 +36,6 @@ frontend/build/
 frontend/*.tsbuildinfo
 frontend/next-env.d.ts
 frontend/*.log
+
+# AI Agent Rules
+.agents/rules/github-role.md

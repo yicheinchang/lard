@@ -57,3 +57,8 @@ As the AI assistant cannot access a browser, the following must be manually veri
 ---
 Built with ❤️ by Antigravity.
 Final version synchronized with v0.67.5.
+
+---
+
+## 📜 License
+This project is licensed under the **MIT License**. See the [LICENSE](../LICENSE) file for more details.

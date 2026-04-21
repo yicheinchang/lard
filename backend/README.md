@@ -166,3 +166,8 @@ The backend reaches a "Ready" state in **< 5 seconds** through:
 - `routers/`: API endpoint definitions (REST & SSE).
 - `test/`: Verification scripts and backend test suite.
 - `data/` (Root): Consolidated persistence for DB, Uploads, Chroma, Settings, and Tmp.
+
+---
+
+## 📜 License
+This project is licensed under the **MIT License**. See the [LICENSE](../LICENSE) file for more details.

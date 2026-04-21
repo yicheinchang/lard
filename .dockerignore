@@ -26,3 +26,6 @@ backend/test/
 *.log
 assets/
 docker-compose.override.yml
+
+# AI Agent Rules
+.agents/
