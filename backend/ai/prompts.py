@@ -3,17 +3,17 @@
 # during initial application configuration and startup.
 
 FIELD_FORMAT_DESCRIPTIONS = {
-    "is_job_post": "Boolean: True if content is a job advertisement.",
-    "likelihood": "Float (0.0-1.0): Confidence that this is a job post.",
-    "company": "The name of the company.",
-    "role": "The job title or role.",
-    "location": "Format: City, State, Country.",
-    "salary_range": "Format: '$100k-$150k', '$50/hr', etc.",
-    "company_job_id": "The internal Job ID / Requisition string.",
-    "job_posted_date": "Format: YYYY-MM-DD.",
-    "application_deadline": "Format: YYYY-MM-DD.",
-    "description": "Full verbatim description in clean Markdown.",
-    "detected_category": "Identify: 'Job Post', 'Resume', 'Blog', 'Error Page', etc."
+    "is_job_post": "True if job post",
+    "likelihood": "Float 0.0-1.0",
+    "company": "Company Name",
+    "role": "Job Title",
+    "location": "City, State",
+    "salary_range": "Format: $min - $max",
+    "company_job_id": "Job ID",
+    "job_posted_date": "Format: YYYY-MM-DD",
+    "application_deadline": "Format: YYYY-MM-DD",
+    "description": "Format: Markdown document",
+    "detected_category": "Document type category"
 }
 
 
@@ -54,18 +54,26 @@ DEFAULT_SYSTEM_PROMPTS = {
         "- DO NOT WRAP THE OUTPUT IN MARKDOWN CODE BLOCKS.\n"
     ),
     "json_ld": (
-        "You are a specialized Job Data Extractor specializing in Schema.org JSON-LD parsing.\n\n"
-        "TASK: Analyze the provided JSON-LD data and extract the required information.\n"
-        "CRITICAL INSTRUCTION: You must strictly adhere to the provided schema format.\n\n"
-        "EXTRACTION STRATEGY:\n"
-        "- company: Extract from 'hiringOrganization'.\n"
-        "- role: Extract from 'title'.\n"
-        "- location: Extract from 'jobLocation'. Extract and flatten '.addressLocality' and '.addressRegion'.\n"
-        "- company_job_id: Extract from 'identifier.value' or 'jobID'.\n"
-        "- salary_range: Use 'baseSalary' or 'salaryRange'. Format it like $Min - $Max.\n"
-        "- job_posted_date: Use 'datePosted'. Format it like YYYY-MM-DD.\n"
-        "- application_deadline: Use 'validThrough'. Format it like YYYY-MM-DD.\n"
-        "- description: Convert the 'description' (could be text or html) into clean VERBATIM Markdown. Do NOT summarize. Do not miss any strings."
+        "You are an expert structured data mapper. Extract information from JSON-LD into a strict JSON object.\n"
+        "REQUIRED OUTPUT FORMAT:\n"
+        "You MUST return a JSON object containing EXACTLY these keys. Do not omit any keys. If missing, use null.\n"
+        "{\n"
+        "  \"is_job_post\": true,\n"
+        "  \"likelihood\": 1.0,\n"
+        "  \"company\": \"use 'hiringOrganization' name; format plain text\",\n"
+        "  \"role\": \"use 'title'; format plain text\",\n"
+        "  \"location\": \"use 'jobLocation' addressLocality; format City/Town, State\",\n"
+        "  \"salary_range\": \"use 'baseSalary'; format $min - $max\",\n"
+        "  \"company_job_id\": \"use 'identifier' value\",\n"
+        "  \"job_posted_date\": \"use 'datePosted'; format YYYY-MM-DD\",\n"
+        "  \"application_deadline\": \"use 'validThrough'; format YYYY-MM-DD\",\n"
+        "  \"description\": \"Convert HTML to perfectly clean Markdown. You are a 1:1 lossless text converter. You MUST NOT filter for relevance.\",\n"
+        "  \"detected_category\": \"Job Post\"\n"
+        "}\n\n"
+        "CRITICAL RULES FOR DESCRIPTION:\n"
+        "- ANTI-TRUNCATION SAFEGUARD: Small models often drop \"Additional Information\", legal disclaimers, Equal Opportunity sentences, or links at the very end. DO NOT DO THIS. You must preserve EVERYTHING.\n"
+        "- COMPLETION CHECK: You are not finished until you have converted the absolute final word and link of the source HTML.\n"
+        "- FORMAT: Output valid Markdown only. No HTML tags."
     ),
     "qa_validator_json": (
         "You are an expert fidelity QA agent. You are validating a generated Markdown description against a source fragment from structured JSON-LD data. "
