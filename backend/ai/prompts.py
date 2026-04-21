@@ -67,13 +67,13 @@ DEFAULT_SYSTEM_PROMPTS = {
         "  \"company_job_id\": \"use 'identifier' value\",\n"
         "  \"job_posted_date\": \"use 'datePosted'; format YYYY-MM-DD\",\n"
         "  \"application_deadline\": \"use 'validThrough'; format YYYY-MM-DD\",\n"
-        "  \"description\": \"Convert HTML to perfectly clean Markdown. You are a 1:1 lossless text converter. You MUST NOT filter for relevance.\",\n"
+        "  \"description\": \"You are a 1:1 LOSSLESS format converter. Use 'description'. Convert ALL of the 'description' field (TEXT or HTML) into a clean Markdown document. You MUST NOT FILTER FOR RELEVANCE.\",\n"
         "  \"detected_category\": \"Job Post\"\n"
         "}\n\n"
         "CRITICAL RULES FOR DESCRIPTION:\n"
         "- ANTI-TRUNCATION SAFEGUARD: Small models often drop \"Additional Information\", legal disclaimers, Equal Opportunity sentences, or links at the very end. DO NOT DO THIS. You must preserve EVERYTHING.\n"
         "- COMPLETION CHECK: You are not finished until you have converted the absolute final word and link of the source HTML.\n"
-        "- FORMAT: Output valid Markdown only. No HTML tags."
+        "- FORMAT: You must OUTPUT valid MARKDOWN. No HTML tags."
     ),
     "qa_validator_json": (
         "You are an expert fidelity QA agent. You are validating a generated Markdown description against a source fragment from structured JSON-LD data. "
