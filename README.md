@@ -1,4 +1,4 @@
-# 🐱 Lard - Lazy AI-powered Resume Database (v0.67.4)
+# 🐱 Lard - Lazy AI-powered Resume Database
 
 ![Lard Logo](assets/Lard-icon.png)
 
@@ -160,4 +160,4 @@ For detailed architecture, API endpoints, and optimization details, refer to:
 
 ---
 Built with ❤️ by Antigravity.
-Current version: v0.67.3
+Current version: v0.67.5
