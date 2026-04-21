@@ -23,15 +23,15 @@ def get_base_prompt(key: str, settings: dict | None = None) -> str:
 class JobDetails(BaseModel):
     is_job_post: bool = Field(description=FIELD_FORMAT_DESCRIPTIONS["is_job_post"])
     likelihood: float = Field(description=FIELD_FORMAT_DESCRIPTIONS["likelihood"])
-    company: str | None = Field(default=None, description=FIELD_FORMAT_DESCRIPTIONS["company"])
-    role: str | None = Field(default=None, description=FIELD_FORMAT_DESCRIPTIONS["role"])
-    location: str | None = Field(default=None, description=FIELD_FORMAT_DESCRIPTIONS["location"])
-    salary_range: str | None = Field(default=None, description=FIELD_FORMAT_DESCRIPTIONS["salary_range"])
-    company_job_id: str | None = Field(default=None, description=FIELD_FORMAT_DESCRIPTIONS["company_job_id"])
-    job_posted_date: str | None = Field(default=None, description=FIELD_FORMAT_DESCRIPTIONS["job_posted_date"])
-    application_deadline: str | None = Field(default=None, description=FIELD_FORMAT_DESCRIPTIONS["application_deadline"])
-    description: str | None = Field(default=None, description=FIELD_FORMAT_DESCRIPTIONS["description"])
-    detected_category: str | None = Field(default=None, description=FIELD_FORMAT_DESCRIPTIONS["detected_category"])
+    company: str | None = Field(description=FIELD_FORMAT_DESCRIPTIONS["company"])
+    role: str | None = Field(description=FIELD_FORMAT_DESCRIPTIONS["role"])
+    location: str | None = Field(description=FIELD_FORMAT_DESCRIPTIONS["location"])
+    salary_range: str | None = Field(description=FIELD_FORMAT_DESCRIPTIONS["salary_range"])
+    company_job_id: str | None = Field(description=FIELD_FORMAT_DESCRIPTIONS["company_job_id"])
+    job_posted_date: str | None = Field(description=FIELD_FORMAT_DESCRIPTIONS["job_posted_date"])
+    application_deadline: str | None = Field(description=FIELD_FORMAT_DESCRIPTIONS["application_deadline"])
+    description: str | None = Field(description=FIELD_FORMAT_DESCRIPTIONS["description"])
+    detected_category: str | None = Field(description=FIELD_FORMAT_DESCRIPTIONS["detected_category"])
 
 # --- Multi-Agent (Granular Splits) ---
 
