@@ -1,6 +1,6 @@
 {
   "name": "lard-frontend",
-  "version": "0.67.6",
+  "version": "0.67.7",
   "license": "MIT",
   "private": true,
   "scripts": {

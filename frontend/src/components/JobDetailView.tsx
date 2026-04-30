@@ -29,7 +29,10 @@ export const JobDetailView: React.FC<JobDetailViewProps> = ({ job, onClose, onJo
 
   // Remove resizing logic for modal transition
 
-  const [activeTab, setActiveTab] = useState<'info' | 'process' | 'notes'>('process');
+  const [activeTab, setActiveTab] = useState<'info' | 'process' | 'notes'>(() => {
+    if (job?.status === 'Wishlist' || job?.status === 'Applied') return 'info';
+    return 'process';
+  });
   const mdParser = new MarkdownIt();
   const [stepTypes, setStepTypes] = useState<StepType[]>([]);
   const [newStepName, setNewStepName] = useState('');
