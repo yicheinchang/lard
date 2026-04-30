@@ -47,7 +47,7 @@ export const DocumentPreview: React.FC<DocumentPreviewProps> = ({
 
   return (
     <Portal>
-      <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 md:p-8 bg-black/80 backdrop-blur-md animate-fade-in" onClick={onClose}>
+      <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 md:p-8 bg-black/80 backdrop-blur-md animate-fade-in" onClick={onClose}>
         <div
           className="glass bg-[#0a0a0f] w-full max-w-5xl h-full max-h-[90vh] rounded-2xl shadow-2xl relative animate-slide-up flex flex-col overflow-hidden border-violet-500/20"
           onClick={(e) => e.stopPropagation()}
