@@ -4,6 +4,7 @@ import { extractJobFromUrl, extractJobFromPdf, createJobStream, checkJobDuplicat
 import { useSettings } from '@/lib/SettingsContext';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
 import { ProcessingOverlay } from './ProcessingOverlay';
+import { Portal } from './Portal';
 import { Ticker } from './Ticker';
 
 interface AddJobModalProps {
@@ -458,7 +459,8 @@ export const AddJobModal: React.FC<AddJobModalProps> = ({ isOpen, onClose, onAdd
   const effectiveAiEnabled = aiEnabled && globalAiEnabled;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in overflow-y-auto">
+    <Portal>
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in overflow-y-auto">
       <div className="glass bg-[var(--bg)] w-full max-w-2xl rounded-2xl p-6 shadow-2xl relative animate-slide-up border-primary/20 my-auto max-h-[90vh] flex flex-col">
 
         <button onClick={onClose} className="absolute right-4 top-4 text-gray-500 hover:text-[var(--fg)] transition-colors z-10 p-1 hover:bg-black/5 dark:hover:bg-white/10 rounded-full">
@@ -842,5 +844,6 @@ export const AddJobModal: React.FC<AddJobModalProps> = ({ isOpen, onClose, onAdd
         }}
       />
     </div>
+    </Portal>
   );
 };

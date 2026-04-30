@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import { Briefcase, Building2, CheckCircle2, Clock, XCircle, Globe, ChevronRight, ThumbsUp, ThumbsDown, Lock, Ban, Star } from 'lucide-react';
 import { Job, getStepTypes, StepType } from '../lib/api';
 import { ConfirmDialog } from './ConfirmDialog';
+import { Tooltip } from './Tooltip';
 
 interface JobCardProps {
   job: Job;
@@ -111,24 +112,16 @@ export const JobCard: React.FC<JobCardProps> = ({ job, onUpdateStatus, onClick, 
       >
         <div className="flex justify-between items-start gap-2">
           <div className="flex flex-col min-w-0 flex-1">
-            <div className="group/tooltip relative">
+            <Tooltip content={job.company} className="w-full">
               <h3 className="text-sm font-semibold text-[var(--fg)] flex items-center gap-1.5 truncate">
                 <Building2 className="w-3.5 h-3.5 text-violet-400 shrink-0" />
                 <span className="truncate">{job.company}</span>
               </h3>
-              {/* Tooltip for company */}
-              <div className="absolute left-0 top-full mt-1.5 opacity-0 group-hover/tooltip:opacity-100 pointer-events-none transition-all duration-200 tooltip-box text-[11px] px-2.5 py-1.5 rounded-lg shadow-2xl z-50 whitespace-normal break-words max-w-[280px]">
-                {job.company}
-              </div>
-            </div>
+            </Tooltip>
 
-            <div className="group/tooltip relative mt-0.5">
-              <p className="text-[11px] text-[var(--fg-muted)] ml-5 truncate">{job.role}</p>
-              {/* Tooltip for role */}
-              <div className="absolute left-5 top-full opacity-0 group-hover/tooltip:opacity-100 pointer-events-none transition-all duration-200 tooltip-box text-[11px] px-2.5 py-1.5 rounded-lg shadow-2xl z-50 whitespace-normal break-words max-w-[280px]">
-                {job.role}
-              </div>
-            </div>
+            <Tooltip content={job.role} className="mt-0.5 ml-5 w-full">
+              <p className="text-[11px] text-[var(--fg-muted)] truncate">{job.role}</p>
+            </Tooltip>
           </div>
           
           <div className="flex items-center gap-1 shrink-0">

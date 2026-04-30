@@ -35,6 +35,7 @@ export default function RootLayout({
             {children}
           </AppShell>
         </SettingsProvider>
+        <div id="portal-root" />
       </body>
     </html>
   );

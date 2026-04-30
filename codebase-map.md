@@ -1,5 +1,5 @@
-# 🗺️ Lard - Lazy AI-Powered Resume Database (v0.67.5)
-Last Updated: 2026-04-21T14:05:00Z
+# 🗺️ Lard - Lazy AI-Powered Resume Database (v0.67.6)
+Last Updated: 2026-04-30T14:32:00Z
 
 This document provides a summary of the project's architecture, tech stack, and key logic to give AI coding agents instant context.
 
@@ -75,22 +75,24 @@ This document provides a summary of the project's architecture, tech stack, and 
 - `src/components/`: Reusable UI components:
   - `AppShell.tsx`: Main layout wrapper featuring a **Binary Snap Sidebar** (Fixed 160px expanded / 64px collapsed). Includes **Mobile Responsive Header** and **Hamburger Menu Drawer**.
   - `KanbanBoard.tsx`: Responsive drag-and-drop pipeline visualization. Features **Min-Width enforcement** (250px) for desktop with horizontal scrolling and a **Tabbed Mobile UI** (below 1024px) for focused single-column tracking. Supports independent vertical scrolling and dynamic counts.
-  - `TableView.tsx`: Density-rich list view of applications. Includes **Hover-activated Tooltips** for company and role cells to prevent truncation.
-  - `JobCard.tsx`: Individual job item in the Kanban board. Features **Hover-activated Tooltips** and **Status text protection** (nowrap) for clean readability at any width. **Mobile Responsive**: Action buttons (Advance, Mark as...) are always visible on touch devices/small screens while remaining hover-only on desktop.
+  - `TableView.tsx`: Density-rich list view of applications. Includes **Portal-based Tooltips** for company and role cells to prevent truncation and container clipping.
+  - `JobCard.tsx`: Individual job item in the Kanban board. Features **Portal-based Tooltips** and **Status text protection** (nowrap) for clean readability at any width. **Mobile Responsive**: Action buttons (Advance, Mark as...) are always visible on touch devices/small screens while remaining hover-only on desktop.
+  - `Portal.tsx`: [NEW] Hydration-safe React Portal implementation for mounting overlays to `#portal-root`.
+  - `Tooltip.tsx`: [NEW] Reusable Portal-based tooltip with viewport-aware positioning and horizontal overflow correction.
 
-  - `JobDetailView.tsx`: Core component for job application management. Features a **Centered Floating Modal** with a backdrop-blur overlay and a **Full-Screen Toggle**. Consists of three tabs:
+  - `JobDetailView.tsx`: Core component for job application management. Rendered via **React Portal** for global stacking. Features a **Centered Floating Modal** with a backdrop-blur overlay and a **Full-Screen Toggle**. Consists of three tabs:
       *   **Interview Pipeline** (Default): Timeline events with full CRUD and inline editing.
       *   **Job Details**: Metadata management and document attachments. Features a **Zoomable Description** with levels from `prose-sm` to `prose-2xl` and a quick-reset toggle.
       *   **Application Notes**: Dedicated Markdown editor (`MdEditor`) for research and interview prep.
-  - `DocumentPreview.tsx`: Overlay for high-fidelity viewing of PDF, Markdown, and plain text documents.
+  - `DocumentPreview.tsx`: **Portal-based overlay** for high-fidelity viewing of PDF, Markdown, and plain text documents.
   - `Ticker.tsx`: News-ticker style progress bar for real-time AI extraction status.
-  - `FilterPopover.tsx`: Advanced filtering UI for dashboard header. Features a **Centered Modal** (constrained width) with a unified scrollable body containing both filters and action buttons to ensure visibility and reachability on all screen heights.
-  - `ProcessingOverlay.tsx`: Full-screen overlay for tracking long-running AI tasks with SSE updates. Feature: **Auto-closes 1.5s after success** and theme-aware styling.
+  - `FilterPopover.tsx`: Advanced filtering UI for dashboard header. Features a **Portal-based Centered Modal** (constrained width) with a unified scrollable body containing both filters and action buttons to ensure visibility and reachability on all screen heights.
+  - `ProcessingOverlay.tsx`: **Portal-based full-screen overlay** for tracking long-running AI tasks with SSE updates. Feature: **Auto-closes 1.5s after success** and theme-aware styling.
   - `AutoSaveIndicator.tsx`: Small, non-blocking status indicator for background AI vectorization during note taking.
   - `tooltip-box`: Theme-aware CSS utility in `globals.css` ensuring readable tooltips in both light and dark modes.
-  - `AddJobModal.tsx`: Core form for new applications. Includes AI Auto-fill, Potential Hallucination Warning System, **Context Limit Warning System**, and **validation guards for required fields** (Company/Role).
-  - `ConfirmDialog.tsx`: Multi-functional modal replacing native prompts. Supports **Date Inputs**, **File Uploads**, and **Combobox Text Inputs** (with custom `<datalist>`). Includes variant-based styling (`danger`, `success`, `default`).
-  - `ChatAssistant.tsx`: Global drawer for the AI agent.
+  - `AddJobModal.tsx`: Core form for new applications. Rendered via **React Portal**. Includes AI Auto-fill, Potential Hallucination Warning System, **Context Limit Warning System**, and **validation guards for required fields** (Company/Role).
+  - `ConfirmDialog.tsx`: Multi-functional modal replacing native prompts. Rendered via **React Portal**. Supports **Date Inputs**, **File Uploads**, and **Combobox Text Inputs** (with custom `<datalist>`). Includes variant-based styling (`danger`, `success`, `default`).
+  - `ChatAssistant.tsx`: Global **Portal-based side drawer** for the AI agent.
   - `SettingsPage.tsx`: Integrated configuration for LLMs and themes. Features a collapsible **Advanced AI Prompt Settings** subsection with:
       *   **Additive Guidance**: Field-specific instruction tabs for fine-tuning extraction.
       *   **Base System Prompts**: Independent sub-section for modifying core backend prompts (Extraction, JSON-LD, QA Validator) and granular field-level prompts for Multi-Agent mode (Text and JSON) with a dedicated reset handler. Features a nested tabbed UI for efficient management of 18 total base prompts. **Selective Filtering**: Prompts are filtered based on the active **Extraction Strategy** (Single vs. Multi-Agent). **Active Selection Sync**: Automatically synchronizes the active prompt tab when switching strategies or tabs to ensure only visible prompts are selected. Supports **Granular Resets** for each specific prompt to factory defaults. Enhanced readability with `rows={12}` text areas. Includes **Focus Persistence Fixes** and **Persistence Support** in the backend for reliable prompt engineering.

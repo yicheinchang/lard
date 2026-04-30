@@ -11,6 +11,7 @@ import { ConfirmDialog } from './ConfirmDialog';
 import { DocumentPreview } from './DocumentPreview';
 import { ProcessingOverlay } from './ProcessingOverlay';
 import { AutoSaveIndicator } from './AutoSaveIndicator';
+import { Portal } from './Portal';
 
 import { useView } from '@/lib/ViewContext';
 
@@ -551,7 +552,7 @@ export const JobDetailView: React.FC<JobDetailViewProps> = ({ job, onClose, onJo
   const stepStatusOptions = ['Requested', 'Scheduled', 'Passed', 'Completed'];
 
   return (
-    <>
+    <Portal>
       <div 
         className={`fixed inset-0 z-[90] flex items-center justify-center bg-black/60 backdrop-blur-sm transition-all duration-300 ${isFullScreen ? 'p-0' : 'p-4 md:p-8'} ${!isAnimationFinished ? 'animate-fade-in' : ''}`}
         onClick={(e) => {
@@ -1260,6 +1261,6 @@ export const JobDetailView: React.FC<JobDetailViewProps> = ({ job, onClose, onJo
         onClose={() => setIsUploadingDoc(false)}
       />
       </div>
-    </>
+    </Portal>
   );
 };

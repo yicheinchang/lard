@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { X, Calendar, Clock, SlidersHorizontal, Trash2, CheckCircle2, Star, StarOff } from 'lucide-react';
+import { Portal } from './Portal';
 
 export interface FilterCriteria {
   appliedDateStart: string;
@@ -54,7 +55,7 @@ export const FilterPopover: React.FC<FilterPopoverProps> = ({
   };
 
   return (
-    <>
+    <Portal>
       {/* Backdrop */}
       <div 
         className="fixed inset-0 z-40 bg-black/20 backdrop-blur-[2px]" 
@@ -281,6 +282,6 @@ export const FilterPopover: React.FC<FilterPopoverProps> = ({
           </div>
         </div>
       </div>
-    </>
+    </Portal>
   );
 };
