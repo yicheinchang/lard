@@ -163,18 +163,52 @@ def _normalize_metadata(raw_extruct_data: dict) -> tuple[dict, bool]:
                     if _is_valid(v):
                         if clean_k not in all_props: all_props[clean_k] = _clean_val(v)
 
+    def _extract_location(loc_data):
+        if not isinstance(loc_data, dict):
+            return str(loc_data)
+        address = loc_data.get("address", loc_data)
+        if isinstance(address, dict):
+            parts = []
+            for field in ["addressLocality", "addressRegion", "addressCountry"]:
+                val = address.get(field)
+                if val: parts.append(str(val))
+            return ", ".join(parts) if parts else str(address)
+        return str(address)
+
     # Now map gathered props to final_data
     for k, v in all_props.items():
-        if k == "hiringOrganization" and isinstance(v, dict):
-            final_data["company"] = v.get("name") or v.get("legalName")
-        elif k == "jobLocation" and isinstance(v, dict):
-            address = v.get("address", v)
-            if isinstance(address, dict):
-                final_data["location"] = address.get("addressLocality") or address.get("addressRegion")
-            else:
-                final_data["location"] = address
-        elif k == "identifier" and isinstance(v, dict):
-            final_data["job_id"] = v.get("value")
+        if k == "hiringOrganization":
+            orgs = v if isinstance(v, list) else [v]
+            for org in orgs:
+                if isinstance(org, dict):
+                    name = org.get("name") or org.get("legalName")
+                    if name:
+                        final_data["company"] = name
+                        break
+                elif isinstance(org, str):
+                    final_data["company"] = org
+                    break
+        elif k == "jobLocation":
+            locs = v if isinstance(v, list) else [v]
+            extracted = [_extract_location(l) for l in locs]
+            valid_locs = [l for l in extracted if l and l.lower() != "none"]
+            if valid_locs:
+                if len(valid_locs) == 1:
+                    final_data["location"] = valid_locs[0]
+                else:
+                    # Provide all locations joined for the LLM to select from
+                    final_data["location"] = " | ".join(valid_locs)
+        elif k == "identifier":
+            ids = v if isinstance(v, list) else [v]
+            for id_node in ids:
+                if isinstance(id_node, dict):
+                    val = id_node.get("value")
+                    if val:
+                        final_data["job_id"] = val
+                        break
+                elif isinstance(id_node, (str, int)):
+                    final_data["job_id"] = str(id_node)
+                    break
         elif k in schema_map:
             final_data[schema_map[k]] = v
         elif k in ["title", "description", "url", "company", "location"]:

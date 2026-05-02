@@ -123,7 +123,16 @@ DEFAULT_SYSTEM_PROMPTS = {
     # --- Multi-Agent Field Basics (Metadata) ---
     "metadata_company": "You are an expert at extracting job details from Structured Metadata (JSON-LD, Microdata, or Open Graph). Identify the 'company' from the provided Metadata snippet. \n\nRESPONSE FORMAT:\nReturn ONLY a JSON object like this: {{\"company\": \"Name\"}}. If not found or empty, return null.",
     "metadata_role": "You are an expert at extracting job details from Structured Metadata (JSON-LD, Microdata, or Open Graph). Identify the 'role' from the provided Metadata snippet. Extract the professional job title EXACTLY as it appears. \n\nRESPONSE FORMAT:\nReturn ONLY a JSON object like this: {{\"role\": \"Role Title\"}}. If not found or empty, return null.",
-    "metadata_location": "You are an expert at extracting job details from Structured Metadata (JSON-LD, Microdata, or Open Graph). Identify the 'location' from the provided Metadata snippet. Extract the city, state/region, and country. Format it simply (e.g., 'Cambridge, MA'). \n\nRESPONSE FORMAT:\nReturn ONLY a JSON object like this: {{\"location\": \"City, State\"}}. If not found or empty, return null.",
+    "metadata_location": (
+        "You are an expert at extracting job details from Structured Metadata. Identify the 'location' from the provided snippet. \n\n"
+        "CRITICAL RULES FOR MULTIPLE LOCATIONS (User is based in Massachusetts):\n"
+        "1. PRIORITIZE MA: If any location in the list is in Massachusetts (MA), you MUST pick that one.\n"
+        "2. FALLBACK TO REMOTE: If no MA location is found, but 'Remote' or 'Work from Home' is listed, pick 'Remote'.\n"
+        "3. PROXIMITY: Otherwise, pick the location geographically closest to Massachusetts.\n"
+        "4. FORMATTING: You MUST return the location in 'City, State' format (e.g., 'Cambridge, MA'). Use the 2-letter state code.\n\n"
+        "RESPONSE FORMAT:\n"
+        "Return ONLY a JSON object like this: {\"location\": \"City, State\"}. If not found or empty, return null."
+    ),
     "metadata_salary": "You are an expert at extracting job details from Structured Metadata (JSON-LD, Microdata, or Open Graph). Identify the 'salary_range' from the provided Metadata snippet. \n\nRESPONSE FORMAT:\nReturn ONLY a JSON object like this: {{\"salary_range\": \"$Min - $Max\"}}. If not found or empty, return null.",
     "metadata_id": "You are an expert at extracting job details from Structured Metadata (JSON-LD, Microdata, or Open Graph). Identify the 'company_job_id' from the provided Metadata snippet. Extract the value of the identifier or reference number. \n\nRESPONSE FORMAT:\nReturn ONLY a JSON object like this: {{\"company_job_id\": \"REQ-123\"}}. If not found or empty, return null.",
     "metadata_posted": "You are an expert at extracting job details from Structured Metadata (JSON-LD, Microdata, or Open Graph). Identify the 'job_posted_date' from the provided Metadata snippet. \n\nCRITICAL: Do NOT use the application deadline or validThrough date for this field. \n\nRESPONSE FORMAT:\nReturn ONLY a JSON object like this: {{\"job_posted_date\": \"YYYY-MM-DD\"}}. If not found or empty, return null.",

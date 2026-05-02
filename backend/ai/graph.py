@@ -296,45 +296,16 @@ async def _run_field_json_extraction(field, schema, prompt, text, fragment, requ
             print(f"Error extracting JSON {field}: {e}")
             return field, None
 
-def _get_json_ld_company(structured_data: dict) -> Any:
-    """Robustly find company information in Schema.org JobPosting data."""
-    # Official key: hiringOrganization
-    org = structured_data.get("hiringOrganization")
-    if org: return org
-    
-    # Common fallbacks
-    for key in ["organization", "brand", "author", "publisher"]:
-        val = structured_data.get(key)
-        if val: return val
-        
-    return None
-
-def _get_json_ld_salary(structured_data: dict) -> Any:
-    """Robustly find salary information in Schema.org JobPosting data."""
-    # Standard keys
-    for key in ["baseSalary", "salaryRange", "salary", "estimatedSalary", "jobBenefits"]:
-        val = structured_data.get(key)
-        if val: return val
-    return None
-
-def _get_json_ld_identifier(structured_data: dict) -> Any:
-    """Robustly find job identifier in Schema.org JobPosting data."""
-    # Standard keys
-    for key in ["identifier", "jobID", "job_id", "positionID"]:
-        val = structured_data.get(key)
-        if val: return val
-    return None
-
 def _map_json_ld_fragments(structured_data: dict) -> dict:
-    """Unified helper to map raw JSON-LD data into standardized fragments using original Schema.org keys."""
+    """Unified helper to map normalized metadata into standardized fragments for multi-agent extraction."""
     return {
-        "hiringOrganization": _get_json_ld_company(structured_data),
+        "company": structured_data.get("company"),
         "title": structured_data.get("title"),
-        "jobLocation": structured_data.get("jobLocation"),
-        "baseSalary": _get_json_ld_salary(structured_data),
-        "identifier": _get_json_ld_identifier(structured_data),
-        "datePosted": structured_data.get("datePosted"),
-        "validThrough": structured_data.get("validThrough"),
+        "location": structured_data.get("location"),
+        "salary_range": structured_data.get("salary_range"),
+        "job_id": structured_data.get("job_id"),
+        "posted_date": structured_data.get("posted_date"),
+        "deadline": structured_data.get("deadline"),
         "description": structured_data.get("description"),
     }
 
@@ -351,13 +322,13 @@ async def _run_multi_agent_json_extraction(structured_data: dict, text: str, req
     fragments = _map_json_ld_fragments(structured_data)
     
     metadata_tasks = [
-        ("company", JobCompany, get_json_field_prompt("company", settings), fragments.get("hiringOrganization")),
+        ("company", JobCompany, get_json_field_prompt("company", settings), fragments.get("company")),
         ("role", JobRole, get_json_field_prompt("role", settings), fragments.get("title")),
-        ("location", JobLocation, get_json_field_prompt("location", settings), fragments.get("jobLocation")),
-        ("salary_range", JobSalary, get_json_field_prompt("salary_range", settings), fragments.get("baseSalary")),
-        ("company_job_id", JobId, get_json_field_prompt("company_job_id", settings), fragments.get("identifier")),
-        ("job_posted_date", PostedDate, get_json_field_prompt("job_posted_date", settings), fragments.get("datePosted")),
-        ("application_deadline", DeadlineDate, get_json_field_prompt("application_deadline", settings), fragments.get("validThrough")),
+        ("location", JobLocation, get_json_field_prompt("location", settings), fragments.get("location")),
+        ("salary_range", JobSalary, get_json_field_prompt("salary_range", settings), fragments.get("salary_range")),
+        ("company_job_id", JobId, get_json_field_prompt("company_job_id", settings), fragments.get("job_id")),
+        ("job_posted_date", PostedDate, get_json_field_prompt("job_posted_date", settings), fragments.get("posted_date")),
+        ("application_deadline", DeadlineDate, get_json_field_prompt("application_deadline", settings), fragments.get("deadline")),
         ("description", JobDescription, description_json_prompt, fragments.get("description")),
     ]
     

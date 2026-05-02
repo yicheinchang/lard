@@ -1,4 +1,4 @@
-# 🗺️ Lard - Lazy AI-Powered Resume Database (v0.68.0)
+# 🗺️ Lard - Lazy AI-Powered Resume Database (v0.68.1)
 Last Updated: 2026-05-02T02:00:00Z
 
 This document provides a summary of the project's architecture, tech stack, and key logic to give AI coding agents instant context.
@@ -313,7 +313,7 @@ The system uses a multi-stage pipeline to extract job details from URLs, PDFs, a
 - **Token Optimization**: Implements a "Clean HTML" strategy for metadata. All extracted metadata is decoded via `html.unescape()` and stripped of non-semantic CSS attributes (e.g., `style="..."`) before being passed to the LLM. This preserves structural guidance (tags like `<p>`, `<ul>`) while minimizing token waste.
 - **Job Post Verification**: LangGraph-based `check_job_post_node` that confirms content is a job posting. Bypassed if JSON-LD is found. Features a **fail-fast** strategy that halts the workflow on negative results. **Resilient Decoupling**: Uses browser-standard headers with **Gzip/Deflate only** (Brotli disabled for reliability) to ensure consistent content decoding across all corporate portals.
 - **Contextual Metadata**: Extracts Company, Role, Location, Salary, Job ID, and Dates.
-- **JSON-LD First Strategy**: Prioritizes `application/ld+json` script tags for metadata. Features **Robust Identification Helpers**: Automatically maps non-standard corporate fields (e.g., `jobBenefits` for salary, `positionID` for Job ID) to the internal schema, minimizing unnecessary full-text fallbacks.
+- **JSON-LD First Strategy**: Prioritizes `application/ld+json` script tags for metadata. Features **Robust Identification Helpers**: Automatically maps non-standard corporate fields (e.g., `jobBenefits` for salary, `positionID` for Job ID) to the internal schema, handles list-based locations and organizations, and synchronizes normalized keys with the multi-agent graph to minimize unnecessary full-text fallbacks.
 - **Optimized JSON-LD Multi-Agent Routing**: If JSON-LD is found and multi-agent mode is enabled, the system bypasses massive payload overhead by slicing the JSON and distributing specific fragments (e.g., `baseSalary`) only to the relevant agents. Missing fragments bypass the LLM completely, optimizing speed and reducing token limits.
 - **Streaming & Progress UI**: Extraction tasks use Server-Sent Events (SSE). The frontend `Ticker.tsx` displays real-time status updates (e.g., "Extracting Salary Range...", "Finalizing Description..."). Implements a **15s SSE heartbeat mechanism** (comments) and increased Next.js proxy timeouts to ensure stability during long LLM processing on hardware-limited systems.
 - **AI Validation & Completeness**: Uses:
