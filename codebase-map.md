@@ -1,5 +1,5 @@
-# 🗺️ Lard - Lazy AI-Powered Resume Database (v0.67.8)
-Last Updated: 2026-04-30T19:38:00Z
+# 🗺️ Lard - Lazy AI-Powered Resume Database (v0.68.0)
+Last Updated: 2026-05-02T02:00:00Z
 
 This document provides a summary of the project's architecture, tech stack, and key logic to give AI coding agents instant context.
 
@@ -57,7 +57,7 @@ This document provides a summary of the project's architecture, tech stack, and 
 - `database/`:
   - `models.py`: SQLAlchemy relational models.
   - `relational.py`: Database engine and session setup.
-  - `vector_store.py`: ChromaDB integration for RAG. Uses lazy initialization for the `PersistentClient` and `HuggingFaceEmbeddings` (with local model caching in `/chroma_db/models/`).
+  - `vector_store.py`: ChromaDB integration for RAG. Uses Docling for high-fidelity extraction of `.docx` and `.html` files. Employs lazy initialization for the `PersistentClient` and `HuggingFaceEmbeddings`.
 - `ai/`:
   - `assistant.py`: LangGraph-based conversational agent logic. Uses lazy loading for the vector store manager.
   - `llm_factory.py`: Multi-provider support (Ollama, OpenAI, Anthropic).
@@ -309,7 +309,8 @@ Settings are not just environment variables. They are persisted in `backend/app_
 
 ### 7. AI Extraction & Preprocessing
 The system uses a multi-stage pipeline to extract job details from URLs, PDFs, and text:
-- **AI Extraction**: Multi-agent extraction pipeline (LangGraph) with a Sequential Fallback strategy. Uses **Docling** with in-memory **DocumentStream** processing for layout-aware Markdown conversion and **extruct** for robust JSON-LD metadata extraction.
+- **AI Extraction**: Multi-agent extraction pipeline (LangGraph) with a Sequential Fallback strategy. Uses **Docling v2.85** with in-memory **DocumentStream** processing for layout-aware Markdown conversion and **extruct** for robust JSON-LD metadata extraction.
+- **Token Optimization**: Implements a "Clean HTML" strategy for metadata. All extracted metadata is decoded via `html.unescape()` and stripped of non-semantic CSS attributes (e.g., `style="..."`) before being passed to the LLM. This preserves structural guidance (tags like `<p>`, `<ul>`) while minimizing token waste.
 - **Job Post Verification**: LangGraph-based `check_job_post_node` that confirms content is a job posting. Bypassed if JSON-LD is found. Features a **fail-fast** strategy that halts the workflow on negative results. **Resilient Decoupling**: Uses browser-standard headers with **Gzip/Deflate only** (Brotli disabled for reliability) to ensure consistent content decoding across all corporate portals.
 - **Contextual Metadata**: Extracts Company, Role, Location, Salary, Job ID, and Dates.
 - **JSON-LD First Strategy**: Prioritizes `application/ld+json` script tags for metadata. Features **Robust Identification Helpers**: Automatically maps non-standard corporate fields (e.g., `jobBenefits` for salary, `positionID` for Job ID) to the internal schema, minimizing unnecessary full-text fallbacks.

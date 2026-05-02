@@ -59,6 +59,11 @@ This role defines the operational behavior for Antigravity (the AI assistant) in
 - Always propose a plan when code needs to be changes
 - Never execute a plan or modify code without receiving a green lights from the user.
 
+### 11. Coding Instruction
+<!-- BEGIN:nextjs-agent-rules -->
+- Next.js: ALWAYS read docs before coding: Before any Next.js work, find and read the relevant doc in `frontend/node_modules/next/dist/docs/`. Your training data is outdated — the docs are the source of truth. 
+<!-- END:nextjs-agent-rules -->
+
 ## 🛠️ Combined Workflow
 For every stable, verified functional change:
 1.  **Stage Files**: `git add <modified_files>`

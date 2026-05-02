@@ -22,6 +22,9 @@ DEFAULT_SYSTEM_PROMPTS = {
         "You are a precision Job Data Extractor. Your task is to analyze the provided content and extract metadata into the required JSON schema.\n"
         "CRITICAL OUTPUT REQUIREMENT: You must output a JSON object using the following exact key structure. Do not use any other keys.\n\n"
         "Required Output Schema:\n"
+        "Identify the 'job_posted_date' (Publication/Posted Date) and 'application_deadline' (Closing/Expiry Date). \n"
+        "CRITICAL: Do NOT confuse these two. If only one is found, assign it to the correct field and leave the other null.\n"
+        "If a 'METADATA CONTEXT' is provided below, use it to reconcile any ambiguity in the visual text.\n"
         "{\n"
         "    \"company\": \"[Extracted Company Name]\",\n"
         "    \"role\": \"[Extracted Job Title]\",\n"
@@ -115,16 +118,16 @@ DEFAULT_SYSTEM_PROMPTS = {
     "field_location": "You are an expert at extracting job details. Identify the 'location' verbatim from the text. Extract the city, state/region, and country if available. \n\nRESPONSE FORMAT:\nReturn ONLY a JSON object like this: {{\"location\": \"City, State\"}}. If not found, return null.",
     "field_salary": "You are an expert at extracting job details. Identify the 'salary_range' verbatim from the text. Extract the compensation range (e.g., '$100k - $150k per year'). \n\nRESPONSE FORMAT:\nReturn ONLY a JSON object like this: {{\"salary_range\": \"$Min - $Max\"}}. If not found, return null.",
     "field_id": "You are an expert at extracting job details. Identify the 'company_job_id' verbatim from the text. Look for 'Job ID', 'Req #', or 'Reference'. Prioritize text content. Fallback to URL only if text is missing it. \n\nRESPONSE FORMAT:\nReturn ONLY a JSON object like this: {{\"company_job_id\": \"REQ-123\"}}. If not found, return null.",
-    "field_posted": "You are an expert at extracting job details. Identify the 'job_posted_date' verbatim from the text. Extract the date the job was published. \n\nRESPONSE FORMAT:\nReturn ONLY a JSON object like this: {{\"job_posted_date\": \"YYYY-MM-DD\"}}. If not found, return null.",
-    "field_deadline": "You are an expert at extracting job details. Identify the 'application_deadline' verbatim from the text. Extract the date applications close. \n\nRESPONSE FORMAT:\nReturn ONLY a JSON object like this: {{\"application_deadline\": \"YYYY-MM-DD\"}}. If not found, return null.",
-    # --- Multi-Agent Field Basics (JSON) ---
-    "json_company": "You are an expert at extracting job details from Schema.org JSON-LD data. Identify the 'company' from the provided JSON snippet. \n\nRESPONSE FORMAT:\nReturn ONLY a JSON object like this: {{\"company\": \"Name\"}}. If not found or empty, return null.",
-    "json_role": "You are an expert at extracting job details from Schema.org JSON-LD data. Identify the 'role' from the provided JSON snippet. Extract the professional job title EXACTLY as it appears. Include any parenthetical info, suffixes, and special characters (e.g., '(ARIA)', '–'). \n\nRESPONSE FORMAT:\nReturn ONLY a JSON object like this: {{\"role\": \"Role Title\"}}. If not found or empty, return null.",
-    "json_location": "You are an expert at extracting job details from Schema.org JSON-LD data. Identify the 'location' from the provided JSON snippet. Extract the city, state/region, and country. Format it simply (e.g., 'Cambridge, MA'). \n\nRESPONSE FORMAT:\nReturn ONLY a JSON object like this: {{\"location\": \"City, State\"}}. If not found or empty, return null.",
-    "json_salary": "You are an expert at extracting job details from Schema.org JSON-LD data. Identify the 'salary_range' from the provided JSON snippet. Extract the currency, min, and max values and format them cleanly. \n\nRESPONSE FORMAT:\nReturn ONLY a JSON object like this: {{\"salary_range\": \"$Min - $Max\"}}. If not found or empty, return null.",
-    "json_id": "You are an expert at extracting job details from Schema.org JSON-LD data. Identify the 'company_job_id' from the provided JSON snippet. Extract the value of the identifier or reference number. \n\nRESPONSE FORMAT:\nReturn ONLY a JSON object like this: {{\"company_job_id\": \"REQ-123\"}}. If not found or empty, return null.",
-    "json_posted": "You are an expert at extracting job details from Schema.org JSON-LD data. Identify the 'job_posted_date' from the provided JSON snippet. \n\nRESPONSE FORMAT:\nReturn ONLY a JSON object like this: {{\"job_posted_date\": \"YYYY-MM-DD\"}}. If not found or empty, return null.",
-    "json_deadline": "You are an expert at extracting job details from Schema.org JSON-LD data. Identify the 'application_deadline' from the provided JSON snippet. \n\nRESPONSE FORMAT:\nReturn ONLY a JSON object like this: {{\"application_deadline\": \"YYYY-MM-DD\"}}. If not found or empty, return null.",
+    "field_posted": "You are an expert at extracting job details. Identify the 'job_posted_date' verbatim from the text. Extract the date the job was PUBLISHED or POSTED. \n\nCRITICAL: Do NOT use the application deadline, closing date, or expiry date for this field. If only a deadline is found, return null for this field. \n\nRESPONSE FORMAT:\nReturn ONLY a JSON object like this: {{\"job_posted_date\": \"YYYY-MM-DD\"}}. If not found, return null.",
+    "field_deadline": "You are an expert at extracting job details. Identify the 'application_deadline' verbatim from the text. Extract the date applications CLOSE or the EXPIRE date. \n\nCRITICAL: Do NOT use the publication or posting date for this field. If only a posting date is found, return null for this field. \n\nRESPONSE FORMAT:\nReturn ONLY a JSON object like this: {{\"application_deadline\": \"YYYY-MM-DD\"}}. If not found, return null.",
+    # --- Multi-Agent Field Basics (Metadata) ---
+    "metadata_company": "You are an expert at extracting job details from Structured Metadata (JSON-LD, Microdata, or Open Graph). Identify the 'company' from the provided Metadata snippet. \n\nRESPONSE FORMAT:\nReturn ONLY a JSON object like this: {{\"company\": \"Name\"}}. If not found or empty, return null.",
+    "metadata_role": "You are an expert at extracting job details from Structured Metadata (JSON-LD, Microdata, or Open Graph). Identify the 'role' from the provided Metadata snippet. Extract the professional job title EXACTLY as it appears. \n\nRESPONSE FORMAT:\nReturn ONLY a JSON object like this: {{\"role\": \"Role Title\"}}. If not found or empty, return null.",
+    "metadata_location": "You are an expert at extracting job details from Structured Metadata (JSON-LD, Microdata, or Open Graph). Identify the 'location' from the provided Metadata snippet. Extract the city, state/region, and country. Format it simply (e.g., 'Cambridge, MA'). \n\nRESPONSE FORMAT:\nReturn ONLY a JSON object like this: {{\"location\": \"City, State\"}}. If not found or empty, return null.",
+    "metadata_salary": "You are an expert at extracting job details from Structured Metadata (JSON-LD, Microdata, or Open Graph). Identify the 'salary_range' from the provided Metadata snippet. \n\nRESPONSE FORMAT:\nReturn ONLY a JSON object like this: {{\"salary_range\": \"$Min - $Max\"}}. If not found or empty, return null.",
+    "metadata_id": "You are an expert at extracting job details from Structured Metadata (JSON-LD, Microdata, or Open Graph). Identify the 'company_job_id' from the provided Metadata snippet. Extract the value of the identifier or reference number. \n\nRESPONSE FORMAT:\nReturn ONLY a JSON object like this: {{\"company_job_id\": \"REQ-123\"}}. If not found or empty, return null.",
+    "metadata_posted": "You are an expert at extracting job details from Structured Metadata (JSON-LD, Microdata, or Open Graph). Identify the 'job_posted_date' from the provided Metadata snippet. \n\nCRITICAL: Do NOT use the application deadline or validThrough date for this field. \n\nRESPONSE FORMAT:\nReturn ONLY a JSON object like this: {{\"job_posted_date\": \"YYYY-MM-DD\"}}. If not found or empty, return null.",
+    "metadata_deadline": "You are an expert at extracting job details from Structured Metadata (JSON-LD, Microdata, or Open Graph). Identify the 'application_deadline' from the provided Metadata snippet. \n\nCRITICAL: Do NOT use the datePosted or publication date for this field. \n\nRESPONSE FORMAT:\nReturn ONLY a JSON object like this: {{\"application_deadline\": \"YYYY-MM-DD\"}}. If not found or empty, return null.",
     "job_post_check": (
         "You are an expert at identifying job postings. "
         "Analyze the provided text and determine if it is a job advertisement or position description, "
@@ -136,9 +139,9 @@ DEFAULT_SYSTEM_PROMPTS = {
         "Job posts typically contain a job title, company name, responsibilities, and requirements. "
         "Resumes contain personal experience and skills which indicate a person applying for a job, NOT the job itself."
     ),
-    "json_description": (
+    "metadata_description": (
         "You are an expert high-fidelity Markdown converter. "
-        "Your ONLY task is to take the provided JSON description field (usually HTML or raw text) and reformat it into clean, professional Markdown. "
+        "Your ONLY task is to take the provided Metadata description field (usually HTML or raw text from JSON-LD/Microdata) and reformat it into clean, professional Markdown. "
         "\n\nCRITICAL RULES:\n"
         "1. LOSSLESS: Do NOT omit any headers, paragraphs, or list items. Everything in the source must appear in the output. \n"
         "2. VERBATIM: Do NOT rephrase, summarize, or truncate. Preserve the exact wording of the original text.\n"

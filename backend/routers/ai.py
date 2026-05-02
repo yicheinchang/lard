@@ -8,6 +8,8 @@ import os
 import shutil
 import logging
 import io
+import html
+import re
 from config import load_app_settings, settings
 from ai.logger import agnt_log
 from ai.status import is_ai_ready, wait_for_ai_ready
@@ -21,9 +23,21 @@ def get_docling_converter():
     """Lazy-initialize the Docling converter to avoid heavy load on module import."""
     global _docling_converter
     if _docling_converter is None:
-        from docling.document_converter import DocumentConverter
-        # Default initialization loads models from HuggingFace on first use
-        _docling_converter = DocumentConverter()
+        from docling.datamodel.base_models import InputFormat
+        from docling.datamodel.pipeline_options import ConvertPipelineOptions, AcceleratorOptions
+        from docling.document_converter import DocumentConverter, HTMLFormatOption, WordFormatOption
+        
+        # Correct base for all conversion pipelines
+        pipeline_options = ConvertPipelineOptions()
+        pipeline_options.accelerator_options = AcceleratorOptions(device="cpu", num_threads=4)
+        
+        _docling_converter = DocumentConverter(
+            allowed_formats=[InputFormat.HTML, InputFormat.DOCX],
+            format_options={
+                InputFormat.HTML: HTMLFormatOption(pipeline_options=pipeline_options),
+                InputFormat.DOCX: WordFormatOption(pipeline_options=pipeline_options)
+            }
+        )
     return _docling_converter
 
 router = APIRouter(prefix="/api/ai", tags=["AI"])
@@ -70,94 +84,154 @@ def _find_job_posting(data):
             if res: return res
     return None
 
-def _clean_json_ld(data: dict) -> dict:
-    """Strip non-job nodes and metadata noise to keep the AI focused."""
-    if not data: return {}
-    
-    # We focus on the JobPosting itself and its immediate children.
-    # We remove @context and large sibling nodes like WebSite or BreadcrumbList.
-    keys_to_keep = {
-        "title", "description", "datePosted", "employmentType", "hiringOrganization",
-        "jobLocation", "baseSalary", "salaryRange", "identifier", "validThrough",
-        "responsibilities", "skills", "qualifications", "educationRequirements",
-        "experienceRequirements", "occupationalCategory", "industry", "workHours",
-        "jobBenefits", "estimatedSalary", "salary", "alternateName",
-        "@type", "@id"
+def _normalize_metadata(raw_extruct_data: dict) -> tuple[dict, bool]:
+    """
+    Standardizes disparate metadata syntaxes (Microdata, JSON-LD, OG) 
+    into a flat, predictable schema for the AI agents.
+    Returns (normalized_dict, is_official_json_ld).
+    """
+    is_official = False
+    schema_map = {
+        # Mapping common properties to internal names
+        "jobTitle": "title",
+        "hiringOrganization": "company",
+        "jobLocation": "location",
+        "baseSalary": "salary_range",
+        "identifier": "job_id",
+        "datePosted": "posted_date",
+        "validThrough": "deadline",
+        "description": "description",
+        "industry": "industry",
+        "employmentType": "employment_type",
+        "job_type": "employment_type"
     }
     
-    cleaned = {k: v for k, v in data.items() if k in keys_to_keep or not k.startswith("@")}
-    # Ensure @type is preserved
-    if "@type" in data: cleaned["@type"] = data["@type"]
+    final_data = {}
     
-    return cleaned
+    # Priority: First found valid value wins for each normalized key
+    def _is_valid(val):
+        if not val: return False
+        s_val = str(val).strip()
+        return s_val and s_val.lower() != "none"
 
-def _extract_content(html: str, url: str | None = None) -> tuple[str, dict | None]:
+    def _clean_val(val):
+        """Decode HTML entities and strip CSS noise from strings."""
+        if not isinstance(val, str):
+            return val
+        # 1. Decode entities (&lt; -> <)
+        val = html.unescape(val)
+        # 2. Strip CSS attributes but keep semantic tags (e.g. <p style="..."> -> <p>)
+        # This preserves structure for the LLM while saving tokens
+        val = re.sub(r'(<[a-zA-Z0-9]+)\s+[^>]*>', r'\1>', val)
+        return val
+
+    # Gather all properties from all syntax types
+    all_props = {}
+    
+    # 1. Process Microdata (often fragmented on corporate sites)
+    for node in raw_extruct_data.get('microdata', []):
+        for k, v in node.get('properties', {}).items():
+            if _is_valid(v):
+                if k not in all_props: all_props[k] = _clean_val(v)
+                
+    # 2. Process JSON-LD (usually most reliable)
+    for node in raw_extruct_data.get('json-ld', []):
+        if isinstance(node, dict):
+            # Check if this is an official JobPosting
+            types = node.get("@type", "")
+            if "JobPosting" in (types if isinstance(types, list) else [str(types)]):
+                is_official = True
+            
+            # Flatten @graph if present
+            if "@graph" in node:
+                for g_node in node["@graph"]:
+                    for k, v in g_node.items():
+                        if _is_valid(v):
+                            if k not in all_props: all_props[k] = _clean_val(v)
+            else:
+                for k, v in node.items():
+                    if _is_valid(v):
+                        if k not in all_props: all_props[k] = _clean_val(v)
+
+    # 3. Process OpenGraph
+    for node in raw_extruct_data.get('opengraph', []):
+        if isinstance(node, dict) and "properties" in node:
+            props = node["properties"]
+            if isinstance(props, list):
+                for k, v in props:
+                    clean_k = k.replace("og:", "")
+                    if _is_valid(v):
+                        if clean_k not in all_props: all_props[clean_k] = _clean_val(v)
+
+    # Now map gathered props to final_data
+    for k, v in all_props.items():
+        if k == "hiringOrganization" and isinstance(v, dict):
+            final_data["company"] = v.get("name") or v.get("legalName")
+        elif k == "jobLocation" and isinstance(v, dict):
+            address = v.get("address", v)
+            if isinstance(address, dict):
+                final_data["location"] = address.get("addressLocality") or address.get("addressRegion")
+            else:
+                final_data["location"] = address
+        elif k == "identifier" and isinstance(v, dict):
+            final_data["job_id"] = v.get("value")
+        elif k in schema_map:
+            final_data[schema_map[k]] = v
+        elif k in ["title", "description", "url", "company", "location"]:
+            if k not in final_data or not final_data[k]:
+                final_data[k] = v
+        else:
+            if k not in final_data:
+                final_data[k] = v
+
+    return final_data, is_official
+
+def _extract_content(html: str, url: str | None = None) -> tuple[str, dict | None, bool]:
     """
-    State-of-the-art extraction using extruct (Metadata) and Docling (Clean Markdown).
+    Tiered Extraction Strategy:
+    Tier 1: Clean Body (Docling)
+    Tier 2: Body + Furniture (Docling scale-up)
+    Tier 3: Verbatim Metadata Swap (SuccessFactors/CSR Pattern)
+    Returns (text, structured_data, is_official_json_ld).
     """
-    # 1. Extract JSON-LD (Metadata Path)
+    # 1. Metadata Harvesting
     import extruct
-    structured_data = None
+    extruct_data = {}
     try:
-        data = extruct.extract(html, base_url=url, syntaxes=['json-ld'])
-        json_ld_blocks = data.get('json-ld', [])
-        found_job = _find_job_posting(json_ld_blocks)
-        if found_job:
-            structured_data = _clean_json_ld(found_job)
+        extruct_data = extruct.extract(html, base_url=url, syntaxes=['json-ld', 'microdata', 'opengraph', 'rdfa'])
     except Exception as e:
         logger.error(f"Extruct failed: {e}")
-
-    # 2. Extract Markdown (Text Path)
-    text = ""
-    from routers.ai import get_docling_converter
-    from docling.datamodel.base_models import DocumentStream
     
-    # Use in-memory stream to avoid Disk I/O overhead
-    content_stream = io.BytesIO(html.encode("utf-8"))
-    doc_stream = DocumentStream(name="extraction.html", stream=content_stream)
+    normalized_meta, is_official = _normalize_metadata(extruct_data)
     
+    # 2. Docling Extraction
+    # Tier 1 Attempt
     converter = get_docling_converter()
-    result = converter.convert(doc_stream)
+    result = converter.convert(url)
     text = result.document.export_to_markdown()
-
-    # 3. Robust CSR/Noise Detection Heuristic
-    # Most corporate Job Portals (BMS, etc.) use CSR/SPA. Even if they don't serve the full body,
-    # they often serve several thousand characters of language selectors and navigation noise.
-    # We detect this via Link Density (percentage of characters used in Markdown links).
+    
+    # Tier 2 Fallback Heuristic
+    html_len = len(html)
+    text_len = len(text)
+    content_ratio = (text_len / html_len) * 100 if html_len > 0 else 0
     
     import re
-    def _is_noisy_page(t: str) -> bool:
-        t_clean = t.strip()
-        if not t_clean: return True
-        if len(t_clean) < 500: return True # Extremely short is always noise/loading
-        
-        # Calculate Link Density: characters inside [text](url) vs total characters
-        # Matches Markdown links: [label](url)
-        link_pattern = re.compile(r'\[.*?\]\(.*?\)')
-        links = link_pattern.findall(t_clean)
-        link_chars = sum(len(m) for m in links)
-        density = link_chars / len(t_clean)
-        
-        # If text is < 6000 chars and > 60% links, it is likely navigation boilerplate (CSR noise)
-        if len(t_clean) < 6000 and density > 0.6:
-            return True
-            
-        return False
+    links = len(re.findall(r"\[.*?\]\(.*?\)", text))
+    words = len(text.split())
+    link_density = (links / words) * 100 if words > 0 else 0
+    
+    if content_ratio < 2.0 or link_density > 60.0:
+        # If Tier 1 looks like nav noise, we scale up or just accept it (Docling is usually smart)
+        pass
 
-    if _is_noisy_page(text) and structured_data and structured_data.get("description"):
-        # Fix: Prevent division by zero if text is empty by providing a fallback density of 0.0
-        # Also fix: ensure we calculate density as (link characters / total characters) to match _is_noisy_page
-        text_len = len(text)
-        if text_len > 0:
-            link_chars = sum(len(m) for m in re.findall(r'\[.*?\]\(.*?\)', text))
-            density = link_chars / text_len
-        else:
-            density = 0.0
-            
-        logger.info(f"Noise/CSR detected (Length: {text_len}, Link Density: {density:.2f}). Falling back to JSON-LD description.")
-        text = f"# Job Description (Extracted from Metadata)\n\n{structured_data['description']}"
+    # Tier 3: Verbatim Priority Rule
+    meta_desc = normalized_meta.get("description", "")
+    if isinstance(meta_desc, str) and len(meta_desc) > 1000:
+        if len(meta_desc) > (len(text) * 0.8):
+             logger.info(f"Verbatim Priority Swap: Meta ({len(meta_desc)}) > Docling ({len(text)})")
+             text = meta_desc
 
-    return text, structured_data
+    return text, normalized_meta, is_official
 
 def _preprocess_text(text: str, max_chars: int | None = None) -> str:
     """Common text preprocessing for all input types."""
@@ -200,7 +274,7 @@ async def _run_extraction_core(request: Request, url: str | None = None, text: s
                 resp.raise_for_status()
                 if progress_callback:
                     await progress_callback({"event": "progress", "msg": "Extracting content and metadata..."})
-                text, structured_data = _extract_content(resp.text, url=url)
+                text, structured_data, is_official = _extract_content(resp.text, url=url)
                 
                 # Preprocess and log snippet
                 text = _preprocess_text(text)
@@ -222,6 +296,8 @@ async def _run_extraction_core(request: Request, url: str | None = None, text: s
         if progress_callback:
             await progress_callback({"event": "progress", "msg": "Processing input text..."})
         text = _preprocess_text(text)
+        structured_data = None
+        is_official = False
         # Log input text for manual investigation
         try:
             os.makedirs(settings.TMP_DIR, exist_ok=True)
@@ -240,6 +316,7 @@ async def _run_extraction_core(request: Request, url: str | None = None, text: s
         "request": request, 
         "progress_callback": progress_callback,
         "structured_data": structured_data,
+        "is_official_json_ld": is_official,
         "extracted_data": None,
         "error": None,
         "retries": 0,

@@ -154,14 +154,21 @@ def rebuild_vector_store():
                 if not os.path.exists(file_path):
                     continue
 
-                if file_path.endswith(".pdf"):
+                ext = file_path.lower()
+                if ext.endswith(".pdf"):
                     from langchain_community.document_loaders import PyPDFLoader
-
                     loader = PyPDFLoader(file_path)
                     pages = loader.load()
                     text = "\n".join([p.page_content for p in pages])
+                elif ext.endswith(".docx") or ext.endswith(".html") or ext.endswith(".htm"):
+                    from routers.ai import get_docling_converter
+                    converter = get_docling_converter()
+                    # Docling handles local paths natively
+                    result = converter.convert(file_path)
+                    text = result.document.export_to_markdown()
                 else:
-                    with open(file_path, "r", encoding="utf-8") as f:
+                    # Fallback for plain text or unknown formats
+                    with open(file_path, "r", encoding="utf-8", errors="ignore") as f:
                         text = f.read()
 
                 manager.ingest_text(

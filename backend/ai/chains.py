@@ -144,32 +144,32 @@ def get_job_post_check_prompt(settings: dict | None = None):
 
 # --- JSON-LD Metadata Support ---
 
-def get_json_field_prompt(field_name: str, settings: dict | None = None):
-    """Helper to create a dynamic metadata prompt for JSON-LD fragment extraction."""
+def get_metadata_field_prompt(field_name: str, settings: dict | None = None):
+    """Helper to create a dynamic metadata prompt for Structured Metadata fragment extraction."""
     # Map field name to system prompt key
     mapping = {
-        "company": "json_company",
-        "role": "json_role",
-        "location": "json_location",
-        "salary_range": "json_salary",
-        "company_job_id": "json_id",
-        "job_posted_date": "json_posted",
-        "application_deadline": "json_deadline"
+        "company": "metadata_company",
+        "role": "metadata_role",
+        "location": "metadata_location",
+        "salary_range": "metadata_salary",
+        "company_job_id": "metadata_id",
+        "job_posted_date": "metadata_posted",
+        "application_deadline": "metadata_deadline"
     }
     key = mapping.get(field_name)
     base = escape_braces(get_base_prompt(key, settings) if key else "")
 
     return ChatPromptTemplate.from_messages([
         ("system", base + "{validation_feedback}{custom_guidance}"),
-        ("user", "JSON FRAGMENT:\n{json_fragment}")
+        ("user", "METADATA FRAGMENT:\n{json_fragment}")
     ])
 
-def _create_description_json_prompt(settings: dict | None = None):
-    """Helper to create a dynamic metadata prompt for JSON-LD description extraction."""
-    base = escape_braces(get_base_prompt("json_description", settings))
+def _create_description_metadata_prompt(settings: dict | None = None):
+    """Helper to create a dynamic metadata prompt for Structured Metadata description extraction."""
+    base = escape_braces(get_base_prompt("metadata_description", settings))
     return ChatPromptTemplate.from_messages([
         ("system", base + "{validation_feedback}{custom_guidance}"),
-        ("user", "JSON FRAGMENT TO PROCESS (Markdown Output Required):\n\"\"\"\n{json_fragment}\n\"\"\"\n\nProduce the verbatim Markdown description now. Do NOT include any preamble or commentary:")
+        ("user", "METADATA FRAGMENT TO PROCESS (Markdown Output Required):\n\"\"\"\n{json_fragment}\n\"\"\"\n\nProduce the verbatim Markdown description now. Do NOT include any preamble or commentary:")
     ])
 
 # --- Aliases for Graph Compatibility ---
@@ -177,9 +177,15 @@ def _create_description_json_prompt(settings: dict | None = None):
 def description_extraction_prompt(settings: dict | None = None):
     return _create_description_prompt(settings)
 
+def description_metadata_prompt(settings: dict | None = None):
+    return _create_description_metadata_prompt(settings)
+
+# Aliases for Graph Compatibility
+def get_json_field_prompt(field_name: str, settings: dict | None = None):
+    return get_metadata_field_prompt(field_name, settings)
+
 def description_json_prompt(settings: dict | None = None):
-    # This matches the legacy name used in graph.py
-    return _create_description_json_prompt(settings)
+    return description_metadata_prompt(settings)
 
 # --- Static wrappers removed in favor of dynamic get_* functions ---
 

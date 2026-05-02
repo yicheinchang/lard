@@ -426,7 +426,8 @@ async def check_job_post_node(state: AgentState):
 
     # If JSON-LD structured data is found, it's definitely a job post
     if structured_data:
-        return {"error": None, "text_truncated": text_truncated, "json_truncated": json_truncated, "structured_data": structured_data}
+        is_official = state.get("is_official_json_ld", False)
+        return {"error": None, "text_truncated": text_truncated, "json_truncated": json_truncated, "structured_data": structured_data, "is_official_json_ld": is_official}
 
     # Log LLM Info once
     llm_logged = state.get("llm_logged", False)
@@ -679,8 +680,27 @@ async def extract_node(state: AgentState):
                     return {"extracted_data": None, "error": "Cancelled"}
                     
                 if progress_cb:
-                    msg = "AI: JSON-LD incomplete. Falling back to Full Text extraction..." if use_text_fallback else "AI: Extracting details from text (Ollama)..."
+                    msg = "AI: Metadata incomplete. Falling back to Full Text extraction..." if use_text_fallback else "AI: Extracting details from text (Ollama)..."
                     await progress_cb({"event": "progress", "msg": msg})
+
+                # --- Single-Agent Metadata Injection ---
+                # We provide a hint to the text extractor about what was in the technical metadata
+                # (Excluding description to save tokens)
+                meta_context = ""
+                if structured_data:
+                    meta_context = "\n[METADATA CONTEXT]\nThe following values were found in technical metadata (use to resolve ambiguity):\n"
+                    context_fields = {
+                        "company": "Company",
+                        "job_id": "Job ID",
+                        "location": "Location",
+                        "salary_range": "Salary",
+                        "posted_date": "Posted Date",
+                        "deadline": "Deadline"
+                    }
+                    for k, v in context_fields.items():
+                        val = structured_data.get(k)
+                        if val: meta_context += f"- {v}: {val}\n"
+                    meta_context += "[/METADATA CONTEXT]\n"
 
                 extractor = get_extraction_prompt(app_settings) | llm.with_structured_output(JobDetails)
                 cg = app_settings.get("custom_prompts", {}).get("single_agent", "")
@@ -689,7 +709,7 @@ async def extract_node(state: AgentState):
                 label = "TRANSITION FEEDBACK (FALLBACK TO TEXT):" if use_text_fallback else "PREVIOUS ATTEMPT FAILED QA VALIDATION:"
                 
                 inputs = { 
-                    "text": text, 
+                    "text": meta_context + text, 
                     "url": url or "Not provided",
                     "custom_guidance": f"ADDITIONAL USER INSTRUCTIONS:\n{cg}" if cg else "",
                     "validation_feedback": f"{label}\n{vf}\n" if vf else ""

@@ -245,7 +245,7 @@ async def create_job_stream(
                         return result.document.export_to_markdown()
                     text = await asyncio.to_thread(run_docling)
                 else:
-                    with open(file_path, "r", encoding="utf-8") as f:
+                    with open(file_path, "r", encoding="utf-8", errors="ignore") as f:
                         text = f.read()
                 
                 from database.vector_store import get_vector_store_manager
@@ -561,7 +561,7 @@ async def upload_job_document(job_id: int, file: UploadFile = File(...), doc_typ
                 return result.document.export_to_markdown()
             text = await asyncio.to_thread(run_docling)
         else:
-            with open(file_path, "r", encoding="utf-8") as f:
+            with open(file_path, "r", encoding="utf-8", errors="ignore") as f:
                 text = f.read()
                 
         from database.vector_store import get_vector_store_manager
@@ -631,7 +631,7 @@ async def upload_job_document_stream(job_id: int, file: UploadFile = File(...), 
                     return result.document.export_to_markdown()
                 text = await asyncio.to_thread(run_docling)
             else:
-                with open(file_path, "r", encoding="utf-8") as f:
+                with open(file_path, "r", encoding="utf-8", errors="ignore") as f:
                     text = f.read()
             
             yield f"data: {json.dumps({'event': 'progress', 'msg': 'Generating embeddings & vectorizing (this may take a minute)...'})}\n\n"
