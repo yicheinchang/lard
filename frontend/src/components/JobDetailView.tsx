@@ -797,7 +797,7 @@ export const JobDetailView: React.FC<JobDetailViewProps> = ({ job, onClose, onJo
 
           {activeTab === 'info' && (
             <div className="flex flex-col lg:flex-row gap-8">
-              <div className="flex-1 space-y-6">
+              <div className="flex-1 min-w-0 space-y-6">
                 <div className="flex items-center justify-between border-b border-[var(--border-color)] pb-2">
                   <div className="flex items-center gap-4">
                     <h3 className="text-lg font-semibold text-[var(--fg)] opacity-90">Description</h3>
@@ -858,7 +858,7 @@ export const JobDetailView: React.FC<JobDetailViewProps> = ({ job, onClose, onJo
                       descFontSizeLevel === 2 ? 'prose-lg' : 
                       descFontSizeLevel === 3 ? 'prose-xl' : 
                       'prose-2xl'
-                    } max-w-none text-[var(--fg-muted)] prose-headings:text-[var(--fg)] prose-strong:text-[var(--fg)] prose-li:text-[var(--fg-muted)] transition-all duration-200`}>
+                    } max-w-none break-words text-[var(--fg-muted)] prose-headings:text-[var(--fg)] prose-strong:text-[var(--fg)] prose-li:text-[var(--fg-muted)] transition-all duration-200`}>
                       <ReactMarkdown>{job.description}</ReactMarkdown>
                     </div>
                   ) : (
@@ -951,7 +951,7 @@ export const JobDetailView: React.FC<JobDetailViewProps> = ({ job, onClose, onJo
                   ) : (
                     <div className="glass p-4 rounded-xl min-h-[100px]">
                       {jobNotes ? (
-                        <div className="prose dark:prose-invert prose-sm max-w-none text-[var(--fg-muted)]">
+                        <div className="prose dark:prose-invert prose-sm max-w-none break-words text-[var(--fg-muted)]">
                           <ReactMarkdown>{jobNotes}</ReactMarkdown>
                         </div>
                       ) : (

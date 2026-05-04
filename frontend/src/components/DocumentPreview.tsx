@@ -88,7 +88,7 @@ export const DocumentPreview: React.FC<DocumentPreviewProps> = ({
               </object>
             ) : markdownContent !== null ? (
               <div className="w-full h-full overflow-y-auto p-6 md:p-10 custom-scrollbar">
-                <div className="prose prose-invert prose-violet max-w-4xl mx-auto">
+                <div className="prose prose-invert prose-violet max-w-4xl mx-auto break-words">
                   <ReactMarkdown>{markdownContent}</ReactMarkdown>
                 </div>
               </div>
