@@ -94,6 +94,7 @@ def _normalize_metadata(raw_extruct_data: dict) -> tuple[dict, bool]:
     schema_map = {
         # Mapping common properties to internal names
         "jobTitle": "title",
+        "title": "title",
         "hiringOrganization": "company",
         "jobLocation": "location",
         "baseSalary": "salary_range",

@@ -297,16 +297,19 @@ async def _run_field_json_extraction(field, schema, prompt, text, fragment, requ
             return field, None
 
 def _map_json_ld_fragments(structured_data: dict) -> dict:
-    """Unified helper to map normalized metadata into standardized fragments for multi-agent extraction."""
+    """
+    Unified helper to map normalized metadata into standardized fragments for multi-agent extraction.
+    We wrap values in dicts using INTERNAL names to reinforce the LLM's instructions.
+    """
     return {
-        "company": structured_data.get("company"),
-        "title": structured_data.get("title"),
-        "location": structured_data.get("location"),
-        "salary_range": structured_data.get("salary_range"),
-        "job_id": structured_data.get("job_id"),
-        "posted_date": structured_data.get("posted_date"),
-        "deadline": structured_data.get("deadline"),
-        "description": structured_data.get("description"),
+        "company": {"company": structured_data.get("company")},
+        "role": {"role": structured_data.get("title")},
+        "location": {"location": structured_data.get("location")},
+        "salary_range": {"salary_range": structured_data.get("salary_range")},
+        "job_id": {"company_job_id": structured_data.get("job_id")},
+        "posted_date": {"job_posted_date": structured_data.get("posted_date")},
+        "deadline": {"application_deadline": structured_data.get("deadline")},
+        "description": structured_data.get("description"), # Keep raw
     }
 
 async def _run_multi_agent_json_extraction(structured_data: dict, text: str, request: Any = None, progress_cb: Callable = None, state: dict = None):
@@ -323,7 +326,7 @@ async def _run_multi_agent_json_extraction(structured_data: dict, text: str, req
     
     metadata_tasks = [
         ("company", JobCompany, get_json_field_prompt("company", settings), fragments.get("company")),
-        ("role", JobRole, get_json_field_prompt("role", settings), fragments.get("title")),
+        ("role", JobRole, get_json_field_prompt("role", settings), fragments.get("role")),
         ("location", JobLocation, get_json_field_prompt("location", settings), fragments.get("location")),
         ("salary_range", JobSalary, get_json_field_prompt("salary_range", settings), fragments.get("salary_range")),
         ("company_job_id", JobId, get_json_field_prompt("company_job_id", settings), fragments.get("job_id")),
@@ -583,16 +586,12 @@ async def extract_node(state: AgentState):
                     with open(os.path.join(tmp_dir, "raw_json_ld.json"), "w", encoding="utf-8") as f:
                         json.dump(structured_data, f, indent=2)
                         
-                    # 2. CLEAN: Fragments actually sent to AI
-                    with open(os.path.join(tmp_dir, "last_fragments.json"), "w", encoding="utf-8") as f:
-                        json.dump(mapped_fragments, f, indent=2)
-                        
-                    agnt_log("Graph", task="Diagnostic", result=f"Saved raw and clean JSON to {tmp_dir}")
+                    agnt_log("Graph", task="Diagnostic", result=f"Saved raw JSON to {tmp_dir}")
                 except Exception as e:
                     print(f"Error saving diagnostic JSON: {e}")
 
                 inputs = {
-                    "json_ld_data": json.dumps(mapped_fragments, indent=2),
+                    "json_ld_data": json.dumps(structured_data, indent=2),
                     "custom_guidance": "",
                     "validation_feedback": ""
                 }
