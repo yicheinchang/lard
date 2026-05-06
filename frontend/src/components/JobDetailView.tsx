@@ -6,7 +6,7 @@ import MdEditor from 'react-markdown-editor-lite';
 import MarkdownIt from 'markdown-it';
 import 'react-markdown-editor-lite/lib/index.css';
 import { Job, getStepTypes, StepType, addInterviewStep, updateInterviewStep, deleteInterviewStep, updateJobStream, updateJob, deleteJobDocument, getCompanies, InterviewStep, uploadJobDocumentStream } from '../lib/api';
-import { X, Calendar, User, Mail, Plus, Circle, FileText, Edit2, Save, Paperclip, Trash2, ExternalLink, Link as LinkIcon, StickyNote, Send, AlertTriangle, CircleDollarSign, Star, Maximize2, Minimize2, ZoomIn, ZoomOut, RotateCcw } from 'lucide-react';
+import { X, Calendar, User, Mail, Plus, Circle, FileText, Edit2, Save, Paperclip, Trash2, ExternalLink, Link as LinkIcon, StickyNote, Send, AlertTriangle, CircleDollarSign, Star, Maximize2, Minimize2, ZoomIn, ZoomOut, RotateCcw, Sun, Moon } from 'lucide-react';
 import { ConfirmDialog } from './ConfirmDialog';
 import { DocumentPreview } from './DocumentPreview';
 import { ProcessingOverlay } from './ProcessingOverlay';
@@ -14,6 +14,7 @@ import { AutoSaveIndicator } from './AutoSaveIndicator';
 import { Portal } from './Portal';
 
 import { useView } from '@/lib/ViewContext';
+import { useSettings } from '@/lib/SettingsContext';
 
 interface JobDetailViewProps {
   job: Job | null;
@@ -23,9 +24,23 @@ interface JobDetailViewProps {
 
 export const JobDetailView: React.FC<JobDetailViewProps> = ({ job, onClose, onJobUpdated }) => {
   const { setDirty } = useView();
+  const { settings } = useSettings();
   const [isAnimationFinished, setIsAnimationFinished] = useState(false);
   const [isFullScreen, setIsFullScreen] = useState(false);
   const [descFontSizeLevel, setDescFontSizeLevel] = useState(0);
+  const [localThemeOverride, setLocalThemeOverride] = useState<'light' | 'dark' | null>(null);
+
+  const resolvedGlobalTheme = useMemo(() => {
+    if (settings?.theme === 'system') {
+      if (typeof window !== 'undefined') {
+        return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+      }
+      return 'dark';
+    }
+    return settings?.theme || 'dark';
+  }, [settings?.theme]);
+
+  const effectiveTheme = localThemeOverride || resolvedGlobalTheme;
 
   // Remove resizing logic for modal transition
 
@@ -563,7 +578,8 @@ export const JobDetailView: React.FC<JobDetailViewProps> = ({ job, onClose, onJo
         }}
       >
         <div
-          className={`bg-[var(--bg)] border border-[var(--border-color)] shadow-2xl flex flex-col transition-all duration-300 ease-in-out ${isFullScreen ? 'w-full h-full rounded-none' : 'w-full max-w-6xl h-[90vh] rounded-2xl md:rounded-3xl'} ${!isAnimationFinished ? 'animate-slide-up' : ''}`}
+          data-theme={effectiveTheme}
+          className={`bg-[var(--bg)] border border-[var(--border-color)] shadow-2xl flex flex-col overflow-hidden transition-all duration-300 ease-in-out ${isFullScreen ? 'w-full h-full rounded-none' : 'w-full max-w-6xl h-[90vh] rounded-2xl md:rounded-3xl'} ${!isAnimationFinished ? 'animate-slide-up' : ''}`}
           onAnimationEnd={() => setIsAnimationFinished(true)}
         >
         {/* Header */}
@@ -828,6 +844,14 @@ export const JobDetailView: React.FC<JobDetailViewProps> = ({ job, onClose, onJo
                             <RotateCcw className="w-3.5 h-3.5" />
                           </button>
                         )}
+                        <div className="w-px h-3 bg-[var(--border-color)] mx-0.5" />
+                        <button 
+                          onClick={() => setLocalThemeOverride(prev => (prev || resolvedGlobalTheme) === 'dark' ? 'light' : 'dark')}
+                          className="p-1 rounded-md text-[var(--fg-muted)] hover:text-violet-500 hover:bg-violet-500/10 transition-colors"
+                          title={`Switch to ${effectiveTheme === 'dark' ? 'Light' : 'Dark'} Mode (Temporary)`}
+                        >
+                          {effectiveTheme === 'dark' ? <Sun className="w-3.5 h-3.5" /> : <Moon className="w-3.5 h-3.5" />}
+                        </button>
                       </div>
                     )}
                   </div>
@@ -852,7 +876,7 @@ export const JobDetailView: React.FC<JobDetailViewProps> = ({ job, onClose, onJo
                   </div>
                  ) : (
                   job.description ? (
-                    <div className={`prose dark:prose-invert ${
+                    <div className={`prose ${effectiveTheme === 'dark' ? 'prose-invert' : ''} ${
                       descFontSizeLevel === 0 ? 'prose-sm' : 
                       descFontSizeLevel === 1 ? 'prose-base' : 
                       descFontSizeLevel === 2 ? 'prose-lg' : 
@@ -951,7 +975,7 @@ export const JobDetailView: React.FC<JobDetailViewProps> = ({ job, onClose, onJo
                   ) : (
                     <div className="glass p-4 rounded-xl min-h-[100px]">
                       {jobNotes ? (
-                        <div className="prose dark:prose-invert prose-sm max-w-none break-words text-[var(--fg-muted)]">
+                        <div className={`prose ${effectiveTheme === 'dark' ? 'prose-invert' : ''} prose-sm max-w-none break-words text-[var(--fg-muted)]`}>
                           <ReactMarkdown>{jobNotes}</ReactMarkdown>
                         </div>
                       ) : (

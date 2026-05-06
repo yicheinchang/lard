@@ -1,6 +1,6 @@
 [project]
 name = "lard-backend"
-version = "0.68.3"
+version = "0.69.0"
 description = "Add your description here"
 license = "MIT"
 readme = "README.md"
