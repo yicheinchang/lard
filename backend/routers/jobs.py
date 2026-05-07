@@ -287,7 +287,9 @@ def update_job(job_id: int, job_update: JobUpdate, db: Session = Depends(get_db)
     is_actually_different = False
     for key, value in update_data.items():
         if hasattr(db_job, key):
-            if getattr(db_job, key) != value:
+            current_val = getattr(db_job, key)
+            # Treat None and "" as equivalent for comparison
+            if (current_val or "") != (value or ""):
                 is_actually_different = True
                 setattr(db_job, key, value)
                 
@@ -319,7 +321,8 @@ async def update_job_stream(job_id: int, job_update: JobUpdate, db: Session = De
             is_actually_different = False
             for key, value in update_data.items():
                 if hasattr(db_job, key):
-                    if getattr(db_job, key) != value:
+                    current_val = getattr(db_job, key)
+                    if (current_val or "") != (value or ""):
                         is_actually_different = True
                         break
             

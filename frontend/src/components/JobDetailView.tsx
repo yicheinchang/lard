@@ -270,7 +270,7 @@ export const JobDetailView: React.FC<JobDetailViewProps> = ({ job, onClose, onJo
 
   // Debounced notes auto-save
   useEffect(() => {
-    if (job?.id && jobNotes !== undefined && jobNotes !== job.notes) {
+    if (job?.id && jobNotes !== undefined && jobNotes !== (job.notes || '')) {
       setSaveStatus('saving');
       const timer = setTimeout(async () => {
         try {
