@@ -244,11 +244,29 @@ input[type="date"].style-date::-webkit-calendar-picker-indicator {
   background-color: transparent !important;
 }
 
+/* Preview styling with Typography (prose) support */
 .rc-md-editor .editor-container .sec-html .html-wrap {
   color: var(--fg) !important;
   background-color: transparent !important;
+  padding: 1.5rem !important;
+  @apply prose prose-sm max-w-none transition-all duration-200;
 }
 
+/* Heading & Content Adjustments for Preview */
+.rc-md-editor .editor-container .sec-html .html-wrap :is(h1, h2, h3, h4, h5, h6, strong, b) {
+  color: var(--fg) !important;
+}
+
+.rc-md-editor .editor-container .sec-html .html-wrap :is(p, li, span, div) {
+  color: var(--fg-muted) !important;
+}
+
+/* Theme-specific Prose Overrides */
+[data-theme="dark"] .rc-md-editor .editor-container .sec-html .html-wrap {
+  @apply prose-invert;
+}
+
+/* Toolbar & Navigation */
 .rc-md-editor .rc-md-navigation {
   background-color: var(--bg) !important;
   border-bottom: 1px solid var(--border-color) !important;
