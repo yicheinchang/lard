@@ -1257,6 +1257,7 @@ export const JobDetailView: React.FC<JobDetailViewProps> = ({ job, onClose, onJo
         title={previewDoc.title}
         fileUrl={previewDoc.fileUrl}
         onClose={() => setPreviewDoc({ ...previewDoc, isOpen: false })}
+        theme={effectiveTheme}
       />
 
       <ConfirmDialog

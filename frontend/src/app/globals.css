@@ -276,27 +276,6 @@ input[type="date"].style-date::-webkit-calendar-picker-indicator {
   height: 100vh !important;
 }
 
-/* Specific theme tweaks for editor blocks (to avoid any semi-transparency) */
-[data-theme="dark"] .rc-md-editor {
-  background-color: #111118 !important;
-}
-
-[data-theme="dark"] .rc-md-editor.full-screen {
-  background-color: #0a0a0f !important;
-}
-
-[data-theme="light"] .rc-md-editor {
-  background-color: #ffffff !important;
-}
-
-[data-theme="dark"] .rc-md-editor .editor-container .sec-md .input {
-  color: #e2e8f0 !important;
-}
-
-[data-theme="dark"] .rc-md-editor .rc-md-navigation {
-  background-color: #111118 !important;
-}
-
 /* ── Tooltip Component ───────────────────────────────────────────── */
 .tooltip-box {
   background-color: rgba(0, 0, 0, 0.9);

@@ -83,6 +83,16 @@ async function handleRequest(req: NextRequest, { params }: { params: Promise<{ p
     responseHeaders.delete('content-encoding');
     responseHeaders.delete('content-length');
 
+    // Handle statuses that MUST NOT have a body (304, 204, etc.)
+    // The Response constructor throws if a body is provided for these statuses.
+    if (response.status === 304 || response.status === 204) {
+      return new NextResponse(null, {
+        status: response.status,
+        statusText: response.statusText,
+        headers: responseHeaders,
+      });
+    }
+
     // Use a stream if available for maximum efficiency, otherwise fallback to blob
     const responseBody = response.body || await response.blob();
 
