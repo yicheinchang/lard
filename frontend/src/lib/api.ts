@@ -48,6 +48,8 @@ export interface Job {
   role: string;
   url?: string;
   status: string; // Wishlist, Applied, Interviewing, Offered, Rejected, Closed, Discontinued
+  employment_type?: string;
+  agency?: string;
   
   job_posted_date?: string;
   application_deadline?: string;

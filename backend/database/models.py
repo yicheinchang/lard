@@ -1,7 +1,13 @@
-from sqlalchemy import Column, Integer, String, DateTime, Text, ForeignKey, JSON, Boolean
+import enum
+from sqlalchemy import Column, Integer, String, DateTime, Text, ForeignKey, JSON, Boolean, Enum as SQLEnum
 from sqlalchemy.orm import relationship
 from datetime import datetime, timezone
 from database.relational import Base
+
+class EmploymentType(str, enum.Enum):
+    FTE = "FTE"
+    CONTRACTOR = "Contractor"
+    CONSULTANT = "Consultant"
 
 class Company(Base):
     __tablename__ = "companies"
@@ -44,6 +50,9 @@ class JobApplication(Base):
     is_starred = Column(Boolean, default=False)
     
     # New detail fields
+    employment_type = Column(SQLEnum(EmploymentType), default=EmploymentType.FTE, nullable=True)
+    agency = Column(String, nullable=True)
+    
     job_posted_date = Column(DateTime, nullable=True)
     application_deadline = Column(DateTime, nullable=True)
     company_job_id = Column(String, nullable=True)

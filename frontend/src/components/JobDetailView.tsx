@@ -77,6 +77,7 @@ export const JobDetailView: React.FC<JobDetailViewProps> = ({ job, onClose, onJo
     if (isEditingInfo && job) {
       const fields: (keyof Job)[] = [
         'company', 'role', 'url', 'status', 'location',
+        'employment_type', 'agency',
         'description', 'salary_range', 'hr_email',
         'hiring_manager_name', 'hiring_manager_email',
         'company_job_id', 'created_at', 'applied_date', 'decision_date', 'closed_date'
@@ -440,6 +441,17 @@ export const JobDetailView: React.FC<JobDetailViewProps> = ({ job, onClose, onJo
   };
 
   const handleSaveInfo = async () => {
+    // Validation: Contractor must have an agency
+    if (editFormData.employment_type === 'Contractor' && (!editFormData.agency || editFormData.agency.trim() === '')) {
+      setAlertDialog({
+        isOpen: true,
+        title: 'Validation Error',
+        message: "Please provide the agency name for Contractor roles.",
+        variant: 'danger'
+      });
+      return;
+    }
+
     // Validation: cannot clear applied_date if steps exist
     if (!editFormData.applied_date && job.steps && job.steps.length > 0) {
       setAlertDialog({
@@ -1014,6 +1026,31 @@ export const JobDetailView: React.FC<JobDetailViewProps> = ({ job, onClose, onJo
                       <input className="bg-[var(--bg)] border border-[var(--border-color)] rounded-md px-2 py-1 text-sm text-[var(--fg)] focus:outline-none focus:border-violet-500" value={editFormData.role || ''} onChange={e => handleEditChange('role', e.target.value)} />
                     </div>
                     <div className="flex flex-col gap-1">
+                      <label className="text-xs text-[var(--fg-subtle)]">Role Type *</label>
+                      <select
+                        required
+                        className="bg-[var(--bg)] border border-[var(--border-color)] rounded-md px-2 py-1 text-sm text-[var(--fg)] focus:outline-none focus:border-violet-500 outline-none cursor-pointer"
+                        value={editFormData.employment_type || 'FTE'}
+                        onChange={e => handleEditChange('employment_type', e.target.value)}
+                      >
+                        <option value="FTE">Full-time (FTE)</option>
+                        <option value="Contractor">Contractor</option>
+                        <option value="Consultant">Consultant</option>
+                      </select>
+                    </div>
+                    {editFormData.employment_type === 'Contractor' && (
+                      <div className="flex flex-col gap-1 animate-fade-in">
+                        <label className="text-xs text-[var(--fg-subtle)]">Agency Name *</label>
+                        <input 
+                          required
+                          className="bg-[var(--bg)] border border-[var(--border-color)] rounded-md px-2 py-1 text-sm text-[var(--fg)] focus:outline-none focus:border-violet-500" 
+                          value={editFormData.agency || ''} 
+                          onChange={e => handleEditChange('agency', e.target.value)} 
+                          placeholder="e.g. Robert Half..." 
+                        />
+                      </div>
+                    )}
+                    <div className="flex flex-col gap-1">
                       <label className="text-xs text-[var(--fg-subtle)] flex items-center gap-1.5"><CircleDollarSign className="w-3 h-3 text-green-500/70" /> Salary Range</label>
                       <input className="bg-[var(--bg)] border border-[var(--border-color)] rounded-md px-2 py-1 text-sm text-[var(--fg)] focus:outline-none focus:border-violet-500 shadow-sm shadow-green-500/5" value={editFormData.salary_range || ''} onChange={e => handleEditChange('salary_range', e.target.value)} placeholder="e.g. $120k - $150k" />
                     </div>
@@ -1111,6 +1148,18 @@ export const JobDetailView: React.FC<JobDetailViewProps> = ({ job, onClose, onJo
                           <ExternalLink className="w-4 h-4 group-hover:scale-110 transition-transform" />
                           Open Application Page
                         </a>
+                      </div>
+                    )}
+
+                    <div>
+                      <span className="text-[var(--fg-subtle)] block mb-1">Role Type</span>
+                      <span className="text-[var(--fg-muted)]">{job.employment_type || 'FTE'}</span>
+                    </div>
+
+                    {job.employment_type === 'Contractor' && (
+                      <div>
+                        <span className="text-[var(--fg-subtle)] block mb-1">Agency</span>
+                        <span className="text-[var(--fg-muted)]">{job.agency || '-'}</span>
                       </div>
                     )}
 

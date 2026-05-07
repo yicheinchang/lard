@@ -1,4 +1,4 @@
-# 🗺️ Lard - Lazy AI-Powered Resume Database (v0.69.2)
+# 🗺️ Lard - Lazy AI-Powered Resume Database (v0.70.0)
 Last Updated: 2026-05-07T04:23:00Z
 
 This document provides a summary of the project's architecture, tech stack, and key logic to give AI coding agents instant context.
@@ -142,6 +142,8 @@ Shared structures used for API communication and state management.
 The central entity representing a job application.
 - `id`: Unique identifier (Integer).
 - `company` & `role`: Brand and position (Strings).
+- `employment_type`: Classification of role (FTE, Contractor, Consultant).
+- `agency`: Optional agency name for contractors.
 - `status`: Lifecycle stage (Wishlist ... Discontinued).
 - `is_starred`: Boolean toggle for marking jobs as important.
 - `steps`: Array of `InterviewStep` objects.

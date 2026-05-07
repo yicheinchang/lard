@@ -9,7 +9,7 @@ from pydantic import BaseModel, ConfigDict
 from typing import List, Optional
 from datetime import datetime, timezone
 from database.relational import get_db
-from database.models import JobApplication, InterviewStep, StepType, DocumentMeta, Company
+from database.models import JobApplication, InterviewStep, StepType, DocumentMeta, Company, EmploymentType
 from config import UPLOADS_DIR
 
 router = APIRouter(prefix="/api", tags=["Jobs"])
@@ -60,6 +60,8 @@ class JobBase(BaseModel):
     role: str
     url: Optional[str] = None
     status: Optional[str] = "Applied"
+    employment_type: Optional[EmploymentType] = EmploymentType.FTE
+    agency: Optional[str] = None
     job_posted_date: Optional[datetime] = None
     application_deadline: Optional[datetime] = None
     company_job_id: Optional[str] = None
@@ -88,6 +90,8 @@ class JobUpdate(BaseModel):
     role: Optional[str] = None
     url: Optional[str] = None
     status: Optional[str] = None
+    employment_type: Optional[EmploymentType] = None
+    agency: Optional[str] = None
     job_posted_date: Optional[datetime] = None
     application_deadline: Optional[datetime] = None
     company_job_id: Optional[str] = None

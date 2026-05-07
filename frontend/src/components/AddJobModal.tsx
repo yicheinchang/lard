@@ -15,6 +15,7 @@ interface AddJobModalProps {
 
 const initialFormData: Partial<Job> = {
   company: '', role: '', url: '', status: 'Wishlist',
+  employment_type: 'FTE', agency: '',
   location: '', company_job_id: '', hr_email: '', hiring_manager_name: '',
   hiring_manager_email: '', headhunter_name: '', headhunter_email: '',
   job_posted_date: '', application_deadline: '', description: '', salary_range: '',
@@ -23,15 +24,16 @@ const initialFormData: Partial<Job> = {
 
 // ── Helper Components (Defined outside to prevent focus loss) ──
 
-const InputField = ({ label, field, value, onChange, type = "text", placeholder }: {
-  label: string; field: keyof Job; value: string; onChange: (value: string) => void; type?: string; placeholder?: string;
+const InputField = ({ label, field, value, onChange, type = "text", placeholder, required = false }: {
+  label: string; field: keyof Job; value: string; onChange: (value: string) => void; type?: string; placeholder?: string; required?: boolean;
 }) => (
   <div className="flex flex-col gap-1">
     <label className="text-xs text-gray-400">{label}</label>
     <input
       type={type}
       placeholder={placeholder}
-      className="w-full bg-black/40 border border-white/10 rounded-lg px-3 py-2 text-white placeholder-gray-500 focus:outline-none focus:border-violet-500 transition-colors text-sm"
+      required={required}
+      className="w-full bg-[var(--input-bg)] border border-white/10 rounded-lg px-3 py-2 text-[var(--fg)] placeholder-gray-500 focus:outline-none focus:border-violet-500 transition-colors text-sm"
       value={value}
       onChange={(e) => onChange(e.target.value)}
     />
@@ -629,19 +631,47 @@ export const AddJobModal: React.FC<AddJobModalProps> = ({ isOpen, onClose, onAdd
                 </div>
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-300 mb-1">Role *</label>
-                <div className="relative">
-                  <Briefcase className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
-                  <input
-                    type="text"
+              <div className="flex flex-col md:flex-row gap-4">
+                <div className="flex-[3]">
+                  <label className="block text-sm font-medium text-gray-300 mb-1">Role *</label>
+                  <div className="relative">
+                    <Briefcase className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
+                    <input
+                      type="text"
+                      required
+                      className="w-full bg-[var(--input-bg)] border border-white/10 rounded-lg pl-10 pr-4 py-2 text-[var(--fg)] placeholder-gray-500 focus:outline-none focus:border-violet-500 transition-colors text-sm"
+                      value={formData.role}
+                      onChange={(e) => handleChange('role', e.target.value)}
+                    />
+                  </div>
+                </div>
+                <div className="flex-[2] md:max-w-[180px]">
+                  <label className="block text-sm font-medium text-gray-300 mb-1">Role Type *</label>
+                  <select
                     required
-                    className="w-full bg-black/40 border border-white/10 rounded-lg pl-10 pr-4 py-2 text-white placeholder-gray-500 focus:outline-none focus:border-violet-500 transition-colors"
-                    value={formData.role}
-                    onChange={(e) => handleChange('role', e.target.value)}
-                  />
+                    className="w-full bg-[var(--input-bg)] border border-white/10 rounded-lg px-3 py-2 text-[var(--fg)] focus:outline-none focus:border-violet-500 transition-colors cursor-pointer text-sm"
+                    value={formData.employment_type || 'FTE'}
+                    onChange={(e) => handleChange('employment_type', e.target.value)}
+                  >
+                    <option value="FTE">Full-time (FTE)</option>
+                    <option value="Contractor">Contractor</option>
+                    <option value="Consultant">Consultant</option>
+                  </select>
                 </div>
               </div>
+
+              {formData.employment_type === 'Contractor' && (
+                <div className="animate-fade-in">
+                  <InputField 
+                    label="Agency Name *" 
+                    field="agency" 
+                    value={formData.agency || ''}
+                    onChange={(val) => handleChange('agency', val)}
+                    placeholder="e.g. Robert Half, Teksystems..."
+                    required={true}
+                  />
+                </div>
+              )}
 
               <StatusSelect 
                 value={formData.status || 'Wishlist'} 

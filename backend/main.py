@@ -31,6 +31,34 @@ async def lifespan(app: FastAPI):
     # Startup: Ensure database tables exist
     from database.relational import engine, Base
     Base.metadata.create_all(bind=engine)
+    
+    # Standardize existing records and ensure columns exist
+    from sqlalchemy import text
+    try:
+        with engine.connect() as conn:
+            # 1. Ensure columns exist (SQLite doesn't support IF NOT EXISTS in ALTER TABLE)
+            # We try to add them and catch the error if they already exist
+            try:
+                conn.execute(text("ALTER TABLE job_applications ADD COLUMN employment_type VARCHAR(20)"))
+                conn.commit()
+                print("INFO:     Added missing column 'employment_type'")
+            except Exception:
+                pass # Already exists
+            
+            try:
+                conn.execute(text("ALTER TABLE job_applications ADD COLUMN agency TEXT"))
+                conn.commit()
+                print("INFO:     Added missing column 'agency'")
+            except Exception:
+                pass # Already exists
+
+            # 2. Normalize NULL -> FTE
+            conn.execute(text("UPDATE job_applications SET employment_type = 'FTE' WHERE employment_type IS NULL"))
+            conn.commit()
+            print("INFO:     Database normalization complete (employment_type -> FTE)")
+    except Exception as e:
+        print(f"WARNING:  Failed to normalize database: {e}")
+
     print("INFO:     Application startup complete (Database Ready)")
     
     threading.Thread(target=_preload_ai_components, daemon=True).start()
