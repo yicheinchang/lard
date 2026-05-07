@@ -35,6 +35,7 @@ export default function Home() {
     staleDays: 14,
     showOnlyStale: false,
     statuses: [],
+    employmentTypes: [],
     starStatus: 'all',
   };
   const [filterCriteria, setFilterCriteria] = useState<FilterCriteria>(initialFilterCriteria);
@@ -46,6 +47,7 @@ export default function Home() {
       filterCriteria.showOnlyClosingSoon === true ||
       filterCriteria.showOnlyStale === true ||
       filterCriteria.statuses.length > 0 ||
+      filterCriteria.employmentTypes.length > 0 ||
       (filterCriteria.starStatus !== undefined && filterCriteria.starStatus !== 'all')
     );
   }, [filterCriteria]);
@@ -87,7 +89,12 @@ export default function Home() {
         if (!filterCriteria.statuses.includes(job.status)) return false;
       }
 
-      // 3. Activity Date Range Filter
+      // 3. Role Type Filter
+      if (filterCriteria.employmentTypes.length > 0) {
+        if (!filterCriteria.employmentTypes.includes(job.employment_type || '')) return false;
+      }
+
+      // 4. Activity Date Range Filter
       if (filterCriteria.appliedDateStart || filterCriteria.appliedDateEnd) {
         const start = filterCriteria.appliedDateStart ? new Date(filterCriteria.appliedDateStart) : null;
         const end = filterCriteria.appliedDateEnd ? new Date(filterCriteria.appliedDateEnd) : null;
@@ -181,12 +188,24 @@ export default function Home() {
 
     return result;
   }, [jobs, searchQuery, sortKey, sortDir, filterCriteria]);
-
   const availableStatuses = useMemo(() => {
     const defaultStatuses = ["Wishlist", "Applied", "Interviewing", "Offered", "Rejected", "Closed", "Discontinued"];
     const foundStatuses = Array.from(new Set(jobs.map(j => j.status)));
     return Array.from(new Set([...defaultStatuses, ...foundStatuses])).sort();
   }, [jobs]);
+
+  const [availableEmploymentTypes, setAvailableEmploymentTypes] = useState<string[]>([]);
+  const fetchEmploymentTypes = async () => {
+    try {
+      const { getEmploymentTypes } = await import('@/lib/api');
+      const types = await getEmploymentTypes();
+      setAvailableEmploymentTypes(types);
+    } catch (error) {
+      console.error('Failed to fetch employment types', error);
+      // Fallback to defaults if API fails
+      setAvailableEmploymentTypes(["FTE", "Contractor", "Consultant"]);
+    }
+  };
 
   const fetchJobs = async () => {
     setIsLoading(true);
@@ -206,6 +225,7 @@ export default function Home() {
 
   useEffect(() => {
     fetchJobs();
+    fetchEmploymentTypes();
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Reset overlays when switching views
@@ -470,6 +490,7 @@ export default function Home() {
               onChange={setFilterCriteria}
               onClear={() => setFilterCriteria(initialFilterCriteria)}
               availableStatuses={availableStatuses}
+              availableEmploymentTypes={availableEmploymentTypes}
             />
           </div>
 

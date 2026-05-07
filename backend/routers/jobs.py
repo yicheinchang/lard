@@ -484,6 +484,10 @@ def read_companies(db: Session = Depends(get_db)):
 def get_step_types(db: Session = Depends(get_db)):
     return db.query(StepType).all()
 
+@router.get("/jobs/employment-types", response_model=List[str])
+def get_employment_types():
+    return [e.value for e in EmploymentType]
+
 @router.post("/jobs/{job_id}/steps", response_model=InterviewStepResponse)
 def add_interview_step(job_id: int, step: InterviewStepCreate, db: Session = Depends(get_db)):
     db_job = db.query(JobApplication).filter(JobApplication.id == job_id).first()

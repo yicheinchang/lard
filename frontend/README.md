@@ -1,4 +1,4 @@
-# 🐱 Lard - Frontend (v0.71.0)
+# 🐱 Lard - Frontend (v0.75.0)
 
 Next.js-based high-performance frontend for the **Lard** (Lazy AI-powered Resume Database) application.
 
@@ -57,7 +57,7 @@ As the AI assistant cannot access a browser, the following must be manually veri
 
 ---
 Built with ❤️ by Antigravity.
-Final version synchronized with v0.71.0.
+Final version synchronized with v0.75.0.
 
 ---
 

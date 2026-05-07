@@ -1,5 +1,5 @@
-# 🗺️ Lard - Lazy AI-Powered Resume Database (v0.74.1)
-Last Updated: 2026-05-07T18:24:00Z
+# 🗺️ Lard - Lazy AI-Powered Resume Database (v0.75.0)
+Last Updated: 2026-05-07T23:43:00Z
 
 This document provides a summary of the project's architecture, tech stack, and key logic to give AI coding agents instant context.
 
@@ -238,8 +238,9 @@ Global configuration persisted on the server (`app_settings.json`).
 
 ### Jobs (`/api/jobs`)
 - `GET /jobs`: List all job applications with nested steps and documents.
+- `GET /api/jobs/employment-types`: Returns the list of available role types (controlled vocabulary) from the database model.
 - `POST /jobs`: Create a new application with auto-linkage to a `Company`.
-- `PUT /api/jobs/{id}/stream`: Streamed job info update.
+- `POST /api/jobs/stream`: Streamed job info update.
 - `PUT /api/jobs/{id}`: Standard (atomic) job info update.
 - `DELETE /jobs/{id}`: Remove a job application and all associated data.
 - `POST /jobs/check-duplicate`: Performs URL, JobID, and Role-based similarity checks.

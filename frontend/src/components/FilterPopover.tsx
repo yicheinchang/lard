@@ -12,6 +12,7 @@ export interface FilterCriteria {
   staleDays: number;
   showOnlyStale: boolean;
   statuses: string[];
+  employmentTypes: string[];
   starStatus?: 'all' | 'starred' | 'unstarred';
 }
 
@@ -22,6 +23,7 @@ interface FilterPopoverProps {
   onChange: (criteria: FilterCriteria) => void;
   onClear: () => void;
   availableStatuses: string[];
+  availableEmploymentTypes: string[];
 }
 
 export const FilterPopover: React.FC<FilterPopoverProps> = ({
@@ -31,6 +33,7 @@ export const FilterPopover: React.FC<FilterPopoverProps> = ({
   onChange,
   onClear,
   availableStatuses,
+  availableEmploymentTypes,
 }) => {
   const [localCriteria, setLocalCriteria] = useState<FilterCriteria>(criteria);
 
@@ -52,6 +55,13 @@ export const FilterPopover: React.FC<FilterPopoverProps> = ({
       ? localCriteria.statuses.filter(s => s !== status)
       : [...localCriteria.statuses, status];
     handleUpdate({ statuses: newStatuses });
+  };
+
+  const toggleEmploymentType = (type: string) => {
+    const newTypes = localCriteria.employmentTypes.includes(type)
+      ? localCriteria.employmentTypes.filter(t => t !== type)
+      : [...localCriteria.employmentTypes, type];
+    handleUpdate({ employmentTypes: newTypes });
   };
 
   return (
@@ -204,6 +214,29 @@ export const FilterPopover: React.FC<FilterPopoverProps> = ({
                   />
                 </div>
                 <p className="text-[10px] text-[var(--fg-subtle)] italic leading-tight font-medium">Shows jobs with no updates for more than {localCriteria.staleDays} days.</p>
+              </div>
+            </div>
+
+            {/* Employment Type Filter */}
+            <div className="space-y-3">
+              <label className="flex items-center gap-2 text-xs font-semibold text-[var(--fg-muted)] uppercase tracking-wider">
+                <SlidersHorizontal className="w-4 h-4" />
+                Role Type
+              </label>
+              <div className="flex flex-wrap gap-2">
+                {availableEmploymentTypes.map((type) => (
+                  <button
+                    key={type}
+                    onClick={() => toggleEmploymentType(type)}
+                    className={`px-3 py-1.5 rounded-full text-[11px] font-semibold transition-all border ${
+                      localCriteria.employmentTypes.includes(type)
+                        ? 'bg-violet-500 text-white border-violet-500 shadow-lg shadow-violet-500/20'
+                        : 'bg-[var(--surface-hover)] border-[var(--border-color)] text-[var(--fg-muted)] hover:bg-[var(--surface)]'
+                    }`}
+                  >
+                    {type}
+                  </button>
+                ))}
               </div>
             </div>
 

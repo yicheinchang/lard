@@ -295,6 +295,11 @@ export const getCompanies = async (): Promise<{id: number, name: string}[]> => {
   return response.data;
 };
 
+export const getEmploymentTypes = async (): Promise<string[]> => {
+  const response = await api.get('/jobs/employment-types');
+  return response.data;
+};
+
 export const checkJobDuplicate = async (data: { company: string, role: string, url?: string, company_job_id?: string }) => {
   return checkDuplicateAction(data);
 };
