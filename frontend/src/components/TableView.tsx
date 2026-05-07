@@ -157,11 +157,14 @@ export const TableView: React.FC<TableViewProps> = ({ jobs, onUpdateStatus, onJo
               </tr>
             ) : (
               filteredAndSorted.map((job) => (
-                <tr
-                  key={job.id}
-                  onClick={() => onJobClick(job)}
-                  className="border-b border-white/5 hover:bg-white/[0.03] cursor-pointer transition-colors group"
-                >
+                  <tr
+                    key={job.id}
+                    onClick={() => onJobClick(job)}
+                    className={`border-b border-white/5 hover:bg-white/[0.03] cursor-pointer transition-colors group ${
+                      job.employment_type === 'Contractor' ? 'border-l-4 border-l-amber-500/50' : 
+                      job.employment_type === 'Consultant' ? 'border-l-4 border-l-blue-500/50' : ''
+                    }`}
+                  >
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-2">
                       {onToggleStar && (
@@ -186,20 +189,9 @@ export const TableView: React.FC<TableViewProps> = ({ jobs, onUpdateStatus, onJo
                     </Tooltip>
                   </td>
                   <td className="px-4 py-3">
-                    <div className="flex items-center gap-1.5">
-                      <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium border ${statusBadgeColors[job.status] || 'text-gray-400 bg-white/5 border-white/10'}`}>
-                        {job.status}
-                      </span>
-                      {job.employment_type && job.employment_type !== 'FTE' && (
-                        <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-tight border ${
-                          job.employment_type === 'Contractor' 
-                            ? 'border-amber-500/30 bg-amber-500/10 text-amber-500' 
-                            : 'border-blue-500/30 bg-blue-500/10 text-blue-500'
-                        }`}>
-                          {job.employment_type}
-                        </span>
-                      )}
-                    </div>
+                    <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium border ${statusBadgeColors[job.status] || 'text-gray-400 bg-white/5 border-white/10'}`}>
+                      {job.status}
+                    </span>
                   </td>
                   <td className="px-4 py-3 text-gray-400">{job.location || '—'}</td>
                   <td className="px-4 py-3 text-gray-400">
