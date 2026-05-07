@@ -12,6 +12,7 @@ import { DocumentPreview } from './DocumentPreview';
 import { ProcessingOverlay } from './ProcessingOverlay';
 import { AutoSaveIndicator } from './AutoSaveIndicator';
 import { Portal } from './Portal';
+import { parseContact } from '@/lib/utils';
 
 import { useView } from '@/lib/ViewContext';
 import { useSettings } from '@/lib/SettingsContext';
@@ -610,6 +611,15 @@ export const JobDetailView: React.FC<JobDetailViewProps> = ({ job, onClose, onJo
               </h2>
               <div className="flex items-center gap-2 shrink-0">
                 <span className="text-sm px-2.5 py-1 bg-[var(--surface-hover)] rounded-full font-medium" style={{ color: 'var(--fg-muted)' }}>{job.status}</span>
+                {job.employment_type && job.employment_type !== 'FTE' && (
+                  <span className={`text-[10px] px-2 py-1 border rounded-md font-bold uppercase tracking-wider ${
+                    job.employment_type === 'Contractor' 
+                      ? 'border-amber-500/30 bg-amber-500/10 text-amber-500' 
+                      : 'border-blue-500/30 bg-blue-500/10 text-blue-500'
+                  }`}>
+                    {job.employment_type}
+                  </span>
+                )}
                 {job.last_operation && (
                   <span className="text-[10px] px-2 py-1 bg-violet-500/10 text-violet-400 border border-violet-500/10 rounded-md font-medium flex items-center gap-1.5 whitespace-nowrap">
                     <span className="w-1 h-1 bg-violet-400 rounded-full animate-pulse"></span>
@@ -1126,7 +1136,15 @@ export const JobDetailView: React.FC<JobDetailViewProps> = ({ job, onClose, onJo
                       </div>
                       <div className="flex flex-col gap-1">
                         <label className="text-xs text-[var(--fg-subtle)]">HR / Recruiter Email</label>
-                        <input className="bg-[var(--bg)] border border-[var(--border-color)] rounded-md px-2 py-1 text-sm text-[var(--fg)] focus:outline-none focus:border-violet-500" value={editFormData.hr_email || ''} onChange={e => handleEditChange('hr_email', e.target.value)} />
+                        <input className="bg-[var(--bg)] border border-[var(--border-color)] rounded-md px-2 py-1 text-sm text-[var(--fg)] focus:outline-none focus:border-violet-500" value={editFormData.hr_email || ''} onChange={e => handleEditChange('hr_email', e.target.value)} placeholder="Name <email@address.com>" />
+                      </div>
+                      <div className="flex flex-col gap-1">
+                        <label className="text-xs text-[var(--fg-subtle)]">Headhunter Name</label>
+                        <input className="bg-[var(--bg)] border border-[var(--border-color)] rounded-md px-2 py-1 text-sm text-[var(--fg)] focus:outline-none focus:border-violet-500" value={editFormData.headhunter_name || ''} onChange={e => handleEditChange('headhunter_name', e.target.value)} />
+                      </div>
+                      <div className="flex flex-col gap-1">
+                        <label className="text-xs text-[var(--fg-subtle)]">Headhunter Email</label>
+                        <input className="bg-[var(--bg)] border border-[var(--border-color)] rounded-md px-2 py-1 text-sm text-[var(--fg)] focus:outline-none focus:border-violet-500" type="email" value={editFormData.headhunter_email || ''} onChange={e => handleEditChange('headhunter_email', e.target.value)} placeholder="Name <email@address.com>" />
                       </div>
                     </div>
 
@@ -1170,21 +1188,66 @@ export const JobDetailView: React.FC<JobDetailViewProps> = ({ job, onClose, onJo
 
                     <div>
                       <span className="text-[var(--fg-subtle)] block mb-1">Hiring Manager</span>
-                      {(job.hiring_manager_name || job.hiring_manager_email) ? (
-                        <div className="glass p-3 rounded-lg flex flex-col gap-1">
-                          <span className="text-[var(--fg)] font-medium flex items-center gap-2"><User className="w-3.5 h-3.5" /> {job.hiring_manager_name || 'Unknown Name'}</span>
-                          {job.hiring_manager_email && <a href={`mailto:${job.hiring_manager_email}`} className="text-violet-500 hover:underline flex items-center gap-2"><Mail className="w-3.5 h-3.5" /> Mail</a>}
-                        </div>
-                      ) : <span className="text-[var(--fg-subtle)] italic">Not specified</span>}
+                      {(job.hiring_manager_name || job.hiring_manager_email) ? (() => {
+                        const parsed = parseContact(job.hiring_manager_email || null);
+                        const displayName = job.hiring_manager_name || parsed.name || 'Hiring Manager';
+                        const displayEmail = parsed.email || job.hiring_manager_email;
+                        
+                        return (
+                          <div className="glass p-3 rounded-lg flex flex-col gap-1">
+                            <span className="text-[var(--fg)] font-medium flex items-center gap-2">
+                              <User className="w-3.5 h-3.5" /> {displayName}
+                            </span>
+                            {displayEmail && (
+                              <a href={`mailto:${displayEmail}`} className="text-violet-500 hover:underline flex items-center gap-2">
+                                <Mail className="w-3.5 h-3.5" /> Mail
+                              </a>
+                            )}
+                          </div>
+                        );
+                      })() : <span className="text-[var(--fg-subtle)] italic">Not specified</span>}
                     </div>
 
                     <div>
                       <span className="text-[var(--fg-subtle)] block mb-1">HR / Recruiter</span>
-                      {job.hr_email ? (
-                        <div className="glass p-3 rounded-lg flex flex-col gap-1">
-                          <a href={`mailto:${job.hr_email}`} className="text-violet-500 hover:underline flex items-center gap-2"><Mail className="w-3.5 h-3.5" /> {job.hr_email}</a>
-                        </div>
-                      ) : <span className="text-[var(--fg-subtle)] italic">Not specified</span>}
+                      {job.hr_email ? (() => {
+                        const parsed = parseContact(job.hr_email);
+                        const displayName = parsed.name || 'HR / Recruiter';
+                        const displayEmail = parsed.email || job.hr_email;
+
+                        return (
+                          <div className="glass p-3 rounded-lg flex flex-col gap-1">
+                            <span className="text-[var(--fg)] font-medium flex items-center gap-2">
+                              <User className="w-3.5 h-3.5" /> {displayName}
+                            </span>
+                            <a href={`mailto:${displayEmail}`} className="text-violet-500 hover:underline flex items-center gap-2">
+                              <Mail className="w-3.5 h-3.5" /> Mail
+                            </a>
+                          </div>
+                        );
+                      })() : <span className="text-[var(--fg-subtle)] italic">Not specified</span>}
+                    </div>
+
+                    <div>
+                      <span className="text-[var(--fg-subtle)] block mb-1">Headhunter</span>
+                      {(job.headhunter_name || job.headhunter_email) ? (() => {
+                        const parsed = parseContact(job.headhunter_email || null);
+                        const displayName = job.headhunter_name || parsed.name || 'Headhunter';
+                        const displayEmail = parsed.email || job.headhunter_email;
+
+                        return (
+                          <div className="glass p-3 rounded-lg flex flex-col gap-1">
+                            <span className="text-[var(--fg)] font-medium flex items-center gap-2">
+                              <User className="w-3.5 h-3.5" /> {displayName}
+                            </span>
+                            {displayEmail && (
+                              <a href={`mailto:${displayEmail}`} className="text-violet-500 hover:underline flex items-center gap-2">
+                                <Mail className="w-3.5 h-3.5" /> Mail
+                              </a>
+                            )}
+                          </div>
+                        );
+                      })() : <span className="text-[var(--fg-subtle)] italic">Not specified</span>}
                     </div>
 
                     <div className="grid grid-cols-2 gap-4 pt-4 border-t border-[var(--border-color)]">

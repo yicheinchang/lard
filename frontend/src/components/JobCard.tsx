@@ -150,10 +150,21 @@ export const JobCard: React.FC<JobCardProps> = ({ job, onUpdateStatus, onClick, 
         </div>
 
         <div className="flex items-center justify-between border-t border-white/5 pt-2 mt-1 relative">
-          <span className={`px-2 py-0.5 rounded-full text-[10px] uppercase tracking-wider font-semibold flex items-center gap-1.5 shrink-0 whitespace-nowrap ${statusColors[job.status] || 'text-[var(--fg-subtle)] bg-[var(--surface-hover)]'}`}>
-            {statusIcons[job.status]}
-            {job.status}
-          </span>
+          <div className="flex items-center gap-1.5">
+            <span className={`px-2 py-0.5 rounded-full text-[10px] uppercase tracking-wider font-semibold flex items-center gap-1.5 shrink-0 whitespace-nowrap ${statusColors[job.status] || 'text-[var(--fg-subtle)] bg-[var(--surface-hover)]'}`}>
+              {statusIcons[job.status]}
+              {job.status}
+            </span>
+            {job.employment_type && job.employment_type !== 'FTE' && (
+              <span className={`px-1.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-tighter border ${
+                job.employment_type === 'Contractor' 
+                  ? 'border-amber-500/30 bg-amber-500/10 text-amber-500' 
+                  : 'border-blue-500/30 bg-blue-500/10 text-blue-500'
+              }`}>
+                {job.employment_type}
+              </span>
+            )}
+          </div>
 
           {hasActions && (
             <div className="flex items-center gap-0.5 opacity-100 lg:opacity-0 lg:group-hover:opacity-100 transition-all translate-x-0 lg:translate-x-2 lg:group-hover:translate-x-0">

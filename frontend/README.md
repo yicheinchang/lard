@@ -1,4 +1,4 @@
-# 🐱 Lard - Frontend (v0.67.5)
+# 🐱 Lard - Frontend (v0.71.0)
 
 Next.js-based high-performance frontend for the **Lard** (Lazy AI-powered Resume Database) application.
 
@@ -35,6 +35,7 @@ The Settings page includes a sophisticated sub-section for AI prompt management:
 - **Granular Baseline Resets**: Restore any of the 18+ system prompts to factory defaults individually.
 - **Context-Aware Filtering**: Automatically hides prompts irrelevant to the active Extraction Strategy (Single vs Multi-Agent).
 - **Additive Guidance**: Field-specific instruction tabs for fine-tuning extraction without modifying core prompts.
+- **Smart Contact Display**: Uses a dedicated `parseContact` utility to support `Name <email>` formats across all contact fields (Hiring Manager, Recruiter, Headhunter).
 
 ---
 
@@ -56,7 +57,7 @@ As the AI assistant cannot access a browser, the following must be manually veri
 
 ---
 Built with ❤️ by Antigravity.
-Final version synchronized with v0.67.5.
+Final version synchronized with v0.71.0.
 
 ---
 

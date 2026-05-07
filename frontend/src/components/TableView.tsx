@@ -186,9 +186,20 @@ export const TableView: React.FC<TableViewProps> = ({ jobs, onUpdateStatus, onJo
                     </Tooltip>
                   </td>
                   <td className="px-4 py-3">
-                    <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium border ${statusBadgeColors[job.status] || 'text-gray-400 bg-white/5 border-white/10'}`}>
-                      {job.status}
-                    </span>
+                    <div className="flex items-center gap-1.5">
+                      <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium border ${statusBadgeColors[job.status] || 'text-gray-400 bg-white/5 border-white/10'}`}>
+                        {job.status}
+                      </span>
+                      {job.employment_type && job.employment_type !== 'FTE' && (
+                        <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-tight border ${
+                          job.employment_type === 'Contractor' 
+                            ? 'border-amber-500/30 bg-amber-500/10 text-amber-500' 
+                            : 'border-blue-500/30 bg-blue-500/10 text-blue-500'
+                        }`}>
+                          {job.employment_type}
+                        </span>
+                      )}
+                    </div>
                   </td>
                   <td className="px-4 py-3 text-gray-400">{job.location || '—'}</td>
                   <td className="px-4 py-3 text-gray-400">

@@ -5,9 +5,10 @@ from sqlalchemy.orm import Session, joinedload
 import os
 import shutil
 import json
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, field_validator
 from typing import List, Optional
 from datetime import datetime, timezone
+import email.utils
 from database.relational import get_db
 from database.models import JobApplication, InterviewStep, StepType, DocumentMeta, Company, EmploymentType
 from config import UPLOADS_DIR
@@ -82,6 +83,17 @@ class JobBase(BaseModel):
     last_operation: Optional[str] = None
     is_starred: Optional[bool] = False
 
+    @field_validator("hr_email", "hiring_manager_email", "headhunter_email")
+    @classmethod
+    def validate_contact_email(cls, v: Optional[str]) -> Optional[str]:
+        if not v or not v.strip():
+            return None
+        # email.utils.parseaddr handles "Name <email@address.com>" and returns (name, email)
+        _, parsed_email = email.utils.parseaddr(v)
+        if not parsed_email or "@" not in parsed_email:
+            raise ValueError(f"Invalid email format: {v}")
+        return v
+
 class JobCreate(JobBase):
     pass
 
@@ -111,6 +123,18 @@ class JobUpdate(BaseModel):
     closed_date: Optional[datetime] = None
     last_operation: Optional[str] = None
     is_starred: Optional[bool] = None
+
+    @field_validator("hr_email", "hiring_manager_email", "headhunter_email")
+    @classmethod
+    def validate_contact_email(cls, v: Optional[str]) -> Optional[str]:
+        if v is None:
+            return None
+        if not v.strip():
+            return None
+        _, parsed_email = email.utils.parseaddr(v)
+        if not parsed_email or "@" not in parsed_email:
+            raise ValueError(f"Invalid email format: {v}")
+        return v
 
 class JobResponse(JobBase):
     id: int

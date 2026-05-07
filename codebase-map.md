@@ -1,5 +1,5 @@
-# 🗺️ Lard - Lazy AI-Powered Resume Database (v0.70.0)
-Last Updated: 2026-05-07T04:23:00Z
+# 🗺️ Lard - Lazy AI-Powered Resume Database (v0.72.0)
+Last Updated: 2026-05-07T15:45:00Z
 
 This document provides a summary of the project's architecture, tech stack, and key logic to give AI coding agents instant context.
 
@@ -50,7 +50,7 @@ This document provides a summary of the project's architecture, tech stack, and 
 - `routers/`:
   - `jobs.py`: 
     *   `Company`: Represents a company/organization. Ensures consistency.
-    *   `JobApplication`: Tracks job details, status, and linked documents/steps. Linked to `Company`.
+    *   `JobApplication`: Tracks job details, status, and linked documents/steps. Linked to `Company`. Includes robust contact validation for Hiring Manager, HR, and Headhunter using `email.utils`.
     *   `InterviewStep`: Individual process steps (e.g., "Phone Screen").
   - `ai.py`: AI Assistant chat and data extraction endpoints. Includes SSE streaming for progress updates.
   - `settings.py`: Application configuration endpoints.
@@ -82,7 +82,7 @@ This document provides a summary of the project's architecture, tech stack, and 
 
   - `JobDetailView.tsx`: Core component for job application management. Rendered via **React Portal** for global stacking. Features a **Centered Floating Modal** with a backdrop-blur overlay and a **Full-Screen Toggle**. Includes **Dynamic Default Tab Selection**: Defaults to "Job Details" for Wishlist/Applied status, and "Interview Process" for all other active stages. Consists of three tabs:
       *   **Interview Pipeline** (Default): Timeline events with full CRUD and inline editing.
-      *   **Job Details**: Metadata management and document attachments. Features a **Zoomable Description** with levels from `prose-sm` to `prose-2xl` and a quick-reset toggle. Includes a **Temporary Theme Toggle** next to zoom controls for switching between light and dark modes locally. Supports theme-consistent **Markdown Editing** and high-fidelity **Document Previews**.
+      *   **Job Details**: Metadata management and document attachments. Features a **Zoomable Description** with levels from `prose-sm` to `prose-2xl` and a quick-reset toggle. Includes a **Temporary Theme Toggle** next to zoom controls for switching between light and dark modes locally. Supports theme-consistent **Markdown Editing** and high-fidelity **Document Previews**. **Contact Metadata**: Implements smart display logic for Hiring Manager, HR/Recruiter, and Headhunter, supporting `Name <email>` formats with automatic name extraction fallback.
       *   **Application Notes**: Dedicated Markdown editor (`MdEditor`) for research and interview prep.
   - `DocumentPreview.tsx`: **Portal-based overlay** for high-fidelity viewing of PDF, Markdown, and plain text documents.
   - `Ticker.tsx`: News-ticker style progress bar for real-time AI extraction status.

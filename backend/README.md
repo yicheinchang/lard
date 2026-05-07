@@ -141,7 +141,13 @@ graph TD
 
 Regardless of strategy, the following core features ensure 100% extraction fidelity:
 
-### 2. QA Validation Loop (Circuit Breaker)
+### 3. Contact Metadata Parsing
+The system supports flexible contact formats for Hiring Managers, Recruiters, and Headhunters.
+- **RFC 5322 Support**: Uses `email.utils.parseaddr` to support `Name <email@address.com>` formats.
+- **Validation**: Pydantic `@field_validator` ensures that even with a display name, a valid email address is extracted and stored.
+- **Normalization**: Automatically handles quoted names and special characters.
+
+### 4. QA Validation Loop (Circuit Breaker)
 Each extraction is validated by a specialized **Extraction Validation Node** with a 3-retry limit:
 - **json_validator_node**: Specialized validator for JSON-LD sources. Focuses on HTML fidelity and heuristic metadata completeness. Triggers a fallback to Text mode if key metadata (Company, Role, etc.) is missing or low-quality.
 - **text_validator_node**: Specialized validator for Raw Text sources. Focuses on boundary detection and semantic completeness.

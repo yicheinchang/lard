@@ -32,6 +32,7 @@ An AI-powered, high-performance job application tracking system with automated d
 - **Verbatim Descriptions**: Preserves original job description formatting and hierarchy in Markdown using specialized extraction agents and layout-aware parsing.
 - **Centralized Truncation**: Intelligently manages context window limits based on user-configurable `num_ctx`, ensuring stable extraction on hardware-limited systems.
 - **Robust Field Validation**: Specialized `json_validator_node` and `text_validator_node` perform targeted QA on the description field, with a **3-retry limit** that injects specific failure feedback into the next extraction attempt.
+- **Smart Contact Parsing**: Advanced RFC 5322 support for Hiring Manager, Recruiter, and Headhunter fields, allowing `Name <email>` formats with automated fallback display logic.
 
 ### 📊 Powerful Visualization
 - **Dynamic Kanban**: Drag-and-drop job hunt pipeline with 4 standard stages and a specialized **Tabbed Mobile UI** for single-column focus on small screens.
@@ -163,4 +164,4 @@ This project is licensed under the **MIT License**. See the [LICENSE](LICENSE) f
 
 ---
 Built with ❤️ by Antigravity.
-Final version synchronized with v0.67.8.
+Final version synchronized with v0.71.0.
