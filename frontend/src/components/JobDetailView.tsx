@@ -1181,74 +1181,82 @@ export const JobDetailView: React.FC<JobDetailViewProps> = ({ job, onClose, onJo
                       </div>
                     )}
 
-                    <div>
-                      <span className="text-[var(--fg-subtle)] block mb-1">Company Job ID</span>
-                      <span className="text-[var(--fg-muted)] font-mono">{job.company_job_id || '-'}</span>
-                    </div>
+                    {job.company_job_id && (
+                      <div>
+                        <span className="text-[var(--fg-subtle)] block mb-1">Company Job ID</span>
+                        <span className="text-[var(--fg-muted)] font-mono">{job.company_job_id}</span>
+                      </div>
+                    )}
 
-                    <div>
-                      <span className="text-[var(--fg-subtle)] block mb-1">Hiring Manager</span>
-                      {(job.hiring_manager_name || job.hiring_manager_email) ? (() => {
-                        const parsed = parseContact(job.hiring_manager_email || null);
-                        const displayName = job.hiring_manager_name || parsed.name || 'Hiring Manager';
-                        const displayEmail = parsed.email || job.hiring_manager_email;
-                        
-                        return (
-                          <div className="glass p-3 rounded-lg flex flex-col gap-1">
-                            <span className="text-[var(--fg)] font-medium flex items-center gap-2">
-                              <User className="w-3.5 h-3.5" /> {displayName}
-                            </span>
-                            {displayEmail && (
+                    {(job.hiring_manager_name || job.hiring_manager_email) && (
+                      <div>
+                        <span className="text-[var(--fg-subtle)] block mb-1">Hiring Manager</span>
+                        {(() => {
+                          const parsed = parseContact(job.hiring_manager_email || null);
+                          const displayName = job.hiring_manager_name || parsed.name || 'Hiring Manager';
+                          const displayEmail = parsed.email || job.hiring_manager_email;
+                          
+                          return (
+                            <div className="glass p-3 rounded-lg flex flex-col gap-1">
+                              <span className="text-[var(--fg)] font-medium flex items-center gap-2">
+                                <User className="w-3.5 h-3.5" /> {displayName}
+                              </span>
+                              {displayEmail && (
+                                <a href={`mailto:${displayEmail}`} className="text-violet-500 hover:underline flex items-center gap-2">
+                                  <Mail className="w-3.5 h-3.5" /> Mail
+                                </a>
+                              )}
+                            </div>
+                          );
+                        })()}
+                      </div>
+                    )}
+
+                    {job.hr_email && (
+                      <div>
+                        <span className="text-[var(--fg-subtle)] block mb-1">HR / Recruiter</span>
+                        {(() => {
+                          const parsed = parseContact(job.hr_email);
+                          const displayName = parsed.name || 'HR / Recruiter';
+                          const displayEmail = parsed.email || job.hr_email;
+
+                          return (
+                            <div className="glass p-3 rounded-lg flex flex-col gap-1">
+                              <span className="text-[var(--fg)] font-medium flex items-center gap-2">
+                                <User className="w-3.5 h-3.5" /> {displayName}
+                              </span>
                               <a href={`mailto:${displayEmail}`} className="text-violet-500 hover:underline flex items-center gap-2">
                                 <Mail className="w-3.5 h-3.5" /> Mail
                               </a>
-                            )}
-                          </div>
-                        );
-                      })() : <span className="text-[var(--fg-subtle)] italic">Not specified</span>}
-                    </div>
+                            </div>
+                          );
+                        })()}
+                      </div>
+                    )}
 
-                    <div>
-                      <span className="text-[var(--fg-subtle)] block mb-1">HR / Recruiter</span>
-                      {job.hr_email ? (() => {
-                        const parsed = parseContact(job.hr_email);
-                        const displayName = parsed.name || 'HR / Recruiter';
-                        const displayEmail = parsed.email || job.hr_email;
+                    {(job.headhunter_name || job.headhunter_email) && (
+                      <div>
+                        <span className="text-[var(--fg-subtle)] block mb-1">Headhunter</span>
+                        {(() => {
+                          const parsed = parseContact(job.headhunter_email || null);
+                          const displayName = job.headhunter_name || parsed.name || 'Headhunter';
+                          const displayEmail = parsed.email || job.headhunter_email;
 
-                        return (
-                          <div className="glass p-3 rounded-lg flex flex-col gap-1">
-                            <span className="text-[var(--fg)] font-medium flex items-center gap-2">
-                              <User className="w-3.5 h-3.5" /> {displayName}
-                            </span>
-                            <a href={`mailto:${displayEmail}`} className="text-violet-500 hover:underline flex items-center gap-2">
-                              <Mail className="w-3.5 h-3.5" /> Mail
-                            </a>
-                          </div>
-                        );
-                      })() : <span className="text-[var(--fg-subtle)] italic">Not specified</span>}
-                    </div>
-
-                    <div>
-                      <span className="text-[var(--fg-subtle)] block mb-1">Headhunter</span>
-                      {(job.headhunter_name || job.headhunter_email) ? (() => {
-                        const parsed = parseContact(job.headhunter_email || null);
-                        const displayName = job.headhunter_name || parsed.name || 'Headhunter';
-                        const displayEmail = parsed.email || job.headhunter_email;
-
-                        return (
-                          <div className="glass p-3 rounded-lg flex flex-col gap-1">
-                            <span className="text-[var(--fg)] font-medium flex items-center gap-2">
-                              <User className="w-3.5 h-3.5" /> {displayName}
-                            </span>
-                            {displayEmail && (
-                              <a href={`mailto:${displayEmail}`} className="text-violet-500 hover:underline flex items-center gap-2">
-                                <Mail className="w-3.5 h-3.5" /> Mail
-                              </a>
-                            )}
-                          </div>
-                        );
-                      })() : <span className="text-[var(--fg-subtle)] italic">Not specified</span>}
-                    </div>
+                          return (
+                            <div className="glass p-3 rounded-lg flex flex-col gap-1">
+                              <span className="text-[var(--fg)] font-medium flex items-center gap-2">
+                                <User className="w-3.5 h-3.5" /> {displayName}
+                              </span>
+                              {displayEmail && (
+                                <a href={`mailto:${displayEmail}`} className="text-violet-500 hover:underline flex items-center gap-2">
+                                  <Mail className="w-3.5 h-3.5" /> Mail
+                                </a>
+                              )}
+                            </div>
+                          );
+                        })()}
+                      </div>
+                    )}
 
                     <div className="grid grid-cols-2 gap-4 pt-4 border-t border-[var(--border-color)]">
                       <div>
@@ -1261,29 +1269,35 @@ export const JobDetailView: React.FC<JobDetailViewProps> = ({ job, onClose, onJo
                       </div>
                     </div>
                     <div className="grid grid-cols-2 gap-4 pt-2">
-                      <div>
-                        <span className="text-[var(--fg-subtle)] block text-xs mb-1">Posted Date</span>
-                        <span className="text-[var(--fg-muted)]">{job.job_posted_date ? new Date(job.job_posted_date).toLocaleDateString() : '-'}</span>
-                      </div>
-                      <div>
-                        <span className="text-[var(--fg-subtle)] block text-xs mb-1">Deadline</span>
-                        <span className="text-[var(--fg-muted)]">{job.application_deadline ? new Date(job.application_deadline).toLocaleDateString() : '-'}</span>
-                      </div>
+                      {job.job_posted_date && (
+                        <div>
+                          <span className="text-[var(--fg-subtle)] block text-xs mb-1">Posted Date</span>
+                          <span className="text-[var(--fg-muted)]">{new Date(job.job_posted_date).toLocaleDateString()}</span>
+                        </div>
+                      )}
+                      {job.application_deadline && (
+                        <div>
+                          <span className="text-[var(--fg-subtle)] block text-xs mb-1">Deadline</span>
+                          <span className="text-[var(--fg-muted)]">{new Date(job.application_deadline).toLocaleDateString()}</span>
+                        </div>
+                      )}
                     </div>
-                    <div className="pt-2 border-t border-[var(--border-color)]">
-                      <span className="text-[var(--fg-subtle)] block text-xs mb-1 flex items-center gap-1.5"><CircleDollarSign className="w-3.5 h-3.5 text-green-500/70" /> Salary Range</span>
-                      <span className="text-[var(--fg-muted)] font-medium">{job.salary_range || 'Not specified'}</span>
-                    </div>
-                    {['Offered', 'Rejected', 'Discontinued'].includes(job.status) && (
-                      <div className="pt-2">
-                        <span className="text-[var(--fg-subtle)] block text-xs mb-1">Decision Date</span>
-                        <span className="text-[var(--fg-muted)] font-medium text-amber-400/80">{job.decision_date ? new Date(job.decision_date).toLocaleDateString() : 'Not Set'}</span>
+                    {job.salary_range && job.salary_range !== 'Not specified' && (
+                      <div className="pt-2 border-t border-[var(--border-color)]">
+                        <span className="text-[var(--fg-subtle)] block text-xs mb-1 flex items-center gap-1.5"><CircleDollarSign className="w-3.5 h-3.5 text-green-500/70" /> Salary Range</span>
+                        <span className="text-[var(--fg-muted)] font-medium">{job.salary_range}</span>
                       </div>
                     )}
-                    {job.status === 'Closed' && (
+                    {['Offered', 'Rejected', 'Discontinued'].includes(job.status) && job.decision_date && (
+                      <div className="pt-2">
+                        <span className="text-[var(--fg-subtle)] block text-xs mb-1">Decision Date</span>
+                        <span className="text-[var(--fg-muted)] font-medium text-amber-400/80">{new Date(job.decision_date).toLocaleDateString()}</span>
+                      </div>
+                    )}
+                    {job.status === 'Closed' && job.closed_date && (
                       <div className="pt-2">
                         <span className="text-[var(--fg-subtle)] block text-xs mb-1">Job Closed Date</span>
-                        <span className="text-[var(--fg-muted)] font-medium text-red-400/80">{job.closed_date ? new Date(job.closed_date).toLocaleDateString() : 'Unknown'}</span>
+                        <span className="text-[var(--fg-muted)] font-medium text-red-400/80">{new Date(job.closed_date).toLocaleDateString()}</span>
                       </div>
                     )}
 

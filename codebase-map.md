@@ -1,5 +1,5 @@
-# 🗺️ Lard - Lazy AI-Powered Resume Database (v0.76.0)
-Last Updated: 2026-05-08T20:23:00Z
+# 🗺️ Lard - Lazy AI-Powered Resume Database (v0.77.0)
+Last Updated: 2026-05-08T20:37:00Z
 
 This document provides a summary of the project's architecture, tech stack, and key logic to give AI coding agents instant context.
 
@@ -82,7 +82,7 @@ This document provides a summary of the project's architecture, tech stack, and 
 
   - `JobDetailView.tsx`: Core component for job application management. Rendered via **React Portal** for global stacking. Features a **Centered Floating Modal** with a backdrop-blur overlay and a **Full-Screen Toggle**. Includes **Dynamic Default Tab Selection**: Defaults to "Job Details" for Wishlist/Applied status, and "Interview Process" for all other active stages. Consists of three tabs:
       *   **Interview Pipeline** (Default): Timeline events with full CRUD and inline editing.
-      *   **Job Details**: Metadata management and document attachments. Features a **Zoomable Description** with levels from `prose-sm` to `prose-2xl` and a quick-reset toggle. Includes a **Temporary Theme Toggle** next to zoom controls for switching between light and dark modes locally. Supports theme-consistent **Markdown Editing** and high-fidelity **Document Previews**. **Contact Metadata**: Implements smart display logic for Hiring Manager, HR/Recruiter, and Headhunter, supporting `Name <email>` formats with automatic name extraction fallback.
+      *   **Job Details**: Metadata management and document attachments. Features a **Zoomable Description** with levels from `prose-sm` to `prose-2xl` and a quick-reset toggle. Includes a **Temporary Theme Toggle** next to zoom controls for switching between light and dark modes locally. Supports theme-consistent **Markdown Editing** and high-fidelity **Document Previews**. **Contact Metadata**: Implements smart display logic for Hiring Manager, HR/Recruiter, and Headhunter, supporting `Name <email>` formats with automatic name extraction fallback. **Conditional Rendering**: Automatically hides empty metadata fields (contacts, dates, salary, job IDs) to minimize UI clutter.
       *   **Application Notes**: Dedicated Markdown editor (`MdEditor`) for research and interview prep.
   - `DocumentPreview.tsx`: **Portal-based overlay** for high-fidelity viewing of PDF, Markdown, and plain text documents.
   - `Ticker.tsx`: News-ticker style progress bar for real-time AI extraction status.
