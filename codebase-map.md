@@ -1,5 +1,5 @@
-# 🗺️ Lard - Lazy AI-Powered Resume Database (v0.75.0)
-Last Updated: 2026-05-07T23:43:00Z
+# 🗺️ Lard - Lazy AI-Powered Resume Database (v0.76.0)
+Last Updated: 2026-05-08T20:23:00Z
 
 This document provides a summary of the project's architecture, tech stack, and key logic to give AI coding agents instant context.
 
@@ -129,8 +129,13 @@ The system enforces strict status integrity in `JobDetailView.tsx` and `page.tsx
 ### 4. Contextual AI Integration
 The `ChatAssistant` is a global component accessible from any page. It maintains its own state and can be toggled via a floating action button or keyboard shortcuts.
 
-### 5. Dynamic Theme Store
-The UI uses Tailwind CSS 4 with `globals.css`: Global CSS containing theme variables, glassmorphism utilities, and the `@plugin "@tailwindcss/typography"` registration for Markdown rendering. These variables are updated dynamically by the `SettingsContext`, supporting instant theme switching between Dark/Light and customizable accent colors. Key components like `JobDetailView` and `KanbanBoard` are fully theme-aware, ensuring readability in both Light and Dark modes. **Markdown Editor Styling**: The `MdEditor` (react-markdown-editor-lite) is customized via global CSS to ensure its preview pane correctly utilizes theme colors and Tailwind's `prose` typography standards, maintaining high legibility during editing in both themes and local overrides. **Standardized Brand Colors**: Primary action buttons across all views (Dashboard, Settings, Details, Filters) use the `--primary` brand color with high-contrast white text for consistent accessibility. **Sticky UI Components**: Modals and Filter Popovers use fixed footers to keep action buttons accessible without scrolling.
+### 5. Universal Theme Architecture
+The UI implements a **Universal Theme Consistency** model using Tailwind CSS 4 and `globals.css`. 
+- **Variable-First Architecture**: Avoids hard-coded utility classes (e.g., `text-white`, `text-gray-400`) in favor of root-level CSS variables (`--bg`, `--fg`, `--surface`, `--border-color`). This ensures the entire UI dynamically adapts to `light` or `dark` modes.
+- **CSS Safety Nets**: Implements aggressive resets in `globals.css` to force readability. Form fields, textareas, and selects are locked to `--fg` and `--input-bg` variables using `!important` to prevent inheritance of legacy dark-mode styles.
+- **Legacy Mitigation**: A "Force Readable" rule automatically maps `.text-white` to `var(--fg)` in light mode, with specific exemptions for primary brand buttons to maintain visual hierarchy.
+- **Markdown Consistency**: The `MdEditor` (react-markdown-editor-lite) and Tailwind `prose` styles are synchronized via CSS variables, ensuring high-fidelity Markdown rendering across all themes.
+- **Theme store**: Settings are updated dynamically by `SettingsContext`, supporting dark/light switching and brand accent customization.
 
 ---
 

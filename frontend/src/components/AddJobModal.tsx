@@ -28,12 +28,12 @@ const InputField = ({ label, field, value, onChange, type = "text", placeholder,
   label: string; field: keyof Job; value: string; onChange: (value: string) => void; type?: string; placeholder?: string; required?: boolean;
 }) => (
   <div className="flex flex-col gap-1">
-    <label className="text-xs text-gray-400">{label}</label>
+    <label className="text-xs text-[var(--fg-muted)]">{label}</label>
     <input
       type={type}
       placeholder={placeholder}
       required={required}
-      className="w-full bg-[var(--input-bg)] border border-white/10 rounded-lg px-3 py-2 text-[var(--fg)] placeholder-gray-500 focus:outline-none focus:border-violet-500 transition-colors text-sm"
+      className="w-full bg-[var(--input-bg)] border border-[var(--border-color)] rounded-lg px-3 py-2 text-[var(--fg)] placeholder-gray-500 focus:outline-none focus:border-violet-500 transition-colors text-sm"
       value={value}
       onChange={(e) => onChange(e.target.value)}
     />
@@ -44,19 +44,19 @@ const StatusSelect = ({ value, appliedDate, onChange }: {
   value: string; appliedDate?: string; onChange: (value: string) => void; 
 }) => (
   <div className="flex flex-col gap-1">
-    <label className="text-xs text-gray-400">Initial Status</label>
+    <label className="text-xs text-[var(--fg-muted)]">Initial Status</label>
     <select
-      className="w-full bg-black/40 border border-white/10 rounded-lg px-3 py-2 text-white outline-none focus:border-violet-500 transition-colors text-sm appearance-none cursor-pointer"
+      className="w-full bg-[var(--input-bg)] border border-[var(--border-color)] rounded-lg px-3 py-2 text-[var(--fg)] outline-none focus:border-violet-500 transition-colors text-sm appearance-none cursor-pointer"
       value={value || 'Wishlist'}
       onChange={(e) => onChange(e.target.value)}
     >
-      <option value="Wishlist" className="bg-[#1a1a24] text-white">Wishlist</option>
-      <option value="Applied" className="bg-[#1a1a24] text-white">Applied</option>
-      <option value="Interviewing" className="bg-[#1a1a24] text-white" disabled={!appliedDate}>Interviewing (Requires Applied Date)</option>
-      <option value="Offered" className="bg-[#1a1a24] text-white" disabled={!appliedDate}>Offered (Requires Applied Date)</option>
-      <option value="Rejected" className="bg-[#1a1a24] text-white" disabled={!appliedDate}>Rejected (Requires Applied Date)</option>
-      <option value="Closed" className="bg-[#1a1a24] text-white">Closed</option>
-      <option value="Discontinued" className="bg-[#1a1a24] text-white">Discontinued</option>
+      <option value="Wishlist" className="bg-[var(--surface-alt)] text-[var(--fg)]">Wishlist</option>
+      <option value="Applied" className="bg-[var(--surface-alt)] text-[var(--fg)]">Applied</option>
+      <option value="Interviewing" className="bg-[var(--surface-alt)] text-[var(--fg)]" disabled={!appliedDate}>Interviewing (Requires Applied Date)</option>
+      <option value="Offered" className="bg-[var(--surface-alt)] text-[var(--fg)]" disabled={!appliedDate}>Offered (Requires Applied Date)</option>
+      <option value="Rejected" className="bg-[var(--surface-alt)] text-[var(--fg)]" disabled={!appliedDate}>Rejected (Requires Applied Date)</option>
+      <option value="Closed" className="bg-[var(--surface-alt)] text-[var(--fg)]">Closed</option>
+      <option value="Discontinued" className="bg-[var(--surface-alt)] text-[var(--fg)]">Discontinued</option>
     </select>
   </div>
 );
@@ -463,9 +463,9 @@ export const AddJobModal: React.FC<AddJobModalProps> = ({ isOpen, onClose, onAdd
   return (
     <Portal>
       <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in overflow-y-auto">
-      <div className="glass bg-[var(--bg)] w-full max-w-2xl rounded-2xl p-6 shadow-2xl relative animate-slide-up border-primary/20 my-auto max-h-[90vh] flex flex-col">
+      <div className="glass bg-[var(--bg)] w-full max-w-2xl rounded-2xl p-6 shadow-2xl relative animate-slide-up border-[var(--border-color)] my-auto max-h-[90vh] flex flex-col">
 
-        <button onClick={onClose} className="absolute right-4 top-4 text-gray-500 hover:text-[var(--fg)] transition-colors z-10 p-1 hover:bg-black/5 dark:hover:bg-white/10 rounded-full">
+        <button onClick={onClose} className="absolute right-4 top-4 text-[var(--fg-subtle)] hover:text-[var(--fg)] transition-colors z-10 p-1 hover:bg-[var(--surface-hover)] rounded-full">
           <X className="w-5 h-5" />
         </button>
 
@@ -478,15 +478,15 @@ export const AddJobModal: React.FC<AddJobModalProps> = ({ isOpen, onClose, onAdd
 
           {/* ── Application URL (always visible) ── */}
           <div>
-            <label className="block text-sm font-medium text-gray-300 mb-1.5 flex items-center gap-2">
-              <LinkIcon className="w-4 h-4 text-gray-400" />
+            <label className="block text-sm font-medium text-[var(--fg-muted)] mb-1.5 flex items-center gap-2">
+              <LinkIcon className="w-4 h-4 text-[var(--fg-subtle)]" />
               Application URL
-              <span className="text-xs text-gray-600 font-normal">(saved as clickable link in job details)</span>
+              <span className="text-xs text-[var(--fg-subtle)] font-normal">(saved as clickable link in job details)</span>
             </label>
             <input
               type="url"
               placeholder="https://company.com/careers/job-listing..."
-              className="w-full bg-black/40 border border-white/10 rounded-lg px-4 py-2.5 text-white placeholder-gray-500 focus:outline-none focus:border-violet-500 transition-colors"
+              className="w-full bg-[var(--input-bg)] border border-[var(--border-color)] rounded-lg px-4 py-2.5 text-[var(--fg)] placeholder-gray-500 focus:outline-none focus:border-violet-500 transition-colors"
               value={formData.url || ''}
               onChange={(e) => handleChange('url', e.target.value)}
             />
@@ -494,13 +494,13 @@ export const AddJobModal: React.FC<AddJobModalProps> = ({ isOpen, onClose, onAdd
 
           {/* ── AI Auto-fill Toggle Section (hidden when AI is globally disabled) ── */}
           {globalAiEnabled && (
-          <div className={`rounded-xl border transition-all duration-300 ${effectiveAiEnabled ? 'border-violet-500/30 bg-violet-500/5' : 'border-white/8 bg-white/[0.02]'}`}>
+          <div className={`rounded-xl border transition-all duration-300 ${effectiveAiEnabled ? 'border-violet-500/30 bg-violet-500/5' : 'border-[var(--border-color)] bg-[var(--surface-alt)]'}`}>
 
             {/* Toggle Header */}
             <div className="flex items-center justify-between px-4 py-3">
               <div className="flex items-center gap-2.5">
-                <Sparkles className={`w-4 h-4 transition-colors ${effectiveAiEnabled ? 'text-violet-400' : 'text-gray-600'}`} />
-                <span className={`text-sm font-medium transition-colors ${effectiveAiEnabled ? 'text-violet-300' : 'text-gray-500'}`}>
+                <Sparkles className={`w-4 h-4 transition-colors ${effectiveAiEnabled ? 'text-violet-400' : 'text-[var(--fg-subtle)]'}`} />
+                <span className={`text-sm font-medium transition-colors ${effectiveAiEnabled ? 'text-violet-300' : 'text-[var(--fg-muted)]'}`}>
                   AI Auto-fill
                 </span>
                 {effectiveAiEnabled && (
@@ -524,7 +524,7 @@ export const AddJobModal: React.FC<AddJobModalProps> = ({ isOpen, onClose, onAdd
             {/* ── AI ON: extraction controls ── */}
             {effectiveAiEnabled && (
               <div className="px-4 pb-4 space-y-3 animate-fade-in border-t border-violet-500/15 pt-3">
-                <p className="text-xs text-gray-500">
+                <p className="text-xs text-[var(--fg-subtle)]">
                   Provide a URL and/or upload a job post file.{' '}
                   <strong className="text-violet-400">File takes priority</strong> over URL when both are present.
                 </p>
@@ -565,7 +565,7 @@ export const AddJobModal: React.FC<AddJobModalProps> = ({ isOpen, onClose, onAdd
                 </button>
 
                 {!canExtract && (
-                  <p className="text-xs text-center text-gray-600">Enter a URL above or upload a file to enable auto-fill</p>
+                  <p className="text-xs text-center text-[var(--fg-subtle)]">Enter a URL above or upload a file to enable auto-fill</p>
                 )}
               </div>
             )}
@@ -574,9 +574,9 @@ export const AddJobModal: React.FC<AddJobModalProps> = ({ isOpen, onClose, onAdd
             {!effectiveAiEnabled && (
               <div className="px-4 pb-4 animate-fade-in border-t border-white/5 pt-3">
                 <div className="flex items-center gap-2 mb-2">
-                  <Paperclip className="w-3.5 h-3.5 text-gray-500" />
-                  <span className="text-xs font-medium text-gray-400">Attach Job Post Document</span>
-                  <span className="text-xs text-gray-600">(optional — will be saved with the application)</span>
+                  <Paperclip className="w-3.5 h-3.5 text-[var(--fg-subtle)]" />
+                  <span className="text-xs font-medium text-[var(--fg-muted)]">Attach Job Post Document</span>
+                  <span className="text-xs text-[var(--fg-subtle)]">(optional — will be saved with the application)</span>
                 </div>
                 <FilePicker
                   label="Upload Job Post (PDF / Markdown / Text)"
@@ -612,14 +612,14 @@ export const AddJobModal: React.FC<AddJobModalProps> = ({ isOpen, onClose, onAdd
 
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-300 mb-1">Company *</label>
+                <label className="block text-sm font-medium text-[var(--fg-muted)] mb-1">Company *</label>
                 <div className="relative">
-                  <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
+                  <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--fg-subtle)]" />
                   <input
                     type="text"
                     required
                     list="company-list"
-                    className="w-full bg-black/40 border border-white/10 rounded-lg pl-10 pr-4 py-2 text-white placeholder-gray-500 focus:outline-none focus:border-violet-500 transition-colors"
+                    className="w-full bg-[var(--input-bg)] border border-[var(--border-color)] rounded-lg pl-10 pr-4 py-2 text-[var(--fg)] placeholder-gray-500 focus:outline-none focus:border-violet-500 transition-colors"
                     value={formData.company}
                     onChange={(e) => handleChange('company', e.target.value)}
                   />
@@ -633,9 +633,9 @@ export const AddJobModal: React.FC<AddJobModalProps> = ({ isOpen, onClose, onAdd
 
               <div className="flex flex-col md:flex-row gap-4">
                 <div className="flex-[3]">
-                  <label className="block text-sm font-medium text-gray-300 mb-1">Role *</label>
+                  <label className="block text-sm font-medium text-[var(--fg-muted)] mb-1">Role *</label>
                   <div className="relative">
-                    <Briefcase className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
+                    <Briefcase className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--fg-subtle)]" />
                     <input
                       type="text"
                       required
@@ -646,10 +646,10 @@ export const AddJobModal: React.FC<AddJobModalProps> = ({ isOpen, onClose, onAdd
                   </div>
                 </div>
                 <div className="flex-[2] md:max-w-[180px]">
-                  <label className="block text-sm font-medium text-gray-300 mb-1">Role Type *</label>
+                  <label className="block text-sm font-medium text-[var(--fg-muted)] mb-1">Role Type *</label>
                   <select
                     required
-                    className="w-full bg-[var(--input-bg)] border border-white/10 rounded-lg px-3 py-2 text-[var(--fg)] focus:outline-none focus:border-violet-500 transition-colors cursor-pointer text-sm"
+                    className="w-full bg-[var(--input-bg)] border border-[var(--border-color)] rounded-lg px-3 py-2 text-[var(--fg)] focus:outline-none focus:border-violet-500 transition-colors cursor-pointer text-sm"
                     value={formData.employment_type || 'FTE'}
                     onChange={(e) => handleChange('employment_type', e.target.value)}
                   >
@@ -731,7 +731,7 @@ export const AddJobModal: React.FC<AddJobModalProps> = ({ isOpen, onClose, onAdd
                 <InputField label="Headhunter Email" field="headhunter_email" type="email" value={formData.headhunter_email || ''} onChange={(val) => handleChange('headhunter_email', val)} />
                 <div className="md:col-span-2 space-y-2">
                   <div className="flex items-center justify-between gap-2 mb-1">
-                    <label className="text-xs text-gray-400 block px-0.5">Job Description (Markdown)</label>
+                    <label className="text-xs text-[var(--fg-subtle)] block px-0.5">Job Description (Markdown)</label>
                     {formData.description && (
                       <button 
                          type="button" 
@@ -783,7 +783,7 @@ export const AddJobModal: React.FC<AddJobModalProps> = ({ isOpen, onClose, onAdd
                   )}
 
                   <textarea
-                    className="w-full bg-black/40 border border-white/10 rounded-lg px-3 py-2 text-white placeholder-gray-500 focus:outline-none focus:border-violet-500 transition-colors text-sm min-h-[150px] custom-scrollbar"
+                    className="w-full bg-[var(--input-bg)] border border-[var(--border-color)] rounded-lg px-3 py-2 text-[var(--fg)] placeholder-gray-500 focus:outline-none focus:border-violet-500 transition-colors text-sm min-h-[150px] custom-scrollbar"
                     value={formData.description || ''}
                     onChange={(e) => handleChange('description', e.target.value)}
                     placeholder="Provide full job description here..."
@@ -794,7 +794,7 @@ export const AddJobModal: React.FC<AddJobModalProps> = ({ isOpen, onClose, onAdd
           </form>
         </div>
 
-        <div className="pt-4 mt-2 flex justify-end gap-3 border-t border-white/10 shrink-0">
+        <div className="pt-4 mt-2 flex justify-end gap-3 border-t border-[var(--border-color)] shrink-0">
           <button
             type="button"
             onClick={() => {
@@ -803,7 +803,7 @@ export const AddJobModal: React.FC<AddJobModalProps> = ({ isOpen, onClose, onAdd
               }
               onClose();
             }}
-            className="px-4 py-2 rounded-lg text-gray-400 hover:text-white hover:bg-white/5 transition-colors font-medium"
+            className="px-4 py-2 rounded-lg text-[var(--fg-subtle)] hover:text-[var(--fg)] hover:bg-[var(--surface-hover)] transition-colors font-medium"
           >
             Cancel
           </button>
@@ -823,19 +823,19 @@ export const AddJobModal: React.FC<AddJobModalProps> = ({ isOpen, onClose, onAdd
         title="Similar Record Found"
         message={duplicateCheckResult ? (
           <div>
-            <p className="mb-2">A similar role was found in your system:</p>
-            <div className="bg-white/5 rounded-lg p-3 border border-white/10">
-              <p className="font-semibold text-white">{duplicateCheckResult.job.company} - {duplicateCheckResult.job.role}</p>
-              <p className="text-xs text-gray-400">Current Status: <span className="text-violet-400 font-medium">{duplicateCheckResult.job.status}</span></p>
-              <p className="text-xs text-gray-400">
+            <p className="mb-2 text-[var(--fg)]">A similar role was found in your system:</p>
+            <div className="bg-[var(--surface-alt)] rounded-lg p-3 border border-[var(--border-color)]">
+              <p className="font-semibold text-[var(--fg)]">{duplicateCheckResult.job.company} - {duplicateCheckResult.job.role}</p>
+              <p className="text-xs text-[var(--fg-subtle)]">Current Status: <span className="text-violet-400 font-medium">{duplicateCheckResult.job.status}</span></p>
+              <p className="text-xs text-[var(--fg-subtle)]">
                 {duplicateCheckResult.job.status === 'Wishlist' ? 'Added to system: ' : 'Applied on: '}
                 {new Date(duplicateCheckResult.job.applied_date).toLocaleDateString()}
               </p>
               {duplicateCheckResult.job.job_posted_date && (
-                <p className="text-xs text-gray-400">Job Posted on: {new Date(duplicateCheckResult.job.job_posted_date).toLocaleDateString()}</p>
+                <p className="text-xs text-[var(--fg-subtle)]">Job Posted on: {new Date(duplicateCheckResult.job.job_posted_date).toLocaleDateString()}</p>
               )}
             </div>
-            <p className="mt-3">Are you sure you want to add this as a new application?</p>
+            <p className="mt-3 text-[var(--fg)]">Are you sure you want to add this as a new application?</p>
           </div>
         ) : ""}
         onConfirm={() => handleSubmit(null as any, true)} // skipCheck = true

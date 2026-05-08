@@ -20,10 +20,10 @@ const COLUMNS = [
 ];
 
 const columnAccents: Record<string, string> = {
-  Wishlist: 'bg-gray-500/20 border-gray-500/10',
-  Applied: 'bg-blue-500/10 border-blue-500/10',
-  Interviewing: 'bg-amber-500/10 border-amber-500/10',
-  Decision: 'bg-violet-500/10 border-violet-500/10',
+  Wishlist: 'bg-[var(--surface-alt)]/50 border-[var(--border-color)]',
+  Applied: 'bg-blue-500/5 border-blue-500/10',
+  Interviewing: 'bg-amber-500/5 border-amber-500/10',
+  Decision: 'bg-violet-500/5 border-violet-500/10',
 };
 
 export const KanbanBoard: React.FC<KanbanBoardProps> = ({ jobs, onUpdateStatus, onJobClick, onAddInterviewStep, onToggleStar }) => {
@@ -53,8 +53,8 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({ jobs, onUpdateStatus, 
               onClick={() => setActiveColumn(col.key)}
               className={`flex-1 py-2.5 px-1 rounded-lg transition-all duration-300 flex flex-col items-center gap-0.5 relative ${
                 isActive
-                  ? 'bg-violet-500 text-white shadow-xl shadow-violet-500/20'
-                  : 'text-[var(--fg-subtle)] hover:text-[var(--fg)] hover:bg-white/5'
+                   ? 'bg-violet-600 text-white shadow-xl shadow-violet-600/20'
+                  : 'text-[var(--fg-subtle)] hover:text-[var(--fg)] hover:bg-[var(--surface-alt)]'
               }`}
             >
               <span className="text-[10px] uppercase tracking-widest font-bold leading-none">{col.label}</span>
@@ -97,7 +97,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({ jobs, onUpdateStatus, 
                     </button>
                   )}
                 </div>
-                <span className="bg-violet-500/10 text-violet-400 text-[11px] px-2.5 py-0.5 rounded-full font-bold border border-violet-500/10">{columnJobs.length}</span>
+                <span className="bg-violet-500/10 text-violet-500 text-[11px] px-2.5 py-0.5 rounded-full font-bold border border-violet-500/20">{columnJobs.length}</span>
               </div>
               
               <div className={`flex flex-col gap-3 p-3 rounded-2xl border flex-1 min-h-0 overflow-y-auto overflow-x-hidden custom-scrollbar ${columnAccents[column.key] || 'bg-[var(--surface)] border-[var(--border-color)]'}`}>

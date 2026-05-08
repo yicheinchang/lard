@@ -592,7 +592,7 @@ export const JobDetailView: React.FC<JobDetailViewProps> = ({ job, onClose, onJo
       >
         <div
           data-theme={effectiveTheme}
-          className={`bg-[var(--bg)] border border-[var(--border-color)] shadow-2xl flex flex-col overflow-hidden transition-all duration-300 ease-in-out ${isFullScreen ? 'w-full h-full rounded-none' : 'w-full max-w-6xl h-[90vh] rounded-2xl md:rounded-3xl'} ${!isAnimationFinished ? 'animate-slide-up' : ''}`}
+          className={`bg-[var(--bg)] text-[var(--fg)] border border-[var(--border-color)] shadow-2xl flex flex-col overflow-hidden transition-all duration-300 ease-in-out ${isFullScreen ? 'w-full h-full rounded-none' : 'w-full max-w-6xl h-[90vh] rounded-2xl md:rounded-3xl'} ${!isAnimationFinished ? 'animate-slide-up' : ''}`}
           onAnimationEnd={() => setIsAnimationFinished(true)}
         >
         {/* Header */}
@@ -1011,7 +1011,7 @@ export const JobDetailView: React.FC<JobDetailViewProps> = ({ job, onClose, onJo
               <div className="w-full lg:w-80 space-y-6 flex-shrink-0">
                 <div className="flex items-center gap-2">
                   <StickyNote className="w-5 h-5 text-violet-400" />
-                  <h3 className="text-lg font-bold text-white tracking-tight">Application Notes</h3>
+                  <h3 className="text-lg font-bold text-[var(--fg)] tracking-tight">Application Notes</h3>
                   <AutoSaveIndicator status={saveStatus} error={saveError} />
                 </div>
 
@@ -1050,7 +1050,7 @@ export const JobDetailView: React.FC<JobDetailViewProps> = ({ job, onClose, onJo
                     </div>
                     {editFormData.employment_type === 'Contractor' && (
                       <div className="flex flex-col gap-1 animate-fade-in">
-                        <label className="text-xs text-[var(--fg-subtle)]">Agency Name *</label>
+                        <label className="text-xs text-[var(--fg-muted)]">Agency Name *</label>
                         <input 
                           required
                           className="bg-[var(--bg)] border border-[var(--border-color)] rounded-md px-2 py-1 text-sm text-[var(--fg)] focus:outline-none focus:border-violet-500" 
@@ -1105,45 +1105,45 @@ export const JobDetailView: React.FC<JobDetailViewProps> = ({ job, onClose, onJo
                       <label className="text-xs text-violet-500 font-medium">Record Settings</label>
 
                       <div className="flex flex-col gap-1">
-                        <label className="text-[10px] uppercase tracking-wider text-[var(--fg-subtle)]">Actually Applied Date</label>
+                        <label className="text-[10px] uppercase tracking-wider text-[var(--fg-muted)]">Actually Applied Date</label>
                         <input type="date" className="bg-[var(--bg)] border border-[var(--border-color)] rounded-md px-2 py-1 text-sm text-[var(--fg)] focus:outline-none focus:border-violet-500 style-date" value={editFormData.applied_date ? editFormData.applied_date.substring(0, 10) : ''} onChange={e => handleEditChange('applied_date', e.target.value)} />
                       </div>
 
                       <div className="flex flex-col gap-1">
-                        <label className="text-[10px] uppercase tracking-wider text-[var(--fg-subtle)]">Job Closed Date</label>
+                        <label className="text-[10px] uppercase tracking-wider text-[var(--fg-muted)]">Job Closed Date</label>
                         <input type="date" className="bg-[var(--bg)] border border-[var(--border-color)] rounded-md px-2 py-1 text-sm text-[var(--fg)] focus:outline-none focus:border-violet-500 style-date" value={editFormData.closed_date ? editFormData.closed_date.substring(0, 10) : ''} onChange={e => handleEditChange('closed_date', e.target.value)} />
                       </div>
 
                       <div className="flex flex-col gap-1">
-                        <label className="text-[10px] uppercase tracking-wider text-[var(--fg-subtle)]">Decision Made Date</label>
+                        <label className="text-[10px] uppercase tracking-wider text-[var(--fg-muted)]">Decision Made Date</label>
                         <input type="date" className="bg-[var(--bg)] border border-[var(--border-color)] rounded-md px-2 py-1 text-sm text-[var(--fg)] focus:outline-none focus:border-violet-500 style-date" value={editFormData.decision_date ? editFormData.decision_date.substring(0, 10) : ''} onChange={e => handleEditChange('decision_date', e.target.value)} />
                       </div>
 
                       <div className="flex flex-col gap-1">
-                        <label className="text-[10px] uppercase tracking-wider text-[var(--fg-subtle)]">System Record Created</label>
+                        <label className="text-[10px] uppercase tracking-wider text-[var(--fg-muted)]">System Record Created</label>
                         <input type="date" className="bg-[var(--bg)] border border-[var(--border-color)] rounded-md px-2 py-1 text-sm text-[var(--fg)] focus:outline-none focus:border-violet-500 style-date" value={editFormData.created_at ? editFormData.created_at.substring(0, 10) : ''} onChange={e => handleEditChange('created_at', e.target.value)} />
                       </div>
                     </div>
 
                     <div className="flex flex-col gap-3 pt-4 border-t border-[var(--border-color)]">
                       <div className="flex flex-col gap-1">
-                        <label className="text-xs text-[var(--fg-subtle)]">Hiring Manager Name</label>
+                        <label className="text-xs text-[var(--fg-muted)]">Hiring Manager Name</label>
                         <input className="bg-[var(--bg)] border border-[var(--border-color)] rounded-md px-2 py-1 text-sm text-[var(--fg)] focus:outline-none focus:border-violet-500" value={editFormData.hiring_manager_name || ''} onChange={e => handleEditChange('hiring_manager_name', e.target.value)} />
                       </div>
                       <div className="flex flex-col gap-1">
-                        <label className="text-xs text-[var(--fg-subtle)]">Hiring Manager Email</label>
+                        <label className="text-xs text-[var(--fg-muted)]">Hiring Manager Email</label>
                         <input className="bg-[var(--bg)] border border-[var(--border-color)] rounded-md px-2 py-1 text-sm text-[var(--fg)] focus:outline-none focus:border-violet-500" type="email" value={editFormData.hiring_manager_email || ''} onChange={e => handleEditChange('hiring_manager_email', e.target.value)} />
                       </div>
                       <div className="flex flex-col gap-1">
-                        <label className="text-xs text-[var(--fg-subtle)]">HR / Recruiter Email</label>
+                        <label className="text-xs text-[var(--fg-muted)]">HR / Recruiter Email</label>
                         <input className="bg-[var(--bg)] border border-[var(--border-color)] rounded-md px-2 py-1 text-sm text-[var(--fg)] focus:outline-none focus:border-violet-500" value={editFormData.hr_email || ''} onChange={e => handleEditChange('hr_email', e.target.value)} placeholder="Name <email@address.com>" />
                       </div>
                       <div className="flex flex-col gap-1">
-                        <label className="text-xs text-[var(--fg-subtle)]">Headhunter Name</label>
+                        <label className="text-xs text-[var(--fg-muted)]">Headhunter Name</label>
                         <input className="bg-[var(--bg)] border border-[var(--border-color)] rounded-md px-2 py-1 text-sm text-[var(--fg)] focus:outline-none focus:border-violet-500" value={editFormData.headhunter_name || ''} onChange={e => handleEditChange('headhunter_name', e.target.value)} />
                       </div>
                       <div className="flex flex-col gap-1">
-                        <label className="text-xs text-[var(--fg-subtle)]">Headhunter Email</label>
+                        <label className="text-xs text-[var(--fg-muted)]">Headhunter Email</label>
                         <input className="bg-[var(--bg)] border border-[var(--border-color)] rounded-md px-2 py-1 text-sm text-[var(--fg)] focus:outline-none focus:border-violet-500" type="email" value={editFormData.headhunter_email || ''} onChange={e => handleEditChange('headhunter_email', e.target.value)} placeholder="Name <email@address.com>" />
                       </div>
                     </div>

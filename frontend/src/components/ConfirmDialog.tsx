@@ -113,12 +113,12 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
               {styles.icon}
             </div>
             <div className="flex-1 min-w-0">
-              <h3 className="text-lg font-semibold text-white mb-1">{title}</h3>
-              <div className="text-sm text-gray-400 leading-relaxed">{message}</div>
+              <h3 className="text-lg font-semibold text-[var(--fg)] mb-1">{title}</h3>
+              <div className="text-sm text-[var(--fg-muted)] leading-relaxed">{message}</div>
             </div>
             <button
               onClick={handleCancel}
-              className="p-1 hover:bg-white/10 rounded-full text-gray-500 hover:text-white transition-colors shrink-0"
+              className="p-1 hover:bg-[var(--surface-hover)] rounded-full text-[var(--fg-subtle)] hover:text-[var(--fg)] transition-colors shrink-0"
             >
               <X className="w-4 h-4" />
             </button>
@@ -126,13 +126,13 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
 
           {showTextInput && (
             <div className="mt-6 ml-10 relative">
-              <label className="block text-xs text-[#a7a7b8] mb-1.5">{textLabel}</label>
+              <label className="block text-xs text-[var(--fg-muted)] mb-1.5">{textLabel}</label>
               <input
                 type="text"
                 value={textValue}
                 onChange={(e) => setTextValue(e.target.value)}
                 list={textOptions && textOptions.length > 0 ? "confirm-text-options" : undefined}
-                className="w-full bg-[var(--input-bg)] border border-white/10 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-violet-500 text-input-dropdown"
+                className="w-full bg-[var(--input-bg)] border border-[var(--border-color)] rounded-lg px-3 py-2 text-[var(--fg)] text-sm focus:outline-none focus:border-violet-500 text-input-dropdown"
                 placeholder="e.g. Phone Screen"
               />
               {textOptions && textOptions.length > 0 && (
@@ -147,24 +147,24 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
 
           {showDateInput && (
             <div className="mt-4 ml-10">
-              <label className="block text-xs text-[#a7a7b8] mb-1.5">{dateLabel}</label>
+              <label className="block text-xs text-[var(--fg-muted)] mb-1.5">{dateLabel}</label>
               <input
                 type="date"
                 value={date}
                 onChange={(e) => setDate(e.target.value)}
-                className="w-full bg-black/40 border border-white/10 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-violet-500 style-date"
+                className="w-full bg-[var(--input-bg)] border border-[var(--border-color)] rounded-lg px-3 py-2 text-[var(--fg)] text-sm focus:outline-none focus:border-violet-500 style-date"
               />
             </div>
           )}
 
           {showFileUpload && (
             <div className="mt-4 ml-10">
-              <label className="block text-xs text-gray-400 mb-1.5">{fileUploadLabel}</label>
+              <label className="block text-xs text-[var(--fg-muted)] mb-1.5">{fileUploadLabel}</label>
               <input
                 type="file"
                 accept={accept}
                 onChange={(e) => setFile(e.target.files?.[0] || null)}
-                className="w-full text-sm text-gray-400 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-sm file:font-medium file:bg-violet-500/10 file:text-violet-400 hover:file:bg-violet-500/20 transition-all cursor-pointer border border-white/10 rounded-xl p-1 bg-black/40"
+                className="w-full text-sm text-[var(--fg-muted)] file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-sm file:font-medium file:bg-violet-500/10 file:text-violet-400 hover:file:bg-violet-500/20 transition-all cursor-pointer border border-[var(--border-color)] rounded-xl p-1 bg-[var(--input-bg)]"
               />
             </div>
           )}
@@ -173,7 +173,7 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
             {!hideCancel && (
               <button
                 onClick={handleCancel}
-                className="px-4 py-2 rounded-lg text-gray-400 hover:text-white hover:bg-white/5 transition-colors font-medium text-sm"
+                className="px-4 py-2 rounded-lg text-[var(--fg-muted)] hover:text-[var(--fg)] hover:bg-[var(--surface-hover)] transition-colors font-medium text-sm"
               >
                 {cancelLabel}
               </button>

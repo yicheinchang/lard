@@ -22,13 +22,13 @@ interface TableViewProps {
 const ALL_STATUSES = ['Wishlist', 'Applied', 'Interviewing', 'Offered', 'Rejected', 'Closed', 'Discontinued'];
 
 const statusBadgeColors: Record<string, string> = {
-  Wishlist: 'text-gray-300 bg-gray-500/15 border-gray-500/20',
-  Applied: 'text-blue-300 bg-blue-500/15 border-blue-500/20',
-  Interviewing: 'text-amber-300 bg-amber-500/15 border-amber-500/20',
-  Offered: 'text-emerald-300 bg-emerald-500/15 border-emerald-500/20',
-  Rejected: 'text-red-300 bg-red-500/15 border-red-500/20',
-  Closed: 'text-orange-300 bg-orange-500/15 border-orange-500/20',
-  Discontinued: 'text-slate-300 bg-slate-500/15 border-slate-500/20',
+  Wishlist: 'text-[var(--fg-muted)] bg-[var(--surface-hover)] border-[var(--border-color)]',
+  Applied: 'text-blue-500 bg-blue-500/10 border-blue-500/20',
+  Interviewing: 'text-amber-500 bg-amber-500/10 border-amber-500/20',
+  Offered: 'text-emerald-500 bg-emerald-500/10 border-emerald-500/20',
+  Rejected: 'text-red-500 bg-red-500/10 border-red-500/20',
+  Closed: 'text-orange-500 bg-orange-500/10 border-orange-500/20',
+  Discontinued: 'text-[var(--fg-subtle)] bg-[var(--surface-alt)] border-[var(--border-color)]',
 };
 
 type SortKey = 'company' | 'role' | 'status' | 'location' | 'applied_date' | 'last_updated';
@@ -59,10 +59,10 @@ export const TableView: React.FC<TableViewProps> = ({ jobs, onUpdateStatus, onJo
   }, [jobs, selectedStatuses]);
 
   const SortIcon = ({ column }: { column: SortKey }) => {
-    if (globalSortKey !== column) return <ChevronsUpDown className="w-3.5 h-3.5 text-white/20" />;
+    if (globalSortKey !== column) return <ChevronsUpDown className="w-3.5 h-3.5 text-[var(--fg-subtle)] opacity-30" />;
     return globalSortDir === 'asc'
-      ? <ChevronUp className="w-3.5 h-3.5 text-violet-400" />
-      : <ChevronDown className="w-3.5 h-3.5 text-violet-400" />;
+      ? <ChevronUp className="w-3.5 h-3.5 text-violet-500" />
+      : <ChevronDown className="w-3.5 h-3.5 text-violet-500" />;
   };
 
   const columns: { key: SortKey; label: string; icon: React.ReactNode; minW: string }[] = [
@@ -82,7 +82,7 @@ export const TableView: React.FC<TableViewProps> = ({ jobs, onUpdateStatus, onJo
           onClick={() => setShowFilters(!showFilters)}
           className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all border ${
             showFilters
-              ? 'bg-violet-500/15 text-violet-300 border-violet-500/20'
+              ? 'bg-violet-500/15 text-violet-500 border-violet-500/30'
               : 'bg-[var(--surface)] text-[var(--fg-subtle)] border-[var(--border-color)] hover:text-[var(--fg)] hover:border-violet-500/30'
           }`}
         >
@@ -95,7 +95,7 @@ export const TableView: React.FC<TableViewProps> = ({ jobs, onUpdateStatus, onJo
           )}
         </button>
 
-        <span className="text-xs text-gray-500 ml-auto">
+        <span className="text-xs text-[var(--fg-subtle)] ml-auto">
           {filteredAndSorted.length} of {jobs.length} applications
         </span>
       </div>
@@ -112,7 +112,7 @@ export const TableView: React.FC<TableViewProps> = ({ jobs, onUpdateStatus, onJo
                 className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all border ${
                   isSelected
                     ? statusBadgeColors[status]
-                    : 'bg-white/5 text-gray-500 border-white/5 opacity-50'
+                    : 'bg-[var(--surface-alt)] text-[var(--fg-subtle)] border-[var(--border-color)] opacity-50'
                 }`}
               >
                 {status}
@@ -121,7 +121,7 @@ export const TableView: React.FC<TableViewProps> = ({ jobs, onUpdateStatus, onJo
           })}
           <button
             onClick={() => setSelectedStatuses(new Set(ALL_STATUSES))}
-            className="text-xs text-violet-400 hover:text-violet-300 px-2 transition-colors"
+            className="text-xs text-violet-500 hover:text-violet-600 px-2 transition-colors font-medium"
           >
             Reset
           </button>
@@ -129,14 +129,14 @@ export const TableView: React.FC<TableViewProps> = ({ jobs, onUpdateStatus, onJo
       )}
 
       {/* Table */}
-      <div className="flex-1 overflow-auto custom-scrollbar glass rounded-2xl">
+      <div className="flex-1 overflow-auto custom-scrollbar glass rounded-2xl border border-[var(--border-color)]">
         <table className="w-full text-sm">
           <thead>
-            <tr className="border-b border-white/10">
+            <tr className="border-b border-[var(--border-color)] bg-[var(--surface-alt)]/30">
               {columns.map(col => (
                 <th
                   key={col.key}
-                  className={`text-left px-4 py-3 text-xs font-medium text-gray-400 uppercase tracking-wider cursor-pointer hover:text-white transition-colors select-none ${col.minW}`}
+                  className={`text-left px-4 py-3 text-xs font-medium text-[var(--fg-muted)] uppercase tracking-wider cursor-pointer hover:text-[var(--fg)] transition-colors select-none ${col.minW}`}
                   onClick={() => handleSort(col.key)}
                 >
                   <div className="flex items-center gap-1.5">
@@ -151,7 +151,7 @@ export const TableView: React.FC<TableViewProps> = ({ jobs, onUpdateStatus, onJo
           <tbody>
             {filteredAndSorted.length === 0 ? (
               <tr>
-                <td colSpan={columns.length} className="text-center py-16 text-gray-500 italic">
+                <td colSpan={columns.length} className="text-center py-16 text-[var(--fg-subtle)] italic">
                   No applications match your filters
                 </td>
               </tr>
@@ -160,7 +160,7 @@ export const TableView: React.FC<TableViewProps> = ({ jobs, onUpdateStatus, onJo
                   <tr
                     key={job.id}
                     onClick={() => onJobClick(job)}
-                    className={`border-b border-white/5 hover:bg-white/[0.03] cursor-pointer transition-colors group ${
+                    className={`border-b border-[var(--border-color)] hover:bg-[var(--surface-hover)] cursor-pointer transition-colors group ${
                       job.employment_type === 'Contractor' ? 'border-l-4 border-l-amber-500/50' : 
                       job.employment_type === 'Consultant' ? 'border-l-4 border-l-blue-500/50' : ''
                     }`}
@@ -170,34 +170,34 @@ export const TableView: React.FC<TableViewProps> = ({ jobs, onUpdateStatus, onJo
                       {onToggleStar && (
                         <button 
                           onClick={(e) => { e.stopPropagation(); onToggleStar(job); }}
-                          className={`p-1.5 -ml-1.5 rounded-full hover:bg-[var(--surface-hover)] transition-colors ${job.is_starred ? 'text-yellow-400' : 'text-[var(--fg-subtle)] hover:text-yellow-400/50'}`}
+                          className={`p-1.5 -ml-1.5 rounded-full hover:bg-[var(--surface-hover)] transition-colors ${job.is_starred ? 'text-yellow-500' : 'text-[var(--fg-subtle)] hover:text-yellow-500/50'}`}
                           title={job.is_starred ? "Unstar Job" : "Star Job"}
                         >
                           <Star className={`w-3.5 h-3.5 ${job.is_starred ? 'fill-current' : ''}`} />
                         </button>
                       )}
                       <Tooltip content={job.company} className="flex-1 min-w-0">
-                        <span className="text-white font-medium hover:text-violet-300 transition-colors truncate">
+                        <span className="text-[var(--fg)] font-medium group-hover:text-violet-500 transition-colors truncate">
                           {job.company}
                         </span>
                       </Tooltip>
                     </div>
                   </td>
-                  <td className="px-4 py-3 text-gray-300">
+                  <td className="px-4 py-3 text-[var(--fg-muted)]">
                     <Tooltip content={job.role} className="w-full">
                       <span className="truncate">{job.role}</span>
                     </Tooltip>
                   </td>
                   <td className="px-4 py-3">
-                    <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium border ${statusBadgeColors[job.status] || 'text-gray-400 bg-white/5 border-white/10'}`}>
+                    <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium border ${statusBadgeColors[job.status] || 'text-[var(--fg-subtle)] bg-[var(--surface-hover)] border-[var(--border-color)]'}`}>
                       {job.status}
                     </span>
                   </td>
-                  <td className="px-4 py-3 text-gray-400">{job.location || '—'}</td>
-                  <td className="px-4 py-3 text-gray-400">
+                  <td className="px-4 py-3 text-[var(--fg-subtle)]">{job.location || '—'}</td>
+                  <td className="px-4 py-3 text-[var(--fg-subtle)]">
                     {job.applied_date ? new Date(job.applied_date).toLocaleDateString() : '—'}
                   </td>
-                  <td className="px-4 py-3 text-gray-400">
+                  <td className="px-4 py-3 text-[var(--fg-subtle)]">
                     {job.last_updated ? new Date(job.last_updated).toLocaleDateString() : '—'}
                   </td>
                 </tr>

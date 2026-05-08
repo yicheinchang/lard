@@ -224,8 +224,26 @@ input[type="date"].style-date::-webkit-calendar-picker-indicator {
 [data-theme="light"] .from-violet-400 { --tw-gradient-from: #7c3aed; }
 [data-theme="light"] .to-fuchsia-400 { --tw-gradient-to: #c026d3; }
 
-/* Light-mode sidebar text */
+/* Light-mode text accents - mapping to darker versions for readability */
 [data-theme="light"] .text-violet-300 { color: #7c3aed; }
+[data-theme="light"] .text-violet-400 { color: #7c3aed; }
+[data-theme="light"] .text-blue-400 { color: #2563eb; }
+[data-theme="light"] .text-yellow-400 { color: #d97706; }
+[data-theme="light"] .text-amber-400 { color: #d97706; }
+[data-theme="light"] .text-emerald-400 { color: #059669; }
+[data-theme="light"] .text-green-400 { color: #059669; }
+[data-theme="light"] .text-red-400 { color: #dc2626; }
+[data-theme="light"] .text-orange-400 { color: #ea580c; }
+[data-theme="light"] .text-slate-400 { color: #475569; }
+[data-theme="light"] .text-gray-300 { color: var(--fg-subtle); }
+[data-theme="light"] .text-gray-400 { color: var(--fg-muted); }
+[data-theme="light"] .text-gray-500 { color: var(--fg-muted); }
+[data-theme="light"] .text-gray-600 { color: var(--fg); }
+
+/* Background accent adjustments */
+[data-theme="light"] .bg-violet-500\/10 { background-color: rgba(124, 58, 237, 0.08); }
+[data-theme="light"] .bg-violet-500\/20 { background-color: rgba(124, 58, 237, 0.12); }
+[data-theme="light"] .bg-violet-500\/5 { background-color: rgba(124, 58, 237, 0.04); }
 
 
 
@@ -325,6 +343,32 @@ select, option, input, textarea {
 [data-theme="light"] select option {
   background-color: #ffffff;
   color: #1a1a2e;
+}
+
+/* NUCLEAR RESET: Force form elements to be readable in light theme regardless of parent classes */
+[data-theme="light"] select,
+[data-theme="light"] option,
+[data-theme="light"] input,
+[data-theme="light"] textarea {
+  color: var(--fg) !important;
+  background-color: var(--input-bg) !important;
+}
+
+/* SAFETY NET: Force text-white to be readable var(--fg) in light theme */
+[data-theme="light"] .text-white:not(.bg-primary):not(.bg-violet-600):not(.bg-red-600) {
+  color: var(--fg) !important;
+}
+
+[data-theme="light"] .text-white\/50 {
+  color: var(--fg-muted) !important;
+}
+
+[data-theme="light"] .text-white\/40 {
+  color: var(--fg-subtle) !important;
+}
+
+[data-theme="light"] .text-white\/20 {
+  color: var(--border-color) !important;
 }
 
 /* ── Resize Handles ────────────────────────────────────────────── */

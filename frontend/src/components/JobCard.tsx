@@ -16,13 +16,13 @@ interface JobCardProps {
 }
 
 const statusColors: Record<string, string> = {
-  Wishlist: 'text-gray-400 bg-gray-400/10',
-  Applied: 'text-blue-400 bg-blue-400/10',
-  Interviewing: 'text-yellow-400 bg-yellow-400/10',
-  Offered: 'text-emerald-400 bg-emerald-400/10',
-  Rejected: 'text-red-400 bg-red-400/10',
-  Closed: 'text-orange-400 bg-orange-400/10',
-  Discontinued: 'text-slate-400 bg-slate-400/10',
+  Wishlist: 'text-[var(--fg-muted)] bg-[var(--surface-hover)]',
+  Applied: 'text-blue-500 bg-blue-500/10',
+  Interviewing: 'text-amber-500 bg-amber-500/10',
+  Offered: 'text-emerald-500 bg-emerald-500/10',
+  Rejected: 'text-red-500 bg-red-500/10',
+  Closed: 'text-orange-500 bg-orange-500/10',
+  Discontinued: 'text-[var(--fg-subtle)] bg-[var(--surface-alt)]',
 };
 
 const statusIcons: Record<string, React.ReactNode> = {
@@ -158,7 +158,7 @@ export const JobCard: React.FC<JobCardProps> = ({ job, onUpdateStatus, onClick, 
           </div>
         </div>
 
-        <div className="flex items-center justify-between border-t border-white/5 pt-2 mt-1 relative">
+        <div className="flex items-center justify-between border-t border-[var(--border-color)] pt-2 mt-1 relative">
           <span className={`px-2 py-0.5 rounded-full text-[10px] uppercase tracking-wider font-semibold flex items-center gap-1.5 shrink-0 whitespace-nowrap ${statusColors[job.status] || 'text-[var(--fg-subtle)] bg-[var(--surface-hover)]'}`}>
             {statusIcons[job.status]}
             {job.status}
