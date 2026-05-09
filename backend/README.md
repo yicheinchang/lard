@@ -137,6 +137,25 @@ graph TD
 
 ---
 
+## 🤖 AI Assistant Logic
+
+The **Chat Assistant** (`backend/ai/assistant.py`) utilizes a specialized communication protocol to ensure high-fidelity rendering on the frontend.
+
+### 1. Math & Formatting Standards
+The assistant is instructed via system prompts to use specific delimiters:
+- **Block Math**: `\[ ... \]`
+- **Inline Math**: `\( ... \)`
+- **Tables**: GFM (GitHub Flavored Markdown) standard.
+
+### 2. Frontend Normalization
+To bridge the gap between "fuzzy" LLM output and strict rendering engines (KaTeX/ReactMarkdown), the system implements a **normalization layer** in the frontend that:
+- Fixes narrow no-break space characters (U+202F).
+- Cleans up negative thin spaces (`\!`) often used in large numbers.
+- Escapes currency symbols to prevent them from being mistaken for math triggers.
+- Normalizes LaTeX delimiters into standard math tokens.
+
+---
+
 ## 🔄 Common AI Logic
 
 Regardless of strategy, the following core features ensure 100% extraction fidelity:

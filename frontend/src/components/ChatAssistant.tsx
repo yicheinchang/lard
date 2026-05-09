@@ -2,6 +2,12 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Bot, Send, X, Loader2, Sparkles, User } from 'lucide-react';
 import api from '../lib/api';
 import { Portal } from './Portal';
+import { useSettings } from '../lib/SettingsContext';
+import ReactMarkdown from 'react-markdown';
+import remarkMath from 'remark-math';
+import remarkGfm from 'remark-gfm';
+import rehypeKatex from 'rehype-katex';
+import 'katex/dist/katex.min.css';
 
 interface Message {
   id: string;
@@ -14,6 +20,18 @@ export const ChatAssistant: React.FC<{
   onClose: () => void;
   jobId?: number; // Optional context filter
 }> = ({ isOpen, onClose, jobId }) => {
+  const { settings } = useSettings();
+  
+  const resolvedGlobalTheme = React.useMemo(() => {
+    if (settings?.theme === 'system') {
+      if (typeof window !== 'undefined') {
+        return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+      }
+      return 'dark';
+    }
+    return settings?.theme || 'dark';
+  }, [settings?.theme]);
+
   const [messages, setMessages] = useState<Message[]>([
     {
       id: '1',
@@ -25,7 +43,40 @@ export const ChatAssistant: React.FC<{
   const [isTyping, setIsTyping] = useState(false);
   const [isAiReady, setIsAiReady] = useState<boolean | null>(null);
   const [isInitializing, setIsInitializing] = useState(false);
+  const [width, setWidth] = useState(400);
+  const isResizing = useRef(false);
   const scrollRef = useRef<HTMLDivElement>(null);
+
+  // Load persisted width
+  useEffect(() => {
+    const savedWidth = localStorage.getItem('chat_assistant_width');
+    if (savedWidth) setWidth(parseInt(savedWidth, 10));
+  }, []);
+
+  // Resize logic
+  const startResizing = React.useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    isResizing.current = true;
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', stopResizing);
+    document.body.style.cursor = 'col-resize';
+  }, []);
+
+  const stopResizing = React.useCallback(() => {
+    isResizing.current = false;
+    document.removeEventListener('mousemove', handleMouseMove);
+    document.removeEventListener('mouseup', stopResizing);
+    document.body.style.cursor = 'default';
+  }, []);
+
+  const handleMouseMove = React.useCallback((e: MouseEvent) => {
+    if (!isResizing.current) return;
+    const newWidth = window.innerWidth - e.clientX;
+    if (newWidth >= 300 && newWidth <= window.innerWidth * 0.8) {
+      setWidth(newWidth);
+      localStorage.setItem('chat_assistant_width', newWidth.toString());
+    }
+  }, []);
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -99,8 +150,18 @@ export const ChatAssistant: React.FC<{
   };
 
   return (
+    <>
     <Portal>
-      <div className="fixed right-0 top-0 bottom-0 w-full sm:w-[400px] bg-[var(--bg)] backdrop-blur-xl border-l border-[var(--border-color)] shadow-2xl z-50 flex flex-col pt-[72px] sm:pt-0 animate-slide-left">
+      <div 
+        style={{ width: typeof window !== 'undefined' && window.innerWidth < 640 ? '100%' : `${width}px` }}
+        className="fixed right-0 top-0 bottom-0 bg-[var(--bg)] backdrop-blur-xl border-l border-[var(--border-color)] shadow-2xl z-50 flex flex-col pt-[72px] sm:pt-0 animate-slide-left"
+      >
+        {/* Resize Handle */}
+        <div 
+          onMouseDown={startResizing}
+          className="absolute left-0 top-0 bottom-0 w-1.5 cursor-col-resize hover:bg-violet-500/30 active:bg-violet-500/50 transition-colors z-[60] hidden sm:block"
+          title="Drag to resize"
+        />
         {/* Header */}
         <div className="p-4 border-b border-[var(--border-color)] flex justify-between items-center bg-violet-600/10 shrink-0">
           <div className="flex items-center gap-2">
@@ -124,8 +185,26 @@ export const ChatAssistant: React.FC<{
               <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${msg.role === 'user' ? 'bg-violet-600' : 'bg-[var(--surface-alt)] border border-[var(--border-color)]'}`}>
                 {msg.role === 'user' ? <User className="w-4 h-4 text-white" /> : <Bot className="w-4 h-4 text-violet-400" />}
               </div>
-              <div className={`max-w-[80%] rounded-2xl p-3 text-sm ${msg.role === 'user' ? 'bg-violet-600/20 text-[var(--fg)]' : 'bg-[var(--surface-hover)] text-[var(--fg-muted)] border border-[var(--border-color)]'}`}>
-                <div className="whitespace-pre-wrap">{msg.content}</div>
+              <div className={`max-w-[90%] rounded-2xl p-4 text-sm ${
+                msg.role === 'user' 
+                  ? 'bg-violet-600/20 text-[var(--fg)]' 
+                  : 'bg-[var(--surface-hover)] text-[var(--fg-muted)] border border-[var(--border-color)]'
+              } prose prose-sm ${resolvedGlobalTheme === 'dark' ? 'prose-invert' : ''} max-w-none break-words overflow-hidden`}>
+                <div className="[&>*:first-child]:mt-0 [&>*:last-child]:mb-0 overflow-x-auto custom-scrollbar">
+                  <ReactMarkdown 
+                    remarkPlugins={[[remarkMath, { singleDollar: true }], remarkGfm]} 
+                    rehypePlugins={[rehypeKatex]}
+                  >
+                    {msg.content
+                      .replace(/\u202F/g, ' ') // Fix narrow no-break space (KaTeX error 8239)
+                      .replace(/\\\$/g, '$')   // 1. Normalize \$ to $
+                      .replace(/\$/g, '\\$')   // 2. Escape all $ to \$
+                      .replace(/\\\[/g, '$$$$')
+                      .replace(/\\\]/g, '$$$$')
+                      .replace(/\\\(/g, '$')   // 3. Convert math \( to $ (unescaped)
+                      .replace(/\\\)/g, '$')}
+                  </ReactMarkdown>
+                </div>
               </div>
             </div>
           ))}
@@ -178,5 +257,17 @@ export const ChatAssistant: React.FC<{
         </div>
       </div>
     </Portal>
+    <style jsx global>{`
+      .katex-display {
+        margin: 1em 0;
+        overflow-x: auto;
+        overflow-y: hidden;
+      }
+      .katex {
+        font-size: 1.1em;
+        color: inherit;
+      }
+    `}</style>
+    </>
   );
 };

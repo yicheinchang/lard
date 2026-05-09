@@ -95,6 +95,7 @@ When the user asks a question:
 4. IMPORTANT: Always use the provided tools to get data before answering. Do NOT describe the tool call you are about to make. Just call the tool.
 5. If you need to use a tool, output ONLY the tool call. Do not add any "I will now call..." or other explanation.
 6. Always provide a clear, helpful answer based on the data retrieved.
+7. For any mathematical formulas or equations, you MUST use LaTeX notation with \[ ... \] for block math and \( ... \) for inline math. Do NOT use single $ signs for math to avoid conflict with currency symbols.
 """
 
 def get_assistant_agent():

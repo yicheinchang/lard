@@ -1,4 +1,4 @@
-# 🐱 Lard - Frontend (v0.76.0)
+# 🐱 Lard - Frontend (v0.78.0)
 
 Next.js-based high-performance frontend for the **Lard** (Lazy AI-powered Resume Database) application.
 
@@ -30,7 +30,13 @@ Features a dual-layout strategy:
 ### 3. Navigation Guards
 Managed via the `ViewContext.tsx`, the application protects against accidental data loss. If a user attempts to navigate away from an unsaved edit (Job Details, Interview Steps, or the "Add Step" form), a centralized interceptor prompts for confirmation.
 
-### 4. Advanced Prompt Engineering UI
+### 4. Resizable AI Assistant
+The global `ChatAssistant.tsx` features:
+- **High-Fidelity Rendering**: Supports full Markdown (including GFM tables) and LaTeX math via KaTeX.
+- **Adjustable Layout**: A persistent resizable width handle allows users to expand the chat drawer for complex data or formulas.
+- **Normalization Layer**: Custom pre-processing ensures LLM quirks (like narrow non-breaking spaces or escaped currency) are cleaned before rendering.
+
+### 5. Advanced Prompt Engineering UI
 The Settings page includes a sophisticated sub-section for AI prompt management:
 - **Granular Baseline Resets**: Restore any of the 18+ system prompts to factory defaults individually.
 - **Context-Aware Filtering**: Automatically hides prompts irrelevant to the active Extraction Strategy (Single vs Multi-Agent).
@@ -57,7 +63,7 @@ As the AI assistant cannot access a browser, the following must be manually veri
 
 ---
 Built with ❤️ by Antigravity.
-Final version synchronized with v0.75.0.
+Final version synchronized with v0.78.0.
 
 ---
 
