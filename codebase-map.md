@@ -1,5 +1,5 @@
-# 🗺️ Lard - Lazy AI-Powered Resume Database (v0.78.0)
-Last Updated: 2026-05-09T01:11:00Z
+# 🗺️ Lard - Lazy AI-Powered Resume Database (v0.79.0)
+Last Updated: 2026-05-09T02:11:00Z
 
 This document provides a summary of the project's architecture, tech stack, and key logic to give AI coding agents instant context.
 
@@ -24,7 +24,7 @@ This document provides a summary of the project's architecture, tech stack, and 
 
 ### 🛠️ Infrastructure
 - **Persistence**: Consolidated project-root `/data` directory (shared by Local Dev and Docker).
-  - `data/db/`: Relational Data (SQLite).
+  - `data/db/`: Relational Data (`tracker.db`) and AI Assistant History (`ai_history.db`).
   - `data/chroma_db/`: Vector Data.
   - `data/uploads/`: Original Documents.
   - `data/huggingface/`: AI Model Cache.
@@ -52,14 +52,14 @@ This document provides a summary of the project's architecture, tech stack, and 
     *   `Company`: Represents a company/organization. Ensures consistency.
     *   `JobApplication`: Tracks job details, status, and linked documents/steps. Linked to `Company`. Includes robust contact validation for Hiring Manager, HR, and Headhunter using `email.utils`.
     *   `InterviewStep`: Individual process steps (e.g., "Phone Screen").
-  - `ai.py`: AI Assistant chat and data extraction endpoints. Includes SSE streaming for progress updates.
+  - `ai.py`: AI Assistant chat, history, and data extraction endpoints. Includes SSE streaming and session persistence.
   - `settings.py`: Application configuration endpoints.
 - `database/`:
   - `models.py`: SQLAlchemy relational models.
   - `relational.py`: Database engine and session setup.
   - `vector_store.py`: ChromaDB integration for RAG. Uses Docling for high-fidelity extraction of `.docx` and `.html` files. Employs lazy initialization for the `PersistentClient` and `HuggingFaceEmbeddings`.
 - `ai/`:
-  - `assistant.py`: LangGraph-based conversational agent logic. Uses lazy loading for the vector store manager.
+  - `assistant.py`: LangGraph-based conversational agent logic. Uses `SqliteSaver` for session persistence in `data/db/ai_history.db`.
   - `llm_factory.py`: Multi-provider support (Ollama, OpenAI, Anthropic).
   - `chains.py`: Specific LangChain sequences (e.g., for extraction).
   - `debug.py`: Custom diagnostics, including the `DebugLLMCallbackHandler` to capture raw inputs/outputs to `data/tmp`.
@@ -92,7 +92,7 @@ This document provides a summary of the project's architecture, tech stack, and 
   - `tooltip-box`: Theme-aware CSS utility in `globals.css` ensuring readable tooltips in both light and dark modes.
   - `AddJobModal.tsx`: Core form for new applications. Rendered via **React Portal**. Includes AI Auto-fill, Potential Hallucination Warning System, **Context Limit Warning System**, and **validation guards for required fields** (Company/Role).
   - `ConfirmDialog.tsx`: Multi-functional modal replacing native prompts. Rendered via **React Portal**. Supports **Date Inputs**, **File Uploads**, and **Combobox Text Inputs** (with custom `<datalist>`). Includes variant-based styling (`danger`, `success`, `default`).
-  - `ChatAssistant.tsx`: Global **Portal-based side drawer** for the AI agent. Features high-fidelity **Markdown rendering** (with GFM tables), **LaTeX mathematical formulas** (via KaTeX), and a **resizable width** handle for adjustable layout. Includes a normalization layer to handle LLM-specific formatting quirks (narrow spaces, escaped currency).
+  - `ChatAssistant.tsx`: Global **Portal-based side drawer** for the AI agent. Features high-fidelity **Markdown rendering**, **LaTeX math**, and a **resizable width**. Includes **Session History management** with a dedicated drawer for navigating past conversations.
   - `SettingsPage.tsx`: Integrated configuration for LLMs and themes. Features a collapsible **Advanced AI Prompt Settings** subsection with:
       *   **Additive Guidance**: Field-specific instruction tabs for fine-tuning extraction.
       *   **Base System Prompts**: Independent sub-section for modifying core backend prompts (Extraction, JSON-LD, QA Validator) and granular field-level prompts for Multi-Agent mode (Text and JSON) with a dedicated reset handler. Features a nested tabbed UI for efficient management of 18 total base prompts. **Selective Filtering**: Prompts are filtered based on the active **Extraction Strategy** (Single vs. Multi-Agent). **Active Selection Sync**: Automatically synchronizes the active prompt tab when switching strategies or tabs to ensure only visible prompts are selected. Supports **Granular Resets** for each specific prompt to factory defaults. Enhanced readability with `rows={12}` text areas. Includes **Focus Persistence Fixes** and **Persistence Support** in the backend for reliable prompt engineering.

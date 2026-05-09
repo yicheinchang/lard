@@ -30,8 +30,10 @@ Features a dual-layout strategy:
 ### 3. Navigation Guards
 Managed via the `ViewContext.tsx`, the application protects against accidental data loss. If a user attempts to navigate away from an unsaved edit (Job Details, Interview Steps, or the "Add Step" form), a centralized interceptor prompts for confirmation.
 
-### 4. Resizable AI Assistant
+### 4. Stateful AI Assistant
 The global `ChatAssistant.tsx` features:
+- **Session History**: A dedicated drawer for navigating past conversations. Supports switching threads and starting new chats with a single click.
+- **Persistence**: Remembers the active `session_id` using `localStorage`, ensuring the conversation continues exactly where you left off after a page refresh.
 - **High-Fidelity Rendering**: Supports full Markdown (including GFM tables) and LaTeX math via KaTeX.
 - **Adjustable Layout**: A persistent resizable width handle allows users to expand the chat drawer for complex data or formulas.
 - **Normalization Layer**: Custom pre-processing ensures LLM quirks (like narrow non-breaking spaces or escaped currency) are cleaned before rendering.

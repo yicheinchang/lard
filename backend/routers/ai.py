@@ -537,28 +537,100 @@ async def extract_from_pdf(request: Request, file: UploadFile = File(...)):
 class ChatRequest(BaseModel):
     message: str
     job_id: int | None = None
+    session_id: str | None = None
+
+@router.get("/sessions")
+async def get_chat_sessions():
+    """List all past chat sessions."""
+    _check_ai_enabled()
+    import sqlite3
+    from ai.assistant import HISTORY_DB_PATH
+    conn = sqlite3.connect(HISTORY_DB_PATH)
+    conn.row_factory = sqlite3.Row
+    cursor = conn.cursor()
+    cursor.execute("SELECT id, title, created_at, updated_at FROM chat_sessions ORDER BY updated_at DESC")
+    rows = cursor.fetchall()
+    conn.close()
+    return [dict(row) for row in rows]
+
+@router.get("/chat/{session_id}")
+async def get_chat_history(session_id: str):
+    """Retrieve message history for a specific session."""
+    _check_ai_enabled()
+    from ai.assistant import get_assistant_agent
+    
+    agent = get_assistant_agent()
+    config = {"configurable": {"thread_id": session_id}}
+    state = agent.get_state(config)
+    
+    messages = []
+    if state.values and "messages" in state.values:
+        for msg in state.values["messages"]:
+            # Only return human and AI messages to the UI
+            if msg.type in ["human", "ai"]:
+                messages.append({
+                    "role": "user" if msg.type == "human" else "assistant",
+                    "content": msg.content
+                })
+    
+    return {"history": messages}
 
 @router.post("/chat")
 async def chat_with_assistant(req: ChatRequest):
     _check_ai_enabled()
     await _ensure_ai_ready()
     try:
-        from ai.assistant import get_assistant_agent
+        from ai.assistant import get_assistant_agent, HISTORY_DB_PATH
         from langchain_core.messages import HumanMessage
+        import sqlite3
         
         agent = get_assistant_agent()
         
-        # If a job_id is provided, we hint the agent about it
+        if not req.session_id:
+            raise HTTPException(status_code=400, detail="session_id is required for persistent chat.")
+
+        # 1. Ensure session exists or create it
+        conn = sqlite3.connect(HISTORY_DB_PATH)
+        cursor = conn.cursor()
+        cursor.execute("SELECT id FROM chat_sessions WHERE id = ?", (req.session_id,))
+        exists = cursor.fetchone()
+        
+        if not exists:
+            # Generate a title for the new session using the LLM
+            from ai.llm_factory import get_llm
+            llm = get_llm()
+            title_prompt = f"Generate a very short (max 5 words) descriptive title for a chat session starting with this message: '{req.message}'. Return only the title text."
+            try:
+                title_res = llm.invoke(title_prompt)
+                title = title_res.content.strip().strip('"').strip("'")
+            except:
+                title = req.message[:30] + "..." if len(req.message) > 30 else req.message
+                
+            cursor.execute(
+                "INSERT INTO chat_sessions (id, title) VALUES (?, ?)",
+                (req.session_id, title)
+            )
+        else:
+            # Update updated_at timestamp
+            cursor.execute(
+                "UPDATE chat_sessions SET updated_at = CURRENT_TIMESTAMP WHERE id = ?",
+                (req.session_id,)
+            )
+        conn.commit()
+        conn.close()
+
+        # 2. Invoke agent with thread_id
         query = req.message
         if req.job_id:
             query = f"(Context: the user is currently looking at job ID {req.job_id}) {query}"
             
-        result = agent.invoke({"messages": [HumanMessage(content=query)]})
+        config = {"configurable": {"thread_id": req.session_id}}
+        result = agent.invoke({"messages": [HumanMessage(content=query)]}, config=config)
         
-        # The result of a react agent is the updated state, 
-        # where the last message is the assistant's reply.
+        # 3. Extract reply
         reply = result["messages"][-1].content
         return {"reply": reply, "error": None}
+        
     except Exception as e:
         import traceback
         print(traceback.format_exc())

@@ -1,6 +1,6 @@
 [project]
 name = "lard-backend"
-version = "0.78.0"
+version = "0.79.0"
 description = "Add your description here"
 license = "MIT"
 readme = "README.md"
@@ -31,6 +31,7 @@ dependencies = [
     "docling>=2.85.0",
     "extruct>=0.18.0",
     "transformers>=5.5.0",
+    "langgraph-checkpoint-sqlite>=3.0.3",
 ]
 
 [[tool.uv.index]]

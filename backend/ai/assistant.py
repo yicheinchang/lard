@@ -1,11 +1,40 @@
+import sqlite3
+import os
 from langchain_core.tools import tool
-from langchain_core.messages import SystemMessage
-from langgraph.prebuilt import create_react_agent
+from langchain.agents import create_agent
+from langgraph.checkpoint.sqlite import SqliteSaver
 from ai.llm_factory import get_llm
 from ai.logger import agnt_log, log_llm_info
 from database.relational import run_query
 from database.vector_store import get_vector_store_manager
 import json
+
+from config import settings
+
+# --- Persistence Setup --- #
+
+HISTORY_DB_PATH = os.path.join(settings.DB_DIR, "ai_history.db")
+
+def init_history_db():
+    conn = sqlite3.connect(HISTORY_DB_PATH)
+    cursor = conn.cursor()
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS chat_sessions (
+            id TEXT PRIMARY KEY,
+            title TEXT,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        );
+    """)
+    conn.commit()
+    conn.close()
+
+init_history_db()
+
+# Initialize SqliteSaver checkpointer
+# Using check_same_thread=False for FastAPI compatibility
+sqlite_conn = sqlite3.connect(HISTORY_DB_PATH, check_same_thread=False)
+sqlite_saver = SqliteSaver(sqlite_conn)
 
 # --- SQL Database Tool --- #
 
@@ -61,7 +90,7 @@ def search_documents(query: str, job_id: Optional[int] = None):
 
 # --- Agent Setup --- #
 
-SCHEMA_DESCRIPTION = """
+SCHEMA_DESCRIPTION = r"""
 You have access to a SQLite database with the following schema:
 
 Table: job_applications
@@ -102,10 +131,12 @@ def get_assistant_agent():
     log_llm_info()
     llm = get_llm()
     tools = [query_database, search_documents]
-    # Use prompt instead of messages_modifier/state_modifier for broader compatibility if unsure
-    agent = create_react_agent(
+    
+    # LangChain v1.0 Standard Agent
+    agent = create_agent(
         llm, 
         tools=tools,
-        prompt=f"You are a helpful AI job assistant. {SCHEMA_DESCRIPTION}"
+        system_prompt=f"You are a helpful AI job assistant. {SCHEMA_DESCRIPTION}",
+        checkpointer=sqlite_saver
     )
     return agent

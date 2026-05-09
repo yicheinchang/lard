@@ -139,9 +139,15 @@ graph TD
 
 ## 🤖 AI Assistant Logic
 
-The **Chat Assistant** (`backend/ai/assistant.py`) utilizes a specialized communication protocol to ensure high-fidelity rendering on the frontend.
+The **Chat Assistant** (`backend/ai/assistant.py`) is a stateful LangGraph-based agent that manages multi-turn conversations and integrates with the Lard database.
 
-### 1. Math & Formatting Standards
+### 1. Persistent Session Memory
+The assistant utilizes `langgraph-checkpoint-sqlite` for long-term memory:
+- **Persistence Layer**: Conversation state is automatically saved to `data/db/ai_history.db` using `SqliteSaver`.
+- **Thread Isolation**: Conversations are isolated by `session_id` (thread ID), allowing users to switch between multiple concurrent or historical chats.
+- **Session Metadata**: The `chat_sessions` table tracks session IDs, auto-generated titles, and timestamps for retrieval in the frontend.
+
+### 2. Math & Formatting Standards
 The assistant is instructed via system prompts to use specific delimiters:
 - **Block Math**: `\[ ... \]`
 - **Inline Math**: `\( ... \)`

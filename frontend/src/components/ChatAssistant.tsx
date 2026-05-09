@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Bot, Send, X, Loader2, Sparkles, User } from 'lucide-react';
+import { Bot, Send, X, Loader2, Sparkles, User, History, Plus, ChevronLeft } from 'lucide-react';
 import api from '../lib/api';
 import { Portal } from './Portal';
 import { useSettings } from '../lib/SettingsContext';
@@ -32,13 +32,10 @@ export const ChatAssistant: React.FC<{
     return settings?.theme || 'dark';
   }, [settings?.theme]);
 
-  const [messages, setMessages] = useState<Message[]>([
-    {
-      id: '1',
-      role: 'assistant',
-      content: 'Hello! I am your AI Job Application Assistant. Ask me anything about your saved jobs, uploaded resumes, or application strategies.'
-    }
-  ]);
+  const [view, setView] = useState<'chat' | 'history'>('chat');
+  const [sessionId, setSessionId] = useState<string | null>(null);
+  const [sessions, setSessions] = useState<any[]>([]);
+  const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [isTyping, setIsTyping] = useState(false);
   const [isAiReady, setIsAiReady] = useState<boolean | null>(null);
@@ -46,6 +43,72 @@ export const ChatAssistant: React.FC<{
   const [width, setWidth] = useState(400);
   const isResizing = useRef(false);
   const scrollRef = useRef<HTMLDivElement>(null);
+
+  // Initialize Session ID
+  useEffect(() => {
+    const savedSessionId = localStorage.getItem('ai_assistant_session_id');
+    if (savedSessionId) {
+      setSessionId(savedSessionId);
+      loadSession(savedSessionId);
+    } else {
+      startNewChat();
+    }
+  }, []);
+
+  const startNewChat = () => {
+    const newId = crypto.randomUUID();
+    setSessionId(newId);
+    localStorage.setItem('ai_assistant_session_id', newId);
+    setMessages([{
+      id: 'welcome',
+      role: 'assistant',
+      content: 'Hello! I am your AI Job Application Assistant. Ask me anything about your saved jobs, uploaded resumes, or application strategies.'
+    }]);
+    setView('chat');
+  };
+
+  const fetchSessions = async () => {
+    try {
+      const res = await api.get('/ai/sessions');
+      setSessions(res.data);
+    } catch (err) {
+      console.error("Failed to fetch sessions:", err);
+    }
+  };
+
+  const loadSession = async (id: string) => {
+    try {
+      setIsTyping(true);
+      const res = await api.get(`/ai/chat/${id}`);
+      setSessionId(id);
+      localStorage.setItem('ai_assistant_session_id', id);
+      
+      if (res.data.history && res.data.history.length > 0) {
+        setMessages(res.data.history.map((m: any, idx: number) => ({
+          id: `hist-${idx}`,
+          role: m.role,
+          content: m.content
+        })));
+      } else {
+        setMessages([{
+          id: 'welcome',
+          role: 'assistant',
+          content: 'Hello! This is a new conversation. How can I help you today?'
+        }]);
+      }
+      setView('chat');
+    } catch (err) {
+      console.error("Failed to load session:", err);
+    } finally {
+      setIsTyping(false);
+    }
+  };
+
+  useEffect(() => {
+    if (view === 'history') {
+      fetchSessions();
+    }
+  }, [view]);
 
   // Load persisted width
   useEffect(() => {
@@ -126,6 +189,7 @@ export const ChatAssistant: React.FC<{
     try {
       const response = await api.post('/ai/chat', { 
         message: userMsg.content,
+        session_id: sessionId,
         ...(jobId ? { job_id: jobId } : {})
       });
       
@@ -165,96 +229,168 @@ export const ChatAssistant: React.FC<{
         {/* Header */}
         <div className="p-4 border-b border-[var(--border-color)] flex justify-between items-center bg-violet-600/10 shrink-0">
           <div className="flex items-center gap-2">
-            <div className="bg-violet-500/20 p-2 rounded-lg text-violet-400">
-              <Sparkles className="w-5 h-5" />
-            </div>
+            {view === 'history' ? (
+              <button 
+                onClick={() => setView('chat')}
+                className="p-1.5 hover:bg-[var(--surface-hover)] rounded-lg text-[var(--fg-subtle)] transition-colors"
+              >
+                <ChevronLeft className="w-5 h-5" />
+              </button>
+            ) : (
+              <div className="bg-violet-500/20 p-2 rounded-lg text-violet-400">
+                <Sparkles className="w-5 h-5" />
+              </div>
+            )}
             <div>
-              <h3 className="font-semibold text-[var(--fg)]">AI Assistant</h3>
-              <p className="text-xs text-[var(--fg-muted)]">{jobId ? 'Context: Current Job' : 'Context: All Applications'}</p>
+              <h3 className="font-semibold text-[var(--fg)]">
+                {view === 'chat' ? 'AI Assistant' : 'Chat History'}
+              </h3>
+              <p className="text-xs text-[var(--fg-muted)]">
+                {view === 'history' ? `${sessions.length} sessions saved` : (jobId ? 'Context: Current Job' : 'Context: All Applications')}
+              </p>
             </div>
           </div>
-          <button onClick={onClose} className="p-2 text-[var(--fg-subtle)] hover:text-[var(--fg)] hover:bg-[var(--surface-hover)] rounded-lg transition-colors">
-            <X className="w-5 h-5" />
-          </button>
-        </div>
-
-        {/* Messages */}
-        <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 space-y-4 custom-scrollbar">
-          {messages.map(msg => (
-            <div key={msg.id} className={`flex gap-3 ${msg.role === 'user' ? 'flex-row-reverse' : ''}`}>
-              <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${msg.role === 'user' ? 'bg-violet-600' : 'bg-[var(--surface-alt)] border border-[var(--border-color)]'}`}>
-                {msg.role === 'user' ? <User className="w-4 h-4 text-white" /> : <Bot className="w-4 h-4 text-violet-400" />}
-              </div>
-              <div className={`max-w-[90%] rounded-2xl p-4 text-sm ${
-                msg.role === 'user' 
-                  ? 'bg-violet-600/20 text-[var(--fg)]' 
-                  : 'bg-[var(--surface-hover)] text-[var(--fg-muted)] border border-[var(--border-color)]'
-              } prose prose-sm ${resolvedGlobalTheme === 'dark' ? 'prose-invert' : ''} max-w-none break-words overflow-hidden`}>
-                <div className="[&>*:first-child]:mt-0 [&>*:last-child]:mb-0 overflow-x-auto custom-scrollbar">
-                  <ReactMarkdown 
-                    remarkPlugins={[[remarkMath, { singleDollar: true }], remarkGfm]} 
-                    rehypePlugins={[rehypeKatex]}
-                  >
-                    {msg.content
-                      .replace(/\u202F/g, ' ') // Fix narrow no-break space (KaTeX error 8239)
-                      .replace(/\\\$/g, '$')   // 1. Normalize \$ to $
-                      .replace(/\$/g, '\\$')   // 2. Escape all $ to \$
-                      .replace(/\\\[/g, '$$$$')
-                      .replace(/\\\]/g, '$$$$')
-                      .replace(/\\\(/g, '$')   // 3. Convert math \( to $ (unescaped)
-                      .replace(/\\\)/g, '$')}
-                  </ReactMarkdown>
-                </div>
-              </div>
-            </div>
-          ))}
-          {isInitializing && (
-            <div className="flex gap-3">
-               <div className="w-8 h-8 rounded-full flex items-center justify-center shrink-0 bg-[var(--surface-alt)] border border-[var(--border-color)] animate-pulse">
-                <Bot className="w-4 h-4 text-violet-400" />
-              </div>
-              <div className="bg-violet-600/10 rounded-2xl p-3 text-xs text-violet-500 border border-violet-500/20 italic">
-                Initializing AI libraries... First start can take 5-10 minutes. I&apos;ll be ready shortly!
-              </div>
-            </div>
-          )}
-          {isTyping && (
-            <div className="flex gap-3">
-               <div className="w-8 h-8 rounded-full flex items-center justify-center shrink-0 bg-[var(--surface-alt)] border border-[var(--border-color)]">
-                <Bot className="w-4 h-4 text-violet-400" />
-              </div>
-              <div className="bg-[var(--surface-hover)] rounded-2xl p-4 flex items-center gap-1">
-                <span className="w-2 h-2 bg-violet-400 rounded-full animate-bounce"></span>
-                <span className="w-2 h-2 bg-violet-400 rounded-full animate-bounce [animation-delay:0.2s]"></span>
-                <span className="w-2 h-2 bg-violet-400 rounded-full animate-bounce [animation-delay:0.4s]"></span>
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* Input */}
-        <div className="p-4 border-t border-[var(--border-color)] bg-[var(--bg)] shrink-0">
-          <form onSubmit={handleSend} className="relative flex items-center">
-            <input
-              type="text"
-              value={input}
-              onChange={e => setInput(e.target.value)}
-              placeholder="Ask about your applications..."
-              className="w-full bg-[var(--input-bg)] border border-[var(--border-color)] rounded-xl pl-4 pr-12 py-3 text-sm text-[var(--fg)] focus:outline-none focus:border-violet-500 transition-colors placeholder-[var(--fg-subtle)]"
-              disabled={isTyping}
-            />
-            <button
-              type="submit"
-              disabled={!input.trim() || isTyping}
-              className="absolute right-2 p-2 text-violet-400 hover:text-violet-500 disabled:opacity-50 transition-colors"
-            >
-              <Send className="w-5 h-5" />
+          <div className="flex items-center gap-1">
+            {view === 'chat' && (
+              <>
+                <button 
+                  onClick={startNewChat}
+                  title="New Chat"
+                  className="p-2 text-[var(--fg-subtle)] hover:text-[var(--fg)] hover:bg-[var(--surface-hover)] rounded-lg transition-colors"
+                >
+                  <Plus className="w-5 h-5" />
+                </button>
+                <button 
+                  onClick={() => setView('history')}
+                  title="View History"
+                  className="p-2 text-[var(--fg-subtle)] hover:text-[var(--fg)] hover:bg-[var(--surface-hover)] rounded-lg transition-colors"
+                >
+                  <History className="w-5 h-5" />
+                </button>
+              </>
+            )}
+            <button onClick={onClose} className="p-2 text-[var(--fg-subtle)] hover:text-[var(--fg)] hover:bg-[var(--surface-hover)] rounded-lg transition-colors">
+              <X className="w-5 h-5" />
             </button>
-          </form>
-          <div className="text-center mt-2 text-[10px] text-[var(--fg-subtle)]">
-            Powered by LangGraph & RAG
           </div>
         </div>
+
+        {view === 'chat' ? (
+          <>
+            {/* Messages */}
+            <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 space-y-4 custom-scrollbar">
+              {messages.map(msg => (
+                <div key={msg.id} className={`flex gap-3 ${msg.role === 'user' ? 'flex-row-reverse' : ''}`}>
+                  <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${msg.role === 'user' ? 'bg-violet-600' : 'bg-[var(--surface-alt)] border border-[var(--border-color)]'}`}>
+                    {msg.role === 'user' ? <User className="w-4 h-4 text-white" /> : <Bot className="w-4 h-4 text-violet-400" />}
+                  </div>
+                  <div className={`max-w-[90%] rounded-2xl p-4 text-sm ${
+                    msg.role === 'user' 
+                      ? 'bg-violet-600/20 text-[var(--fg)]' 
+                      : 'bg-[var(--surface-hover)] text-[var(--fg-muted)] border border-[var(--border-color)]'
+                  } prose prose-sm ${resolvedGlobalTheme === 'dark' ? 'prose-invert' : ''} max-w-none break-words overflow-hidden`}>
+                    <div className="[&>*:first-child]:mt-0 [&>*:last-child]:mb-0 overflow-x-auto custom-scrollbar">
+                      <ReactMarkdown 
+                        remarkPlugins={[[remarkMath, { singleDollar: true }], remarkGfm]} 
+                        rehypePlugins={[rehypeKatex]}
+                      >
+                        {msg.content
+                          .replace(/\u202F/g, ' ') // Fix narrow no-break space (KaTeX error 8239)
+                          .replace(/\\\$/g, '$')   // 1. Normalize \$ to $
+                          .replace(/\$/g, '\\$')   // 2. Escape all $ to \$
+                          .replace(/\\\[/g, '$$$$')
+                          .replace(/\\\]/g, '$$$$')
+                          .replace(/\\\(/g, '$')   // 3. Convert math \( to $ (unescaped)
+                          .replace(/\\\)/g, '$')}
+                      </ReactMarkdown>
+                    </div>
+                  </div>
+                </div>
+              ))}
+              {isInitializing && (
+                <div className="flex gap-3">
+                   <div className="w-8 h-8 rounded-full flex items-center justify-center shrink-0 bg-[var(--surface-alt)] border border-[var(--border-color)] animate-pulse">
+                    <Bot className="w-4 h-4 text-violet-400" />
+                  </div>
+                  <div className="bg-violet-600/10 rounded-2xl p-3 text-xs text-violet-500 border border-violet-500/20 italic">
+                    Initializing AI libraries... First start can take 5-10 minutes. I&apos;ll be ready shortly!
+                  </div>
+                </div>
+              )}
+              {isTyping && (
+                <div className="flex gap-3">
+                   <div className="w-8 h-8 rounded-full flex items-center justify-center shrink-0 bg-[var(--surface-alt)] border border-[var(--border-color)]">
+                    <Bot className="w-4 h-4 text-violet-400" />
+                  </div>
+                  <div className="bg-[var(--surface-hover)] rounded-2xl p-4 flex items-center gap-1">
+                    <span className="w-2 h-2 bg-violet-400 rounded-full animate-bounce"></span>
+                    <span className="w-2 h-2 bg-violet-400 rounded-full animate-bounce [animation-delay:0.2s]"></span>
+                    <span className="w-2 h-2 bg-violet-400 rounded-full animate-bounce [animation-delay:0.4s]"></span>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Input */}
+            <div className="p-4 border-t border-[var(--border-color)] bg-[var(--bg)] shrink-0">
+              <form onSubmit={handleSend} className="relative flex items-center">
+                <input
+                  type="text"
+                  value={input}
+                  onChange={e => setInput(e.target.value)}
+                  placeholder="Ask about your applications..."
+                  className="w-full bg-[var(--input-bg)] border border-[var(--border-color)] rounded-xl pl-4 pr-12 py-3 text-sm text-[var(--fg)] focus:outline-none focus:border-violet-500 transition-colors placeholder-[var(--fg-subtle)]"
+                  disabled={isTyping}
+                />
+                <button
+                  type="submit"
+                  disabled={!input.trim() || isTyping}
+                  className="absolute right-2 p-2 text-violet-400 hover:text-violet-500 disabled:opacity-50 transition-colors"
+                >
+                  <Send className="w-5 h-5" />
+                </button>
+              </form>
+              <div className="text-center mt-2 text-[10px] text-[var(--fg-subtle)]">
+                Powered by LangGraph & RAG
+              </div>
+            </div>
+          </>
+        ) : (
+          <div className="flex-1 overflow-y-auto p-2 custom-scrollbar">
+            {sessions.length === 0 ? (
+              <div className="flex flex-col items-center justify-center h-full text-[var(--fg-subtle)] p-8 text-center">
+                <History className="w-12 h-12 mb-4 opacity-20" />
+                <p className="text-sm">No past conversations found.</p>
+              </div>
+            ) : (
+              <div className="space-y-1">
+                {sessions.map(s => (
+                  <button
+                    key={s.id}
+                    onClick={() => loadSession(s.id)}
+                    className={`w-full text-left p-3 rounded-xl transition-all border ${
+                      s.id === sessionId 
+                        ? 'bg-violet-600/10 border-violet-500/30' 
+                        : 'border-transparent hover:bg-[var(--surface-hover)]'
+                    }`}
+                  >
+                    <div className="flex justify-between items-start mb-1">
+                      <span className={`text-sm font-medium line-clamp-1 ${s.id === sessionId ? 'text-violet-400' : 'text-[var(--fg)]'}`}>
+                        {s.title || 'Untitled Session'}
+                      </span>
+                      <span className="text-[10px] text-[var(--fg-subtle)] shrink-0">
+                        {new Date(s.updated_at + 'Z').toLocaleDateString()}
+                      </span>
+                    </div>
+                    <p className="text-[10px] text-[var(--fg-muted)] line-clamp-1 opacity-70">
+                      Last active: {new Date(s.updated_at + 'Z').toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    </p>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
       </div>
     </Portal>
     <style jsx global>{`
