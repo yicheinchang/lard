@@ -295,7 +295,9 @@ export const ChatAssistant: React.FC<{
                         rehypePlugins={[rehypeKatex]}
                       >
                         {msg.content
+                          .replace(/\u2011/g, '-') // Fix non-breaking hyphen (KaTeX error 8209)
                           .replace(/\u202F/g, ' ') // Fix narrow no-break space (KaTeX error 8239)
+                          .replace(/\u00A0/g, ' ') // Fix non-breaking space
                           .replace(/\\\$/g, '$')   // 1. Normalize \$ to $
                           .replace(/\$/g, '\\$')   // 2. Escape all $ to \$
                           .replace(/\\\[/g, '$$$$')
