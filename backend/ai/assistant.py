@@ -1,8 +1,10 @@
 import sqlite3
 import os
+import asyncio
+from contextlib import asynccontextmanager
 from langchain_core.tools import tool
 from langchain.agents import create_agent
-from langgraph.checkpoint.sqlite import SqliteSaver
+from langgraph.checkpoint.sqlite.aio import AsyncSqliteSaver
 from ai.llm_factory import get_llm
 from ai.logger import agnt_log, log_llm_info
 from database.relational import run_query
@@ -30,11 +32,6 @@ def init_history_db():
     conn.close()
 
 init_history_db()
-
-# Initialize SqliteSaver checkpointer
-# Using check_same_thread=False for FastAPI compatibility
-sqlite_conn = sqlite3.connect(HISTORY_DB_PATH, check_same_thread=False)
-sqlite_saver = SqliteSaver(sqlite_conn)
 
 # --- SQL Database Tool --- #
 
@@ -127,16 +124,20 @@ When the user asks a question:
 7. For any mathematical formulas or equations, you MUST use LaTeX notation with \[ ... \] for block math and \( ... \) for inline math. Do NOT use single $ signs for math to avoid conflict with currency symbols.
 """
 
-def get_assistant_agent():
+@asynccontextmanager
+async def get_assistant_agent():
+    """Async context manager for the assistant agent, ensuring checkpointer is properly managed."""
     log_llm_info()
     llm = get_llm()
     tools = [query_database, search_documents]
     
-    # LangChain v1.0 Standard Agent
-    agent = create_agent(
-        llm, 
-        tools=tools,
-        system_prompt=f"You are a helpful AI job assistant. {SCHEMA_DESCRIPTION}",
-        checkpointer=sqlite_saver
-    )
-    return agent
+    # Use AsyncSqliteSaver as a context manager (LangGraph 1.0 standard)
+    async with AsyncSqliteSaver.from_conn_string(HISTORY_DB_PATH) as checkpointer:
+        # LangChain v1.0 Standard Agent
+        agent = create_agent(
+            llm, 
+            tools=tools,
+            system_prompt=f"You are a helpful AI job assistant. {SCHEMA_DESCRIPTION}",
+            checkpointer=checkpointer
+        )
+        yield agent

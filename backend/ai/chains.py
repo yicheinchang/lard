@@ -1,5 +1,5 @@
 from langchain_core.prompts import ChatPromptTemplate
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ConfigDict
 
 from .prompts import DEFAULT_SYSTEM_PROMPTS, FIELD_FORMAT_DESCRIPTIONS
 import re
@@ -21,47 +21,57 @@ def get_base_prompt(key: str, settings: dict | None = None) -> str:
 # --- Single Agent (Base Baseline) ---
 
 class JobDetails(BaseModel):
+    model_config = ConfigDict(populate_by_name=True)
     is_job_post: bool = Field(description=FIELD_FORMAT_DESCRIPTIONS["is_job_post"])
     likelihood: float = Field(description=FIELD_FORMAT_DESCRIPTIONS["likelihood"])
-    company: str | None = Field(description=FIELD_FORMAT_DESCRIPTIONS["company"])
-    role: str | None = Field(description=FIELD_FORMAT_DESCRIPTIONS["role"])
-    location: str | None = Field(description=FIELD_FORMAT_DESCRIPTIONS["location"])
-    salary_range: str | None = Field(description=FIELD_FORMAT_DESCRIPTIONS["salary_range"])
-    company_job_id: str | None = Field(description=FIELD_FORMAT_DESCRIPTIONS["company_job_id"])
-    job_posted_date: str | None = Field(description=FIELD_FORMAT_DESCRIPTIONS["job_posted_date"])
-    application_deadline: str | None = Field(description=FIELD_FORMAT_DESCRIPTIONS["application_deadline"])
-    description: str | None = Field(description=FIELD_FORMAT_DESCRIPTIONS["description"])
-    detected_category: str | None = Field(description=FIELD_FORMAT_DESCRIPTIONS["detected_category"])
+    company: str | None = Field(default=None, description=FIELD_FORMAT_DESCRIPTIONS["company"])
+    role: str | None = Field(default=None, description=FIELD_FORMAT_DESCRIPTIONS["role"])
+    location: str | None = Field(default=None, description=FIELD_FORMAT_DESCRIPTIONS["location"])
+    salary_range: str | None = Field(default=None, description=FIELD_FORMAT_DESCRIPTIONS["salary_range"])
+    company_job_id: str | None = Field(default=None, description=FIELD_FORMAT_DESCRIPTIONS["company_job_id"])
+    job_posted_date: str | None = Field(default=None, description=FIELD_FORMAT_DESCRIPTIONS["job_posted_date"])
+    application_deadline: str | None = Field(default=None, description=FIELD_FORMAT_DESCRIPTIONS["application_deadline"])
+    description: str | None = Field(default=None, description=FIELD_FORMAT_DESCRIPTIONS["description"])
+    detected_category: str | None = Field(default=None, description=FIELD_FORMAT_DESCRIPTIONS["detected_category"])
 
 # --- Multi-Agent (Granular Splits) ---
 
 class JobCompany(BaseModel):
+    model_config = ConfigDict(populate_by_name=True)
     company: str | None = Field(default=None, description=FIELD_FORMAT_DESCRIPTIONS["company"])
 
 class JobRole(BaseModel):
+    model_config = ConfigDict(populate_by_name=True)
     role: str | None = Field(default=None, description=FIELD_FORMAT_DESCRIPTIONS["role"])
 
 class JobLocation(BaseModel):
+    model_config = ConfigDict(populate_by_name=True)
     location: str | None = Field(default=None, description=FIELD_FORMAT_DESCRIPTIONS["location"])
 
 class JobSalary(BaseModel):
+    model_config = ConfigDict(populate_by_name=True)
     salary_range: str | None = Field(default=None, description=FIELD_FORMAT_DESCRIPTIONS["salary_range"])
 
 class JobId(BaseModel):
+    model_config = ConfigDict(populate_by_name=True)
     company_job_id: str | None = Field(default=None, description=FIELD_FORMAT_DESCRIPTIONS["company_job_id"])
 
 class PostedDate(BaseModel):
+    model_config = ConfigDict(populate_by_name=True)
     job_posted_date: str | None = Field(default=None, description=FIELD_FORMAT_DESCRIPTIONS["job_posted_date"])
 
 class DeadlineDate(BaseModel):
+    model_config = ConfigDict(populate_by_name=True)
     application_deadline: str | None = Field(default=None, description=FIELD_FORMAT_DESCRIPTIONS["application_deadline"])
 
 class JobDescription(BaseModel):
+    model_config = ConfigDict(populate_by_name=True)
     description: str | None = Field(default=None, description=FIELD_FORMAT_DESCRIPTIONS["description"])
 
 # --- Verification (Multi-Agent Entry) ---
 
 class JobPostCheck(BaseModel):
+    model_config = ConfigDict(populate_by_name=True)
     is_job_post: bool = Field(description="True if the provided content is likely a job description or position advertisement.")
     likelihood: float = Field(description="The confidence level that the content is a job post, from 0.0 to 1.0.")
     reason: str | None = Field(default=None, description="Optional brief reason if it's unlikely to be a job post.")
@@ -190,6 +200,7 @@ def description_json_prompt(settings: dict | None = None):
 # --- Static wrappers removed in favor of dynamic get_* functions ---
 
 class DescriptionValidation(BaseModel):
+    model_config = ConfigDict(populate_by_name=True)
     is_valid: bool = Field(description="True if the description is formatted correctly as clean Markdown and does NOT contain AI filler/conversational wrappers.")
     is_complete: bool = Field(description="True if the generated description contains ALL relevant information from the source, specifically ensuring the LAST items in lists and sections are present. True for JSON-LD if everything is present.")
     failure_reason: str | None = Field(default=None, description="If is_valid or is_complete is False, provide a concise explanation (e.g. 'Missing the final responsibility item', 'Includes AI conversational filler').")

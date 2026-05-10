@@ -1,5 +1,5 @@
-# 🗺️ Lard - Lazy AI-Powered Resume Database (v0.79.0)
-Last Updated: 2026-05-09T02:11:00Z
+# 🗺️ Lard - Lazy AI-Powered Resume Database (v0.80.0)
+Last Updated: 2026-05-10T02:35:00Z
 
 This document provides a summary of the project's architecture, tech stack, and key logic to give AI coding agents instant context.
 
@@ -59,7 +59,7 @@ This document provides a summary of the project's architecture, tech stack, and 
   - `relational.py`: Database engine and session setup.
   - `vector_store.py`: ChromaDB integration for RAG. Uses Docling for high-fidelity extraction of `.docx` and `.html` files. Employs lazy initialization for the `PersistentClient` and `HuggingFaceEmbeddings`.
 - `ai/`:
-  - `assistant.py`: LangGraph-based conversational agent logic. Uses `SqliteSaver` for session persistence in `data/db/ai_history.db`.
+  - `assistant.py`: LangGraph-based conversational agent logic (LangChain v1.0 standard). Uses `AsyncSqliteSaver` for persistent session history in `data/db/ai_history.db`.
   - `llm_factory.py`: Multi-provider support (Ollama, OpenAI, Anthropic).
   - `chains.py`: Specific LangChain sequences (e.g., for extraction).
   - `debug.py`: Custom diagnostics, including the `DebugLLMCallbackHandler` to capture raw inputs/outputs to `data/tmp`.

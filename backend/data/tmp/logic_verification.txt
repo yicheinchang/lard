@@ -1,0 +1,8 @@
+--- Testing Logic Preservation: JSON-LD to Text Fallback ---
+Initial state (JSON-LD): Test Corp - Salary: None
+Validator output: use_text_fallback=True, active_source=TEXT
+✅ SUCCESS: Validator correctly triggered Fallback to TEXT.
+Merged Fields from Text: ['salary_range']
+Final Salary: $100k-$120k
+Preserved Company: Test Corp
+✅ SUCCESS: Merge logic correctly preserved JSON data while filling gaps from TEXT.

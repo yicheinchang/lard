@@ -143,7 +143,8 @@ The **Chat Assistant** (`backend/ai/assistant.py`) is a stateful LangGraph-based
 
 ### 1. Persistent Session Memory
 The assistant utilizes `langgraph-checkpoint-sqlite` for long-term memory:
-- **Persistence Layer**: Conversation state is automatically saved to `data/db/ai_history.db` using `SqliteSaver`.
+- **Persistence Layer**: Conversation state is automatically saved to `data/db/ai_history.db` using `AsyncSqliteSaver` (LangGraph v1.0 Standard).
+- **Migration (v0.80.0)**: Fully migrated to LangChain v1.0 and Pydantic v2, supporting Python 3.14+ with native `model_dump()` and `ConfigDict` patterns.
 - **Thread Isolation**: Conversations are isolated by `session_id` (thread ID), allowing users to switch between multiple concurrent or historical chats.
 - **Session Metadata**: The `chat_sessions` table tracks session IDs, auto-generated titles, and timestamps for retrieval in the frontend.
 

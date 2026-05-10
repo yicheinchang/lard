@@ -559,21 +559,21 @@ async def get_chat_history(session_id: str):
     _check_ai_enabled()
     from ai.assistant import get_assistant_agent
     
-    agent = get_assistant_agent()
-    config = {"configurable": {"thread_id": session_id}}
-    state = agent.get_state(config)
-    
-    messages = []
-    if state.values and "messages" in state.values:
-        for msg in state.values["messages"]:
-            # Only return human and AI messages to the UI
-            if msg.type in ["human", "ai"]:
-                messages.append({
-                    "role": "user" if msg.type == "human" else "assistant",
-                    "content": msg.content
-                })
-    
-    return {"history": messages}
+    async with get_assistant_agent() as agent:
+        config = {"configurable": {"thread_id": session_id}}
+        state = await agent.aget_state(config)
+        
+        messages = []
+        if state.values and "messages" in state.values:
+            for msg in state.values["messages"]:
+                # Only return human and AI messages to the UI
+                if msg.type in ["human", "ai"]:
+                    messages.append({
+                        "role": "user" if msg.type == "human" else "assistant",
+                        "content": msg.content
+                    })
+        
+        return {"history": messages}
 
 @router.post("/chat")
 async def chat_with_assistant(req: ChatRequest):
@@ -584,12 +584,12 @@ async def chat_with_assistant(req: ChatRequest):
         from langchain_core.messages import HumanMessage
         import sqlite3
         
-        agent = get_assistant_agent()
-        
         if not req.session_id:
             raise HTTPException(status_code=400, detail="session_id is required for persistent chat.")
 
         # 1. Ensure session exists or create it
+        # We still use sync sqlite3 for simple metadata, or we could refactor this too.
+        # Keeping it sync for metadata is fine as it's a separate table.
         conn = sqlite3.connect(HISTORY_DB_PATH)
         cursor = conn.cursor()
         cursor.execute("SELECT id FROM chat_sessions WHERE id = ?", (req.session_id,))
@@ -601,7 +601,7 @@ async def chat_with_assistant(req: ChatRequest):
             llm = get_llm()
             title_prompt = f"Generate a very short (max 5 words) descriptive title for a chat session starting with this message: '{req.message}'. Return only the title text."
             try:
-                title_res = llm.invoke(title_prompt)
+                title_res = await llm.ainvoke(title_prompt)
                 title = title_res.content.strip().strip('"').strip("'")
             except:
                 title = req.message[:30] + "..." if len(req.message) > 30 else req.message
@@ -624,12 +624,13 @@ async def chat_with_assistant(req: ChatRequest):
         if req.job_id:
             query = f"(Context: the user is currently looking at job ID {req.job_id}) {query}"
             
-        config = {"configurable": {"thread_id": req.session_id}}
-        result = agent.invoke({"messages": [HumanMessage(content=query)]}, config=config)
-        
-        # 3. Extract reply
-        reply = result["messages"][-1].content
-        return {"reply": reply, "error": None}
+        async with get_assistant_agent() as agent:
+            config = {"configurable": {"thread_id": req.session_id}}
+            result = await agent.ainvoke({"messages": [HumanMessage(content=query)]}, config=config)
+            
+            # 3. Extract reply
+            reply = result["messages"][-1].content
+            return {"reply": reply, "error": None}
         
     except Exception as e:
         import traceback
