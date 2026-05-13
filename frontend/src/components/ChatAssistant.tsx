@@ -13,6 +13,7 @@ interface Message {
   id: string;
   role: 'user' | 'assistant';
   content: string;
+  reasoning?: string;
 }
 
 export const ChatAssistant: React.FC<{
@@ -87,7 +88,8 @@ export const ChatAssistant: React.FC<{
         setMessages(res.data.history.map((m: any, idx: number) => ({
           id: `hist-${idx}`,
           role: m.role,
-          content: m.content
+          content: m.content,
+          reasoning: m.reasoning
         })));
       } else {
         setMessages([{
@@ -193,14 +195,15 @@ export const ChatAssistant: React.FC<{
         ...(jobId ? { job_id: jobId } : {})
       });
       
-      const replyContent = response.data.error 
-        ? `Error: ${response.data.error}` 
-        : response.data.reply;
+      const { reply: replyContent, reasoning: replyReasoning, error: replyError } = response.data;
+      
+      const finalContent = replyError ? `Error: ${replyError}` : replyContent;
 
       setMessages(prev => [...prev, {
         id: (Date.now() + 1).toString(),
         role: 'assistant',
-        content: replyContent
+        content: finalContent,
+        reasoning: replyReasoning
       }]);
     } catch (err: any) {
       setMessages(prev => [...prev, {
@@ -284,27 +287,53 @@ export const ChatAssistant: React.FC<{
                   <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${msg.role === 'user' ? 'bg-violet-600' : 'bg-[var(--surface-alt)] border border-[var(--border-color)]'}`}>
                     {msg.role === 'user' ? <User className="w-4 h-4 text-white" /> : <Bot className="w-4 h-4 text-violet-400" />}
                   </div>
-                  <div className={`max-w-[90%] rounded-2xl p-4 text-sm ${
+                  <div className={`max-w-[90%] rounded-2xl overflow-hidden flex flex-col ${
                     msg.role === 'user' 
                       ? 'bg-violet-600/20 text-[var(--fg)]' 
                       : 'bg-[var(--surface-hover)] text-[var(--fg-muted)] border border-[var(--border-color)]'
-                  } prose prose-sm ${resolvedGlobalTheme === 'dark' ? 'prose-invert' : ''} max-w-none break-words overflow-hidden`}>
-                    <div className="[&>*:first-child]:mt-0 [&>*:last-child]:mb-0 overflow-x-auto custom-scrollbar">
-                      <ReactMarkdown 
-                        remarkPlugins={[[remarkMath, { singleDollar: true }], remarkGfm]} 
-                        rehypePlugins={[rehypeKatex]}
-                      >
-                        {msg.content
-                          .replace(/\u2011/g, '-') // Fix non-breaking hyphen (KaTeX error 8209)
-                          .replace(/\u202F/g, ' ') // Fix narrow no-break space (KaTeX error 8239)
-                          .replace(/\u00A0/g, ' ') // Fix non-breaking space
-                          .replace(/\\\$/g, '$')   // 1. Normalize \$ to $
-                          .replace(/\$/g, '\\$')   // 2. Escape all $ to \$
-                          .replace(/\\\[/g, '$$$$')
-                          .replace(/\\\]/g, '$$$$')
-                          .replace(/\\\(/g, '$')   // 3. Convert math \( to $ (unescaped)
-                          .replace(/\\\)/g, '$')}
-                      </ReactMarkdown>
+                  }`}>
+                    {/* Reasoning Section (Collapsible) */}
+                    {msg.reasoning && (
+                      <details className="border-b border-[var(--border-color)] bg-[var(--surface-alt)]/50 group">
+                        <summary className="p-3 text-[10px] uppercase tracking-wider font-bold text-[var(--fg-subtle)] cursor-pointer list-none hover:bg-[var(--surface-hover)] transition-colors flex items-center gap-2">
+                          <div className="w-1.5 h-1.5 rounded-full bg-violet-400 animate-pulse" />
+                          <span>Reasoning</span>
+                          <span className="ml-auto text-[8px] opacity-0 group-open:opacity-100 transition-opacity">Hide</span>
+                        </summary>
+                        <div className="p-4 pt-0 text-xs italic text-[var(--fg-subtle)] border-t border-[var(--border-color)]/30 max-h-[200px] overflow-y-auto custom-scrollbar">
+                          <ReactMarkdown 
+                            remarkPlugins={[[remarkMath, { singleDollar: true }], remarkGfm]} 
+                            rehypePlugins={[rehypeKatex]}
+                          >
+                            {msg.reasoning
+                              .replace(/\u2011/g, '-') 
+                              .replace(/\u202F/g, ' ') 
+                              .replace(/\u00A0/g, ' ')
+                            }
+                          </ReactMarkdown>
+                        </div>
+                      </details>
+                    )}
+
+                    {/* Main Content */}
+                    <div className={`p-4 text-sm prose prose-sm ${resolvedGlobalTheme === 'dark' ? 'prose-invert' : ''} max-w-none break-words overflow-hidden`}>
+                      <div className="[&>*:first-child]:mt-0 [&>*:last-child]:mb-0 overflow-x-auto custom-scrollbar">
+                        <ReactMarkdown 
+                          remarkPlugins={[[remarkMath, { singleDollar: true }], remarkGfm]} 
+                          rehypePlugins={[rehypeKatex]}
+                        >
+                          {msg.content
+                            .replace(/\u2011/g, '-') // Fix non-breaking hyphen (KaTeX error 8209)
+                            .replace(/\u202F/g, ' ') // Fix narrow no-break space (KaTeX error 8239)
+                            .replace(/\u00A0/g, ' ') // Fix non-breaking space
+                            .replace(/\\\$/g, '$')   // 1. Normalize \$ to $
+                            .replace(/\$/g, '\\$')   // 2. Escape all $ to \$
+                            .replace(/\\\[/g, '$$$$')
+                            .replace(/\\\]/g, '$$$$')
+                            .replace(/\\\(/g, '$')   // 3. Convert math \( to $ (unescaped)
+                            .replace(/\\\)/g, '$')}
+                        </ReactMarkdown>
+                      </div>
                     </div>
                   </div>
                 </div>

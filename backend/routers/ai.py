@@ -568,9 +568,31 @@ async def get_chat_history(session_id: str):
             for msg in state.values["messages"]:
                 # Only return human and AI messages to the UI
                 if msg.type in ["human", "ai"]:
+                    content = ""
+                    reasoning = ""
+                    
+                    if isinstance(msg.content, str):
+                        content = msg.content
+                    elif isinstance(msg.content, list):
+                        for block in msg.content:
+                            if isinstance(block, str):
+                                content += block
+                            elif isinstance(block, dict):
+                                b_type = block.get("type")
+                                if b_type == "text":
+                                    content += block.get("text", "")
+                                elif b_type in ["thinking", "reasoning"]:
+                                    # Handle both common block keys
+                                    reasoning += block.get("thinking", "") or block.get("reasoning", "")
+                    
+                    # Skip empty assistant messages (usually intermediate tool calls)
+                    if msg.type == "ai" and not content.strip() and not reasoning.strip():
+                        continue
+                        
                     messages.append({
                         "role": "user" if msg.type == "human" else "assistant",
-                        "content": msg.content
+                        "content": content,
+                        "reasoning": reasoning if reasoning else None
                     })
         
         return {"history": messages}
@@ -633,9 +655,30 @@ async def chat_with_assistant(req: ChatRequest):
             config = {"configurable": {"thread_id": req.session_id}}
             result = await agent.ainvoke({"messages": [HumanMessage(content=query)]}, config=config)
             
-            # 3. Extract reply
-            reply = result["messages"][-1].content
-            return {"reply": reply, "error": None}
+            # 3. Extract reply and reasoning
+            last_msg = result["messages"][-1]
+            content = ""
+            reasoning = ""
+            
+            if isinstance(last_msg.content, str):
+                content = last_msg.content
+            elif isinstance(last_msg.content, list):
+                for block in last_msg.content:
+                    if isinstance(block, str):
+                        content += block
+                    elif isinstance(block, dict):
+                        b_type = block.get("type")
+                        if b_type == "text":
+                            content += block.get("text", "")
+                        elif b_type in ["thinking", "reasoning"]:
+                            # Handle both common block keys
+                            reasoning += block.get("thinking", "") or block.get("reasoning", "")
+            
+            return {
+                "reply": content, 
+                "reasoning": reasoning if reasoning else None,
+                "error": None
+            }
         
     except Exception as e:
         import traceback
