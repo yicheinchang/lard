@@ -14,76 +14,19 @@ def escape_braces(s: str) -> str:
 
 def normalize_date_string(v: Any) -> Any:
     """
-    Robustly normalizes various date string formats to YYYY-MM-DD.
+    Robustly normalizes common date string formats to YYYY-MM-DD.
     If parsing fails, returns the original string to avoid data loss.
     """
     if not isinstance(v, str) or not v:
         return v
     
-    # 1. Basic clean-up
-    v = v.strip()
-    if not v:
-        return v
-        
-    # Remove common AI prefixes (case insensitive)
-    v = re.sub(r'^(estimated|posted|closes|deadline|approx)\s*[:\-]?\s*', '', v, flags=re.IGNORECASE)
-    
-    # 2. Already matches YYYY-MM-DD
-    if re.match(r"^\d{4}-\d{2}-\d{2}$", v):
-        return v
-        
-    # 3. Attempt common numeric formats: MM/DD/YYYY, DD/MM/YYYY, YYYY/MM/DD (with / - or .)
-    # Match 3 numeric parts separated by common delimiters
-    match = re.match(r"^(\d{1,4})[/\-\.](\d{1,2})[/\-\.](\d{1,4})$", v)
-    if match:
-        parts = list(match.groups())
-        
-        # Determine which part is the year (4 digits)
-        year = None
-        other_parts = []
-        for p in parts:
-            if len(p) == 4:
-                year = p
-            else:
-                other_parts.append(p)
-        
-        if year and len(other_parts) == 2:
-            p1, p2 = other_parts
-            # Heuristic: if p1 > 12, it must be day
-            if int(p1) > 12:
-                day, month = p1, p2
-            elif int(p2) > 12:
-                month, day = p1, p2
-            else:
-                # Ambiguous (both <= 12). Default to MM/DD (US standard)
-                # unless the year was first, in which case YYYY/MM/DD
-                if parts[0] == year:
-                    month, day = p1, p2
-                else:
-                    month, day = p1, p2
-            
-            try:
-                dt = datetime(int(year), int(month), int(day))
-                return dt.strftime("%Y-%m-%d")
-            except ValueError:
-                pass
-
-    # 4. Attempt datetime.strptime waterfall
-    formats = [
-        "%m/%d/%Y", "%d/%m/%Y", "%Y/%m/%d",
-        "%m-%d-%Y", "%d-%m-%Y", "%Y-%m-%d",
-        "%b %d, %Y", "%B %d, %Y", "%d %b %Y", "%d %B %Y",
-        "%m/%d/%y", "%d/%m/%y", # 2-digit years
-    ]
-    
-    for fmt in formats:
+    # Try common formats in order of likelihood
+    for fmt in ("%Y-%m-%d", "%m/%d/%Y", "%d/%m/%Y", "%B %d, %Y", "%b %d, %Y"):
         try:
-            dt = datetime.strptime(v, fmt)
-            return dt.strftime("%Y-%m-%d")
+            return datetime.strptime(v.strip(), fmt).strftime("%Y-%m-%d")
         except ValueError:
             continue
-
-    # 5. Return original if all parsing fails
+            
     return v
 
 def get_base_prompt(key: str, settings: dict | None = None) -> str:
