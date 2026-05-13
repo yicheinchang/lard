@@ -1,5 +1,7 @@
 from langchain_core.prompts import ChatPromptTemplate
-from pydantic import BaseModel, Field, ConfigDict
+from pydantic import BaseModel, Field, ConfigDict, field_validator
+from typing import Any
+from datetime import datetime
 
 from .prompts import DEFAULT_SYSTEM_PROMPTS, FIELD_FORMAT_DESCRIPTIONS
 import re
@@ -9,6 +11,80 @@ def escape_braces(s: str) -> str:
     if not s:
         return ""
     return s.replace("{", "{{").replace("}", "}}")
+
+def normalize_date_string(v: Any) -> Any:
+    """
+    Robustly normalizes various date string formats to YYYY-MM-DD.
+    If parsing fails, returns the original string to avoid data loss.
+    """
+    if not isinstance(v, str) or not v:
+        return v
+    
+    # 1. Basic clean-up
+    v = v.strip()
+    if not v:
+        return v
+        
+    # Remove common AI prefixes (case insensitive)
+    v = re.sub(r'^(estimated|posted|closes|deadline|approx)\s*[:\-]?\s*', '', v, flags=re.IGNORECASE)
+    
+    # 2. Already matches YYYY-MM-DD
+    if re.match(r"^\d{4}-\d{2}-\d{2}$", v):
+        return v
+        
+    # 3. Attempt common numeric formats: MM/DD/YYYY, DD/MM/YYYY, YYYY/MM/DD (with / - or .)
+    # Match 3 numeric parts separated by common delimiters
+    match = re.match(r"^(\d{1,4})[/\-\.](\d{1,2})[/\-\.](\d{1,4})$", v)
+    if match:
+        parts = list(match.groups())
+        
+        # Determine which part is the year (4 digits)
+        year = None
+        other_parts = []
+        for p in parts:
+            if len(p) == 4:
+                year = p
+            else:
+                other_parts.append(p)
+        
+        if year and len(other_parts) == 2:
+            p1, p2 = other_parts
+            # Heuristic: if p1 > 12, it must be day
+            if int(p1) > 12:
+                day, month = p1, p2
+            elif int(p2) > 12:
+                month, day = p1, p2
+            else:
+                # Ambiguous (both <= 12). Default to MM/DD (US standard)
+                # unless the year was first, in which case YYYY/MM/DD
+                if parts[0] == year:
+                    month, day = p1, p2
+                else:
+                    month, day = p1, p2
+            
+            try:
+                dt = datetime(int(year), int(month), int(day))
+                return dt.strftime("%Y-%m-%d")
+            except ValueError:
+                pass
+
+    # 4. Attempt datetime.strptime waterfall
+    formats = [
+        "%m/%d/%Y", "%d/%m/%Y", "%Y/%m/%d",
+        "%m-%d-%Y", "%d-%m-%Y", "%Y-%m-%d",
+        "%b %d, %Y", "%B %d, %Y", "%d %b %Y", "%d %B %Y",
+        "%m/%d/%y", "%d/%m/%y", # 2-digit years
+    ]
+    
+    for fmt in formats:
+        try:
+            dt = datetime.strptime(v, fmt)
+            return dt.strftime("%Y-%m-%d")
+        except ValueError:
+            continue
+
+    # 5. Return original if all parsing fails
+    return v
 
 def get_base_prompt(key: str, settings: dict | None = None) -> str:
     """Helper to retrieve a base system prompt from settings or fallback to default."""
@@ -44,6 +120,11 @@ class JobDetails(BaseModel):
     description: str | None = Field(default=None, description=FIELD_FORMAT_DESCRIPTIONS["description"])
     detected_category: str | None = Field(default=None, description=FIELD_FORMAT_DESCRIPTIONS["detected_category"])
 
+    @field_validator("job_posted_date", "application_deadline", mode="before")
+    @classmethod
+    def normalize_dates(cls, v: Any) -> Any:
+        return normalize_date_string(v)
+
 # --- Multi-Agent (Granular Splits) ---
 
 class JobCompany(BaseModel):
@@ -70,9 +151,19 @@ class PostedDate(BaseModel):
     model_config = ConfigDict(populate_by_name=True)
     job_posted_date: str | None = Field(default=None, description=FIELD_FORMAT_DESCRIPTIONS["job_posted_date"])
 
+    @field_validator("job_posted_date", mode="before")
+    @classmethod
+    def normalize_posted_date(cls, v: Any) -> Any:
+        return normalize_date_string(v)
+
 class DeadlineDate(BaseModel):
     model_config = ConfigDict(populate_by_name=True)
     application_deadline: str | None = Field(default=None, description=FIELD_FORMAT_DESCRIPTIONS["application_deadline"])
+
+    @field_validator("application_deadline", mode="before")
+    @classmethod
+    def normalize_deadline(cls, v: Any) -> Any:
+        return normalize_date_string(v)
 
 class JobDescription(BaseModel):
     model_config = ConfigDict(populate_by_name=True)

@@ -1,5 +1,5 @@
-# 🗺️ Lard - Lazy AI-Powered Resume Database (v0.81.0)
-Last Updated: 2026-05-13T03:42:00Z
+# 🗺️ Lard - Lazy AI-Powered Resume Database (v0.81.1)
+Last Updated: 2026-05-13T15:20:00Z
 
 This document provides a summary of the project's architecture, tech stack, and key logic to give AI coding agents instant context.
 
@@ -347,6 +347,7 @@ The system uses a multi-stage pipeline to extract job details from URLs, PDFs, a
 - **Extraction Prompt Safety**: Implements an `escape_braces` utility in `chains.py` that automatically escapes literal curly braces in all system prompts before they are passed to LangChain. This prevents template variable errors when prompts contain literal JSON examples, ensuring compatibility across all extraction strategies and models.
 - **Robust Field Validation**: Specialized `json_validator_node` and `text_validator_node` perform targeted QA on the description field, with a **3-retry limit** that injects specific failure feedback into the next extraction attempt.
 - **Fast Pass Logic**: If a description has already been verified by the JSON-LD fidelity pass, it skips redundant text-mode validation.
+- **Robust Date Normalization**: Implements a Pydantic-level normalization layer using `@field_validator`. This automatically converts diverse LLM date formats (e.g., `MM/DD/YYYY`, `Month DD, YYYY`, or `DD.MM.YYYY`) into the strict `YYYY-MM-DD` ISO format required by the frontend's HTML5 date inputs, preventing data loss due to formatting inconsistencies.
 
 ### 6. Document Ingestion
 Supports PDF and plain text. PDFs are parsed using `pypdf` and split into chunks before vectorization.
