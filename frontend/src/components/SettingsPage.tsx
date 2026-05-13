@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { Sun, Moon, Monitor, Bot, BotOff, Server, Key, Database, RefreshCw,
   CheckCircle2, XCircle, Loader2, AlertTriangle, Sparkles, ChevronDown, RotateCcw
 } from 'lucide-react';
-import { DEFAULT_SYSTEM_PROMPTS } from '@/lib/constants';
+// Remove DEFAULT_SYSTEM_PROMPTS import, will fetch from backend
 import { useSettings, applyTheme } from '@/lib/SettingsContext';
 import { useView } from '@/lib/ViewContext';
 import {
@@ -166,34 +166,10 @@ export function SettingsPage() {
     ollama_base_url: '', ollama_model: '',
     openai_api_key: '', openai_model: '',
   });
-  const [customPrompts, setCustomPrompts] = useState<{
-    single_agent: string;
-    multi_agent: {
-      company: string;
-      role: string;
-      location: string;
-      salary_range: string;
-      job_posted_date: string;
-      application_deadline: string;
-      description: string;
-    };
-    job_post_check: string;
-    qa_json: string;
-    qa_text: string;
-  }>({
-    single_agent: '',
-    multi_agent: { company: '', role: '', location: '', salary_range: '', job_posted_date: '', application_deadline: '', description: '' },
-    job_post_check: '',
-    qa_json: '',
-    qa_text: ''
-  });
-  const [systemPrompts, setSystemPrompts] = useState<AppSettings['system_prompts']>({
+  const [customPrompts, setCustomPrompts] = useState<AppSettings['custom_prompts']>({
     extraction_base: '',
     extraction_description: '',
     json_ld: '',
-    qa_validator: '',
-    qa_validator_json: '',
-    qa_validator_text: '',
     field_company: '',
     field_role: '',
     field_location: '',
@@ -209,9 +185,62 @@ export function SettingsPage() {
     json_posted: '',
     json_deadline: '',
     json_description: '',
-    job_post_check: ''
+    job_post_check: '',
+    qa_json: '',
+    qa_text: '',
+    qa_validator: '',
+    assistant_system_prompt: ''
   });
-  const [factoryPrompts, setFactoryPrompts] = useState<AppSettings['system_prompts']>(DEFAULT_SYSTEM_PROMPTS);
+  const [systemPrompts, setSystemPrompts] = useState<AppSettings['system_prompts']>({
+    extraction_base: '',
+    extraction_description: '',
+    json_ld: '',
+    field_company: '',
+    field_role: '',
+    field_location: '',
+    field_salary: '',
+    field_id: '',
+    field_posted: '',
+    field_deadline: '',
+    json_company: '',
+    json_role: '',
+    json_location: '',
+    json_salary: '',
+    json_id: '',
+    json_posted: '',
+    json_deadline: '',
+    json_description: '',
+    job_post_check: '',
+    qa_json: '',
+    qa_text: '',
+    qa_validator: '',
+    assistant_system_prompt: ''
+  });
+  const [factoryPrompts, setFactoryPrompts] = useState<AppSettings['system_prompts']>({
+    extraction_base: '',
+    extraction_description: '',
+    json_ld: '',
+    field_company: '',
+    field_role: '',
+    field_location: '',
+    field_salary: '',
+    field_id: '',
+    field_posted: '',
+    field_deadline: '',
+    json_company: '',
+    json_role: '',
+    json_location: '',
+    json_salary: '',
+    json_id: '',
+    json_posted: '',
+    json_deadline: '',
+    json_description: '',
+    job_post_check: '',
+    qa_json: '',
+    qa_text: '',
+    qa_validator: '',
+    assistant_system_prompt: ''
+  });
 
   // UI states
   const [saving, setSaving] = useState(false);
@@ -225,7 +254,8 @@ export function SettingsPage() {
   const [showRebuildConfirm, setShowRebuildConfirm] = useState(false);
   const [showAdvancedPrompts, setShowAdvancedPrompts] = useState(false);
   const [showSystemPrompts, setShowSystemPrompts] = useState(false);
-  const [activePromptField, setActivePromptField] = useState<keyof typeof customPrompts.multi_agent | 'job_post_check' | 'qa_json' | 'qa_text'>('company');
+  const [activePromptField, setActivePromptField] = useState<keyof AppSettings['custom_prompts']>('extraction_base');
+  const [activeCustomTab, setActiveCustomTab] = useState<'global' | 'text' | 'json'>('global');
   const [activeSystemTab, setActiveSystemTab] = useState<'global' | 'text' | 'json'>('global');
   const [activeSystemPrompt, setActiveSystemPrompt] = useState<keyof AppSettings['system_prompts']>('extraction_base');
 
@@ -300,7 +330,7 @@ export function SettingsPage() {
   useEffect(() => {
     // Fetch latest factory defaults from backend to ensure Reset works correctly
     getDefaultPrompts().then(setFactoryPrompts).catch(err => {
-      console.warn("Failed to fetch backend prompt defaults, using frontend constants fallback:", err);
+      console.warn("Failed to fetch backend prompt defaults:", err);
     });
 
     if (!settings) return;
@@ -316,11 +346,29 @@ export function SettingsPage() {
     setOriginalEmbeddingProvider(settings.embedding_provider);
     setOriginalEmbeddingConfig(settings.embedding_config);
     setCustomPrompts(settings.custom_prompts || {
-      single_agent: '',
-      multi_agent: { company: '', role: '', location: '', salary_range: '', job_posted_date: '', application_deadline: '', description: '' },
+      extraction_base: '',
+      extraction_description: '',
+      json_ld: '',
+      field_company: '',
+      field_role: '',
+      field_location: '',
+      field_salary: '',
+      field_id: '',
+      field_posted: '',
+      field_deadline: '',
+      json_company: '',
+      json_role: '',
+      json_location: '',
+      json_salary: '',
+      json_id: '',
+      json_posted: '',
+      json_deadline: '',
+      json_description: '',
       job_post_check: '',
       qa_json: '',
-      qa_text: ''
+      qa_text: '',
+      qa_validator: '',
+      assistant_system_prompt: ''
     });
     if (settings.system_prompts) {
       setSystemPrompts(settings.system_prompts);
@@ -366,7 +414,7 @@ export function SettingsPage() {
       if (activeSystemTab !== 'global') {
         setActiveSystemTab('global');
         setActiveSystemPrompt('extraction_base');
-      } else if (activeSystemPrompt !== 'extraction_base' && activeSystemPrompt !== 'json_ld' && activeSystemPrompt !== 'qa_validator_json' && activeSystemPrompt !== 'qa_validator_text') {
+      } else if (activeSystemPrompt !== 'extraction_base' && activeSystemPrompt !== 'json_ld' && activeSystemPrompt !== 'qa_json' && activeSystemPrompt !== 'qa_text') {
         // If we were on a field prompt and switched to single-mode, reset to extraction_base
         setActiveSystemPrompt('extraction_base');
       }
@@ -885,97 +933,151 @@ export function SettingsPage() {
                         </p>
                         <button
                           onClick={() => setCustomPrompts({
-                            single_agent: '',
-                            multi_agent: { company: '', role: '', location: '', salary_range: '', job_posted_date: '', application_deadline: '', description: '' },
+                            extraction_base: '',
+                            extraction_description: '',
+                            json_ld: '',
+                            field_company: '',
+                            field_role: '',
+                            field_location: '',
+                            field_salary: '',
+                            field_id: '',
+                            field_posted: '',
+                            field_deadline: '',
+                            json_company: '',
+                            json_role: '',
+                            json_location: '',
+                            json_salary: '',
+                            json_id: '',
+                            json_posted: '',
+                            json_deadline: '',
+                            json_description: '',
                             job_post_check: '',
                             qa_json: '',
-                            qa_text: ''
+                            qa_text: '',
+                            qa_validator: '',
+                            assistant_system_prompt: ''
                           })}
                           className="mt-3 px-3 py-1.5 rounded-lg text-[10px] font-bold bg-[var(--surface)] border border-violet-500/20 hover:bg-violet-500/10 transition-all text-violet-300 uppercase tracking-tight"
                         >
-                          Reset all prompts
+                          Reset all custom instructions
                         </button>
                       </div>
                     </div>
 
-                    {extractionMode === 'single' ? (
-                      <div className="space-y-2">
+                    <div className="space-y-4">
+                      {/* Prompts Category Tabs */}
+                      <div className="flex gap-4 border-b border-[var(--border-color)]">
+                        {[
+                          { id: 'global', label: 'Global' },
+                          { id: 'text', label: 'Field (Text)', hide: extractionMode === 'single' },
+                          { id: 'json', label: 'Field (JSON)', hide: extractionMode === 'single' },
+                        ].filter(t => !t.hide).map(t => (
+                          <button
+                            key={t.id}
+                            type="button"
+                            onClick={() => {
+                              setActiveCustomTab(t.id as any);
+                              if (t.id === 'global') setActivePromptField(extractionMode === 'single' ? 'extraction_base' : 'job_post_check');
+                              if (t.id === 'text') setActivePromptField('field_company');
+                              if (t.id === 'json') setActivePromptField('json_company');
+                            }}
+                            className={`pb-2 text-xs font-bold transition-all uppercase tracking-tight ${
+                              activeCustomTab === t.id
+                                ? 'border-b-2 border-violet-500 text-violet-400'
+                                : 'text-[var(--fg-subtle)] hover:text-[var(--fg)]'
+                            }`}
+                          >
+                            {t.label}
+                          </button>
+                        ))}
+                      </div>
+
+                      {/* Sub-tabs based on Category */}
+                      <div className="flex flex-wrap gap-1.5 p-1 bg-[var(--surface)] rounded-xl border border-[var(--border-color)]">
+                        {activeCustomTab === 'global' && [
+                          { id: 'extraction_base', label: 'Main (Single)', hide: extractionMode === 'multi' },
+                          { id: 'json_ld', label: 'JSON-LD (Single)', hide: extractionMode === 'multi' },
+                          { id: 'job_post_check', label: 'Job Check', hide: extractionMode === 'single' },
+                          { id: 'qa_json', label: 'JSON QA' },
+                          { id: 'qa_text', label: 'Text QA' },
+                          { id: 'assistant_system_prompt', label: 'Assistant' },
+                        ].filter(tab => !tab.hide).map(tab => (
+                          <button
+                            key={tab.id}
+                            type="button"
+                            onClick={() => setActivePromptField(tab.id as any)}
+                            className={`px-3 py-1.5 rounded-lg text-[10px] font-bold transition-all uppercase tracking-tight ${
+                              activePromptField === tab.id
+                                ? 'bg-violet-600 text-white shadow-md'
+                                : 'text-[var(--fg-subtle)] hover:text-[var(--fg)] hover:bg-violet-500/5'
+                            }`}
+                          >
+                            {tab.label}
+                          </button>
+                        ))}
+                        {activeCustomTab === 'text' && [
+                          { id: 'field_company', label: 'Company' },
+                          { id: 'field_role', label: 'Role' },
+                          { id: 'field_location', label: 'Location' },
+                          { id: 'field_salary', label: 'Salary' },
+                          { id: 'field_id', label: 'Job ID' },
+                          { id: 'field_posted', label: 'Posted' },
+                          { id: 'field_deadline', label: 'Deadline' },
+                          { id: 'extraction_description', label: 'Description' },
+                        ].map(tab => (
+                          <button
+                            key={tab.id}
+                            type="button"
+                            onClick={() => setActivePromptField(tab.id as any)}
+                            className={`px-3 py-1.5 rounded-lg text-[10px] font-bold transition-all uppercase tracking-tight ${
+                              activePromptField === tab.id
+                                ? 'bg-violet-600 text-white shadow-md'
+                                : 'text-[var(--fg-subtle)] hover:text-[var(--fg)] hover:bg-violet-500/5'
+                            }`}
+                          >
+                            {tab.label}
+                          </button>
+                        ))}
+                        {activeCustomTab === 'json' && [
+                          { id: 'json_company', label: 'Company' },
+                          { id: 'json_role', label: 'Role' },
+                          { id: 'json_location', label: 'Location' },
+                          { id: 'json_salary', label: 'Salary' },
+                          { id: 'json_id', label: 'Job ID' },
+                          { id: 'json_posted', label: 'Posted' },
+                          { id: 'json_deadline', label: 'Deadline' },
+                          { id: 'json_description', label: 'Description' },
+                        ].map(tab => (
+                          <button
+                            key={tab.id}
+                            type="button"
+                            onClick={() => setActivePromptField(tab.id as any)}
+                            className={`px-3 py-1.5 rounded-lg text-[10px] font-bold transition-all uppercase tracking-tight ${
+                              activePromptField === tab.id
+                                ? 'bg-violet-600 text-white shadow-md'
+                                : 'text-[var(--fg-subtle)] hover:text-[var(--fg)] hover:bg-violet-500/5'
+                            }`}
+                          >
+                            {tab.label}
+                          </button>
+                        ))}
+                      </div>
+
+                      <div className="animate-fade-in">
                         <Label 
-                          onReset={() => setCustomPrompts(p => ({ ...p, single_agent: '' }))}
-                          resetLabel="Clear custom instructions"
+                          onReset={() => setCustomPrompts(p => ({ ...p, [activePromptField]: '' }))}
+                          resetLabel={`Clear custom ${activePromptField.replace(/^(field_|json_)/, '').replace(/_/g, ' ')} guidance`}
                         >
-                          Single-Agent System Instructions
+                          {activePromptField.replace(/^(field_|json_)/, '').replace(/_/g, ' ')} guidance ({activeCustomTab})
                         </Label>
                         <TextAreaInput
                           rows={12}
-                          value={customPrompts.single_agent}
-                          onChange={v => setCustomPrompts(p => ({ ...p, single_agent: v }))}
-                          placeholder="Example: Always prefer the remote office. Ensure base compensation is formatted strictly numerically..."
+                          value={customPrompts[activePromptField] || ''}
+                          onChange={v => setCustomPrompts(p => ({ ...p, [activePromptField]: v }))}
+                          placeholder={`Provide custom instructions for the ${activePromptField.replace(/^(field_|json_)/, '').replace(/_/g, ' ')} extraction...`}
                         />
                       </div>
-                    ) : (
-                      <div className="space-y-4">
-                        <div className="flex flex-wrap gap-1.5 p-1 bg-[var(--surface)] rounded-xl border border-[var(--border-color)]">
-                          {[
-                            { id: 'company', label: 'Company' },
-                            { id: 'role', label: 'Role' },
-                            { id: 'location', label: 'Location' },
-                            { id: 'salary_range', label: 'Salary' },
-                            { id: 'job_posted_date', label: 'Posted' },
-                            { id: 'application_deadline', label: 'Deadline' },
-                            { id: 'description', label: 'Description' },
-                            { id: 'job_post_check', label: 'Job Check', hide: extractionMode === 'single' },
-                            { id: 'qa_json', label: 'JSON QA' },
-                            { id: 'qa_text', label: 'Text QA' },
-                          ].map(tab => (
-                            <button
-                              key={tab.id}
-                              type="button"
-                              onClick={() => setActivePromptField(tab.id as any)}
-                              className={`px-3 py-1.5 rounded-lg text-[10px] font-bold transition-all uppercase tracking-tight ${
-                                activePromptField === tab.id
-                                  ? 'bg-violet-600 text-white shadow-md'
-                                  : 'text-[var(--fg-subtle)] hover:text-[var(--fg)] hover:bg-violet-500/5'
-                              }`}
-                            >
-                              {tab.label}
-                            </button>
-                          ))}
-                        </div>
-
-                        <div className="animate-fade-in">
-                          <Label 
-                            onReset={() => setCustomPrompts(p => {
-                               if (activePromptField === 'job_post_check' || activePromptField === 'qa_json' || activePromptField === 'qa_text') {
-                                 return { ...p, [activePromptField]: '' };
-                               }
-                               return {
-                                 ...p,
-                                 multi_agent: { ...p.multi_agent, [activePromptField]: '' }
-                               };
-                             })}
-                            resetLabel={`Clear custom ${activePromptField.replace(/_/g, ' ')} guidance`}
-                          >
-                            {activePromptField.replace(/_/g, ' ')} guidance
-                          </Label>
-                          <TextAreaInput
-                            rows={12}
-                            value={(activePromptField === 'job_post_check' || activePromptField === 'qa_json' || activePromptField === 'qa_text') ? customPrompts[activePromptField as 'job_post_check' | 'qa_json' | 'qa_text'] : customPrompts.multi_agent[activePromptField as keyof typeof customPrompts.multi_agent]}
-                            onChange={v => {
-                                if (activePromptField === 'job_post_check' || activePromptField === 'qa_json' || activePromptField === 'qa_text') {
-                                  setCustomPrompts(p => ({ ...p, [activePromptField]: v }));
-                                } else {
-                                  setCustomPrompts(p => ({
-                                    ...p,
-                                    multi_agent: { ...p.multi_agent, [activePromptField]: v }
-                                  }));
-                                }
-                              }}
-                            placeholder={`Provide custom instructions for parsing the ${activePromptField.replace(/_/g, ' ')}...`}
-                          />
-                        </div>
-                      </div>
-                    )}
+                    </div>
                   </div>
                 )}
               </div>
@@ -1048,8 +1150,9 @@ export function SettingsPage() {
                           { id: 'extraction_base', label: 'Main (Single)', hide: extractionMode === 'multi' },
                           { id: 'json_ld', label: 'JSON-LD (Single)', hide: extractionMode === 'multi' },
                           { id: 'job_post_check', label: 'Job Check', hide: extractionMode === 'single' },
-                          { id: 'qa_validator_json', label: 'JSON Validation' },
-                          { id: 'qa_validator_text', label: 'Text Validation' },
+                          { id: 'qa_json', label: 'JSON Validation' },
+                          { id: 'qa_text', label: 'Text Validation' },
+                          { id: 'assistant_system_prompt', label: 'Chat Assistant' },
                         ].filter(tab => !tab.hide).map(tab => (
                           <button
                             key={tab.id}

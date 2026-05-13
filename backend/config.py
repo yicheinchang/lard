@@ -2,7 +2,7 @@ import json
 import os
 import logging
 from pydantic_settings import BaseSettings, SettingsConfigDict
-from pydantic import Field
+from pydantic import Field, SecretStr
 from ai.prompts import DEFAULT_SYSTEM_PROMPTS
 
 # Setup logger for config
@@ -37,8 +37,8 @@ class Settings(BaseSettings):
     LLM_PROVIDER: str = "ollama"
     OLLAMA_BASE_URL: str = "http://host.docker.internal:11434"
     OLLAMA_MODEL: str = "gemma3:4b-it-qat"
-    OPENAI_API_KEY: str | None = None
-    ANTHROPIC_API_KEY: str | None = None
+    OPENAI_API_KEY: SecretStr | None = None
+    ANTHROPIC_API_KEY: SecretStr | None = None
     
     # Legacy support (overridden if DATABASE_URL env is set)
     DATABASE_URL: str | None = None
@@ -109,18 +109,34 @@ DEFAULT_APP_SETTINGS = {
     "extraction_mode": "single",
     "max_concurrency": 2,
     "custom_prompts": {
-        "single_agent": "",
-        "multi_agent": {
-            "company": "", "role": "", "location": "", "salary_range": "",
-            "job_posted_date": "", "application_deadline": "", "description": ""
-        },
-        "job_post_check": "", "qa_json": "", "qa_text": ""
+        "extraction_base": "",
+        "extraction_description": "",
+        "json_ld": "",
+        "field_company": "",
+        "field_role": "",
+        "field_location": "",
+        "field_salary": "",
+        "field_id": "",
+        "field_posted": "",
+        "field_deadline": "",
+        "json_company": "",
+        "json_role": "",
+        "json_location": "",
+        "json_salary": "",
+        "json_id": "",
+        "json_posted": "",
+        "json_deadline": "",
+        "json_description": "",
+        "job_post_check": "",
+        "qa_json": "",
+        "qa_text": "",
+        "qa_validator": "",
+        "assistant_system_prompt": ""
     },
     "system_prompts": {
         "extraction_base": DEFAULT_SYSTEM_PROMPTS["extraction_base"],
         "extraction_description": DEFAULT_SYSTEM_PROMPTS["extraction_description"],
         "json_ld": DEFAULT_SYSTEM_PROMPTS["json_ld"],
-        "qa_validator": DEFAULT_SYSTEM_PROMPTS["qa_validator"],
         "field_company": DEFAULT_SYSTEM_PROMPTS["field_company"],
         "field_role": DEFAULT_SYSTEM_PROMPTS["field_role"],
         "field_location": DEFAULT_SYSTEM_PROMPTS["field_location"],
@@ -128,23 +144,26 @@ DEFAULT_APP_SETTINGS = {
         "field_id": DEFAULT_SYSTEM_PROMPTS["field_id"],
         "field_posted": DEFAULT_SYSTEM_PROMPTS["field_posted"],
         "field_deadline": DEFAULT_SYSTEM_PROMPTS["field_deadline"],
-        "metadata_company": DEFAULT_SYSTEM_PROMPTS["metadata_company"],
-        "metadata_role": DEFAULT_SYSTEM_PROMPTS["metadata_role"],
-        "metadata_location": DEFAULT_SYSTEM_PROMPTS["metadata_location"],
-        "metadata_salary": DEFAULT_SYSTEM_PROMPTS["metadata_salary"],
-        "metadata_id": DEFAULT_SYSTEM_PROMPTS["metadata_id"],
-        "metadata_posted": DEFAULT_SYSTEM_PROMPTS["metadata_posted"],
-        "metadata_deadline": DEFAULT_SYSTEM_PROMPTS["metadata_deadline"],
-        "metadata_description": DEFAULT_SYSTEM_PROMPTS["metadata_description"],
+        "json_company": DEFAULT_SYSTEM_PROMPTS["json_company"],
+        "json_role": DEFAULT_SYSTEM_PROMPTS["json_role"],
+        "json_location": DEFAULT_SYSTEM_PROMPTS["json_location"],
+        "json_salary": DEFAULT_SYSTEM_PROMPTS["json_salary"],
+        "json_id": DEFAULT_SYSTEM_PROMPTS["json_id"],
+        "json_posted": DEFAULT_SYSTEM_PROMPTS["json_posted"],
+        "json_deadline": DEFAULT_SYSTEM_PROMPTS["json_deadline"],
+        "json_description": DEFAULT_SYSTEM_PROMPTS["json_description"],
         "job_post_check": DEFAULT_SYSTEM_PROMPTS["job_post_check"],
-        "qa_validator_json": DEFAULT_SYSTEM_PROMPTS["qa_validator_json"],
-        "qa_validator_text": DEFAULT_SYSTEM_PROMPTS["qa_validator_text"]
+        "qa_json": DEFAULT_SYSTEM_PROMPTS["qa_json"],
+        "qa_text": DEFAULT_SYSTEM_PROMPTS["qa_text"],
+        "qa_validator": DEFAULT_SYSTEM_PROMPTS["qa_validator"],
+        "assistant_system_prompt": DEFAULT_SYSTEM_PROMPTS["assistant_system_prompt"]
     }
 }
 
 def _deep_merge(base: dict, overrides: dict) -> dict:
     """Recursively merge *overrides* into *base*, returning a new dict."""
-    merged = base.copy()
+    import copy
+    merged = copy.deepcopy(base)
     for key, value in overrides.items():
         if key in merged and isinstance(merged[key], dict) and isinstance(value, dict):
             merged[key] = _deep_merge(merged[key], value)

@@ -137,55 +137,37 @@ graph TD
 
 ---
 
-## 🤖 AI Assistant Logic
+## 🔄 Core AI & Data Patterns
 
-The **Chat Assistant** (`backend/ai/assistant.py`) is a stateful LangGraph-based agent that manages multi-turn conversations and integrates with the Lard database.
+The **Lard** backend follows strict standards for data integrity and AI orchestration to ensure high fidelity across all providers.
 
-### 1. Persistent Session Memory
-The assistant utilizes `langgraph-checkpoint-sqlite` for long-term memory:
-- **Persistence Layer**: Conversation state is automatically saved to `data/db/ai_history.db` using `AsyncSqliteSaver` (LangGraph v1.0 Standard).
-- **Migration (v0.80.0)**: Fully migrated to LangChain v1.0 and Pydantic v2, supporting Python 3.14+ with native `model_dump()` and `ConfigDict` patterns.
-- **Thread Isolation**: Conversations are isolated by `session_id` (thread ID), allowing users to switch between multiple concurrent or historical chats.
-- **Session Metadata**: The `chat_sessions` table tracks session IDs, auto-generated titles, and timestamps for retrieval in the frontend.
+### 1. Modern Pydantic Integration (v2.x)
+Fully migrated to Pydantic v2 standards for high-performance validation and serialization:
+- **Type Safety**: Uses `AwareDatetime` (UTC-enforced), `HttpUrl` (HTTPS-normalized), and `NameEmail` (RFC-compliant) for all incoming metadata.
+- **Security**: Sensitive credentials (API keys) are managed using `SecretStr` in `config.py` to prevent leakage in logs or debug output.
+- **Automated Normalization**:
+    - `model_validator`: Automatically populates dedicated name fields (e.g., `hiring_manager_name`) from the display name part of a `NameEmail` string if the field is empty.
+    - `to_db_dict`: Centralized helper that serializes complex Pydantic types (Enums, URLs, Emails) into plain strings compatible with SQLite.
+- **Config Management**: Uses `SettingsConfigDict` with `extra='ignore'` and a custom `_deep_merge` utility to synchronize factory default prompts with user overrides in `app_settings.json`.
 
-### 2. Math & Formatting Standards
-The assistant is instructed via system prompts to use specific delimiters:
-- **Block Math**: `\[ ... \]`
-- **Inline Math**: `\( ... \)`
-- **Tables**: GFM (GitHub Flavored Markdown) standard.
+### 2. Global Error Handling
+The backend implements a custom `RequestValidationError` handler in `main.py` that translates complex Pydantic errors into human-readable, field-specific feedback (e.g., `[hr_email]: invalid email format`) for immediate consumption by the frontend.
 
-### 2. Frontend Normalization
-To bridge the gap between "fuzzy" LLM output and strict rendering engines (KaTeX/ReactMarkdown), the system implements a **normalization layer** in the frontend that:
-- Fixes narrow no-break space characters (U+202F).
-- Cleans up negative thin spaces (`\!`) often used in large numbers.
-- Escapes currency symbols to prevent them from being mistaken for math triggers.
-- Normalizes LaTeX delimiters into standard math tokens.
+### 3. Persistent AI Assistant (LangGraph v1.0)
+The **Chat Assistant** is a stateful LangGraph agent utilizing `AsyncSqliteSaver`:
+- **Persistence**: Conversation state is saved to `data/db/ai_history.db`.
+- **Thread Isolation**: Multiple concurrent conversations are supported via `session_id` isolation.
+- **Sanitized Output**: Chat session titles are generated as plain text, explicitly forbidding Markdown in the prompt and applying a backend `strip()` safety net.
 
----
-
-## 🔄 Common AI Logic
-
-Regardless of strategy, the following core features ensure 100% extraction fidelity:
-
-### 3. Contact Metadata Parsing
-The system supports flexible contact formats for Hiring Managers, Recruiters, and Headhunters.
-- **RFC 5322 Support**: Uses `email.utils.parseaddr` to support `Name <email@address.com>` formats.
-- **Validation**: Pydantic `@field_validator` ensures that even with a display name, a valid email address is extracted and stored.
-- **Normalization**: Automatically handles quoted names and special characters.
-
-### 4. QA Validation Loop (Circuit Breaker)
-Each extraction is validated by a specialized **Extraction Validation Node** with a 3-retry limit:
-- **json_validator_node**: Specialized validator for JSON-LD sources. Focuses on HTML fidelity and heuristic metadata completeness. Triggers a fallback to Text mode if key metadata (Company, Role, etc.) is missing or low-quality.
-- **text_validator_node**: Specialized validator for Raw Text sources. Focuses on boundary detection and semantic completeness.
-- **Fast Pass Logic**: If a description has already been verified by the JSON-LD fidelity pass, the system automatically bypasses the text-mode QA validation to preserve resources and prevent false-positive rejections.
-- **Feedback Injection**: If validation fails, the failure reason is injected into the prompt of the extraction node for the guided retry.
-- **UI Flagging**: If the circuit breaker trips after 3 attempts, the final output is preserved but flagged with an amber "Hallucination Detected" warning in the frontend.
-
+### 4. Extraction Engine & QA Loop
+The system uses a multi-stage pipeline (Single vs. Multi-Agent) with a **QA Circuit Breaker**:
+- **Verification Nodes**: Confirms "is_job_post" before proceeding.
+- **Guided Retries**: If validation (JSON/Text) fails, specific feedback is injected into the prompt for up to 3 guided extraction attempts.
+- **Prompt Sync**: All 18+ system prompts are isolated in `backend/ai/prompts.py` and served via `/api/settings/defaults` to ensure the frontend reset UI remains synchronized with the backend logic.
 
 ---
 
 ## ⚡ Architecture & Optimization
-
 ### Lazy Loading & Startup
 The backend reaches a "Ready" state in **< 5 seconds** through:
 - **`app_factory` pattern**: Library imports are deferred until needed.

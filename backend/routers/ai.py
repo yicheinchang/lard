@@ -599,10 +599,15 @@ async def chat_with_assistant(req: ChatRequest):
             # Generate a title for the new session using the LLM
             from ai.llm_factory import get_llm
             llm = get_llm()
-            title_prompt = f"Generate a very short (max 5 words) descriptive title for a chat session starting with this message: '{req.message}'. Return only the title text."
+            title_prompt = (
+                f"Generate a very short (max 5 words) descriptive title for a chat session starting with the message below. "
+                f"RULES: 1. PLAIN TEXT ONLY. 2. No Markdown formatting (no bold, no italics, no headers). 3. No quotes around the title.\n\n"
+                f"Message: '{req.message}'"
+            )
             try:
                 title_res = await llm.ainvoke(title_prompt)
-                title = title_res.content.strip().strip('"').strip("'")
+                # Minimal safety net: strip common Markdown decorators and various quote types
+                title = title_res.content.strip().strip('*#_ "`')
             except:
                 title = req.message[:30] + "..." if len(req.message) > 30 else req.message
                 

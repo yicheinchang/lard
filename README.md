@@ -27,28 +27,27 @@ An AI-powered, high-performance job application tracking system with automated d
 
 ### 🤖 Intelligent AI Extraction
 - **Multi-Strategy Parsing**: Automated extraction from URLs, PDFs, and raw text.
-- **JSON-LD First**: Prioritizes structured Schema.org data for 100% extraction accuracy on modern job portals.
-- **Agentic Pipeline**: Supports both high-speed Single-Agent mode and high-fidelity Multi-Agent mode (parallel field extraction).
-- **Verbatim Descriptions**: Preserves original job description formatting and hierarchy in Markdown using specialized extraction agents and layout-aware parsing.
-- **Centralized Truncation**: Intelligently manages context window limits based on user-configurable `num_ctx`, ensuring stable extraction on hardware-limited systems.
-- **Robust Field Validation**: Specialized `json_validator_node` and `text_validator_node` perform targeted QA on the description field, with a **3-retry limit** that injects specific failure feedback into the next extraction attempt.
-- **Smart Contact Parsing**: Advanced RFC 5322 support for Hiring Manager, Recruiter, and Headhunter fields, allowing `Name <email>` formats with automated fallback display logic.
+- **JSON-LD First**: Prioritizes structured Schema.org data for 100% extraction accuracy.
+- **Agentic Pipeline**: Supports both high-speed Single-Agent mode and high-fidelity Multi-Agent mode.
+- **Strict Validation**: Implements RFC-compliant `NameEmail` and `HttpUrl` validation with automated name extraction via Pydantic v2 `model_validators`.
+- **Field-Level Feedback**: Global error handling provides specific, human-readable feedback (e.g., `[hr_email]: invalid format`) directly to the frontend.
+- **Dynamic Prompt Sync**: Centralized prompt engineering in the backend ensures the UI and AI logic remain perfectly synchronized.
 
 ### 📊 Powerful Visualization
-- **Dynamic Kanban**: Drag-and-drop job hunt pipeline with 4 standard stages and a specialized **Tabbed Mobile UI** for single-column focus on small screens.
+- **Dynamic Kanban**: Drag-and-drop pipeline with a specialized **Tabbed Mobile UI** for focused single-column tracking on small screens.
 - **Data Table**: High-fidelity list view with advanced sorting, filtering, and density-rich tooltips.
 - **Interview Tracking**: Manage every step with full CRUD, inline editing, and lifecycle guards (Applied/Interviewing status synchronization).
 
 ### ⚡ Extreme Performance
-- **Instant Backend Startup**: Cold start in **< 5 seconds** via background eager loading and synchronized initialization using the `app_factory` pattern.
-- **Local Embedded Models**: Uses `all-MiniLM-L6-v2` for embeddings with a persistent local model cache.
-- **Dynamic Settings**: Change LLM providers (Ollama, OpenAI, Anthropic), models, or themes in real-time without restarts.
+- **Instant Backend Startup**: Cold start in **< 5 seconds** via background eager loading and `app_factory` patterns.
+- **Local Embedded Models**: Uses `all-MiniLM-L6-v2` with a persistent local model cache.
+- **Dynamic Settings**: Change LLM providers, models, or themes in real-time with **Deep Merge** settings persistence.
 
 ---
 
 ## 📂 Project Structure
 
-- **`/backend`**: FastAPI ecosystem. Handles data persistence (SQLAlchemy + SQLite), vector search (ChromaDB), and AI orchestration (LangGraph).
+- **`/backend`**: FastAPI ecosystem (Python 3.14+). Handles data persistence (SQLite), vector search (ChromaDB), and AI orchestration (LangGraph v1.0).
 - **`/frontend`**: Next.js 16 + React 19 + Tailwind CSS 4. Acts as the secure gateway via **API Proxying** and **Server Actions**.
 - **`/assets`**: Project icons, screenshots, and documentation media.
 
@@ -145,8 +144,8 @@ Access the application at **[http://localhost:3030](http://localhost:3030)**.
 
 ### 4. Persistence
 All data is consolidated into a project-root **`/data`** directory, which is persisted across both local development and Docker.
-- **SQLite**: `data/db/tracker.db`
-- **Settings**: `data/app_settings.json`
+- **SQLite**: `data/db/tracker.db` and `data/db/ai_history.db`.
+- **Settings**: `data/app_settings.json` (Supports Deep Merging).
 - **Uploads**: `data/uploads/`
 - **ChromaDB**: `data/chroma_db/`
 - **AI Cache**: `data/huggingface/`
@@ -157,6 +156,7 @@ All data is consolidated into a project-root **`/data`** directory, which is per
 ## 📚 Documentation
 For detailed architecture, API endpoints, and optimization details, refer to:
 - [Backend README](file:///home/Lard/backend/README.md)
+- [Frontend README](file:///home/Lard/frontend/README.md)
 - [Codebase Map](file:///home/Lard/codebase-map.md)
 ---
 ## 📜 License
@@ -164,4 +164,4 @@ This project is licensed under the **MIT License**. See the [LICENSE](LICENSE) f
 
 ---
 Built with ❤️ by Antigravity.
-Final version synchronized with v0.71.0.
+Final version synchronized with v0.81.0.

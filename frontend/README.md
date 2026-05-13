@@ -1,4 +1,4 @@
-# 🐱 Lard - Frontend (v0.80.0)
+# 🐱 Lard - Frontend (v0.81.0)
 
 Next.js-based high-performance frontend for the **Lard** (Lazy AI-powered Resume Database) application.
 
@@ -28,22 +28,21 @@ Features a dual-layout strategy:
 - **Mobile (< 1024px)**: Automatically switches to a **Tabbed UI (Segmented Control)**, allowing users to focus on one stage at a time with real-time job counts.
 
 ### 3. Navigation Guards
-Managed via the `ViewContext.tsx`, the application protects against accidental data loss. If a user attempts to navigate away from an unsaved edit (Job Details, Interview Steps, or the "Add Step" form), a centralized interceptor prompts for confirmation.
+Managed via the `ViewContext.tsx`, the application protects against accidental data loss. If a user attempts to navigate away from an unsaved edit, a centralized interceptor prompts for confirmation.
 
 ### 4. Stateful AI Assistant
 The global `ChatAssistant.tsx` features:
-- **Session History**: A dedicated drawer for navigating past conversations. Supports switching threads and starting new chats with a single click.
-- **Persistence**: Remembers the active `session_id` using `localStorage`, ensuring the conversation continues exactly where you left off after a page refresh.
-- **High-Fidelity Rendering**: Supports full Markdown (including GFM tables) and LaTeX math via KaTeX.
-- **Adjustable Layout**: A persistent resizable width handle allows users to expand the chat drawer for complex data or formulas.
-- **Normalization Layer**: Custom pre-processing ensures LLM quirks (like narrow non-breaking spaces or escaped currency) are cleaned before rendering.
+- **Session History**: A dedicated drawer for navigating past conversations.
+- **Normalization Layer**: Bridge the gap between LLM quirks and strict rendering. Fixes narrow no-break spaces (U+202F), cleans negative thin spaces (`\!`), and normalizes LaTeX delimiters into standard math tokens for KaTeX.
+- **Persistence**: Remembers the active `session_id` using `localStorage`.
+- **High-Fidelity Rendering**: Supports full Markdown and LaTeX math.
+- **Adjustable Layout**: Persistent resizable width handle.
 
 ### 5. Advanced Prompt Engineering UI
 The Settings page includes a sophisticated sub-section for AI prompt management:
 - **Granular Baseline Resets**: Restore any of the 18+ system prompts to factory defaults individually.
-- **Context-Aware Filtering**: Automatically hides prompts irrelevant to the active Extraction Strategy (Single vs Multi-Agent).
-- **Additive Guidance**: Field-specific instruction tabs for fine-tuning extraction without modifying core prompts.
-- **Smart Contact Display**: Uses a dedicated `parseContact` utility to support `Name <email>` formats across all contact fields (Hiring Manager, Recruiter, Headhunter).
+- **Sync Guard**: Automatically pulls backend factory defaults via `/api/settings/defaults` to ensure logic consistency.
+- **Validation Feedback**: Displays granular, field-level error messages (e.g., `[hiring_manager_email]: invalid format`) directly in the `AddJobModal` based on strict Pydantic v2 validation.
 
 ---
 
@@ -58,14 +57,14 @@ npm run dev
 
 ### Manual Verification Checklist
 As the AI assistant cannot access a browser, the following must be manually verified after any change:
-1. **Theme Consistency**: Verify both Light and Dark modes (handled via `SettingsContext`).
-2. **Responsive Layouts**: Check the Kanban tabbed UI on small screens and the sidebar collapse logic.
+1. **Theme Consistency**: Verify both Light and Dark modes.
+2. **Responsive Layouts**: Check the Kanban tabbed UI on small screens.
 3. **Guard Logic**: Confirm that unsaved changes trigger the navigation interceptor.
-4. **SSE Connectivity**: Ensure the `Ticker.tsx` and `ProcessingOverlay.tsx` receive real-time updates from the backend.
+4. **SSE Connectivity**: Ensure the `Ticker.tsx` receives real-time updates.
 
 ---
 Built with ❤️ by Antigravity.
-Final version synchronized with v0.80.0.
+Final version synchronized with v0.81.0.
 
 ---
 

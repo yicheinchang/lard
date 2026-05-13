@@ -10,8 +10,9 @@ from config import load_app_settings, settings
 from ai.chains import (
     get_job_post_check_prompt, 
     get_extraction_prompt, 
-    _create_description_prompt, 
-    get_json_ld_prompt
+    get_description_text_prompt, 
+    get_json_ld_extraction_prompt,
+    get_custom_guidance
 )
 
 class AgentState(TypedDict):
@@ -74,17 +75,10 @@ async def _run_field_extraction(field, schema, prompt, text, url, request, semap
             # SPECIAL CASE: Job Description (Raw Pass)
             # We skip structured output for the large description field to avoid JSON overhead and hangs.
             if field == "description":
-                # Inject custom guidance into the prompt if provided
-                custom_guidance = ""
                 settings = load_app_settings()
-                if settings.get("custom_prompts"):
-                    mode = settings.get("extraction_mode", "single")
-                    if mode == "multi":
-                        cg = settings["custom_prompts"]["multi_agent"].get(field, "")
-                        if cg: custom_guidance = f"ADDITIONAL USER INSTRUCTIONS:\n{cg}"
-                    else:
-                        cg = settings["custom_prompts"].get("single_agent", "")
-                        if cg: custom_guidance = f"ADDITIONAL USER INSTRUCTIONS:\n{cg}"
+                mode = settings.get("extraction_mode", "single")
+                key = "extraction_description" if mode == "multi" else "extraction_base"
+                custom_guidance = get_custom_guidance(key, settings)
 
                 # Raw LLM call without structured output wrapping
                 raw_chain = prompt | llm
@@ -122,16 +116,19 @@ async def _run_field_extraction(field, schema, prompt, text, url, request, semap
 
             # STANDARD CASE: Metadata (Structured JSON)
             # Multi-agent metadata fields are small and benefit from JSON schema enforcement.
-            custom_guidance = ""
             settings = load_app_settings()
-            if settings.get("custom_prompts"):
-                mode = settings.get("extraction_mode", "single")
-                if mode == "multi":
-                    cg = settings["custom_prompts"]["multi_agent"].get(field, "")
-                    if cg: custom_guidance = f"ADDITIONAL USER INSTRUCTIONS:\n{cg}"
-                else:
-                    cg = settings["custom_prompts"].get("single_agent", "")
-                    if cg: custom_guidance = f"ADDITIONAL USER INSTRUCTIONS:\n{cg}"
+            # Map multi-agent field names to their system prompt keys
+            mapping = {
+                "company": "field_company",
+                "role": "field_role",
+                "location": "field_location",
+                "salary_range": "field_salary",
+                "company_job_id": "field_id",
+                "job_posted_date": "field_posted",
+                "application_deadline": "field_deadline"
+            }
+            key = mapping.get(field, "extraction_base")
+            custom_guidance = get_custom_guidance(key, settings)
 
             chain = prompt | llm.with_structured_output(schema)
             inputs = {
@@ -176,11 +173,11 @@ async def _run_multi_agent_extraction(text: str, url: str, request: Any = None, 
     from ai.chains import (
         JobCompany, JobRole, JobLocation, JobSalary, JobId, 
         PostedDate, DeadlineDate, JobDescription,
-        get_field_prompt, _create_description_prompt
+        get_field_prompt, get_description_text_prompt
     )
-    description_extraction_prompt = _create_description_prompt(settings)
+    description_text_prompt = get_description_text_prompt(settings)
 
-    metadata_tasks = [
+    json_tasks = [
         ("company", JobCompany, get_field_prompt("company", settings)),
         ("role", JobRole, get_field_prompt("role", settings)),
         ("location", JobLocation, get_field_prompt("location", settings)),
@@ -188,17 +185,17 @@ async def _run_multi_agent_extraction(text: str, url: str, request: Any = None, 
         ("company_job_id", JobId, get_field_prompt("company_job_id", settings)),
         ("job_posted_date", PostedDate, get_field_prompt("job_posted_date", settings)),
         ("application_deadline", DeadlineDate, get_field_prompt("application_deadline", settings)),
-        ("description", JobDescription, description_extraction_prompt),
+        ("description", JobDescription, description_text_prompt),
     ]
     
     # Filter tasks if requested
     if fields_to_extract:
-        metadata_tasks = [t for t in metadata_tasks if t[0] in fields_to_extract]
+        json_tasks = [t for t in json_tasks if t[0] in fields_to_extract]
 
     # Launch concurrent tasks
     tasks = [
         _run_field_extraction(field, schema, prompt, text, url, request, semaphore, progress_cb, state=state)
-        for field, schema, prompt in metadata_tasks
+        for field, schema, prompt in json_tasks
     ]
     
     results_list = await asyncio.gather(*tasks)
@@ -235,16 +232,21 @@ async def _run_field_json_extraction(field, schema, prompt, text, fragment, requ
         agnt_log(f"Agent:{field} (JSON)", task="Parsing Field", input_data=str(fragment)[:50])
 
         try:
-            custom_guidance = ""
             settings = load_app_settings()
-            if settings.get("custom_prompts"):
-                mode = settings.get("extraction_mode", "single")
-                if mode == "multi":
-                    cg = settings["custom_prompts"]["multi_agent"].get(field, "")
-                    if cg: custom_guidance = f"ADDITIONAL USER INSTRUCTIONS:\n{cg}"
-                else:
-                    cg = settings["custom_prompts"].get("single_agent", "")
-                    if cg: custom_guidance = f"ADDITIONAL USER INSTRUCTIONS:\n{cg}"
+            if field == "description":
+                key = "json_description"
+            else:
+                mapping = {
+                    "company": "json_company",
+                    "role": "json_role",
+                    "location": "json_location",
+                    "salary_range": "json_salary",
+                    "company_job_id": "json_id",
+                    "job_posted_date": "json_posted",
+                    "application_deadline": "json_deadline"
+                }
+                key = mapping.get(field, "json_ld")
+            custom_guidance = get_custom_guidance(key, settings)
 
             if field == "description":
                 raw_chain = prompt | llm
@@ -319,12 +321,12 @@ async def _run_multi_agent_json_extraction(structured_data: dict, text: str, req
     from ai.chains import (
         JobCompany, JobRole, JobLocation, JobSalary, JobId, 
         PostedDate, DeadlineDate, JobDescription,
-        get_json_field_prompt, description_json_prompt
+        get_json_field_prompt, get_description_json_prompt
     )
     
     fragments = _map_json_ld_fragments(structured_data)
     
-    metadata_tasks = [
+    json_tasks = [
         ("company", JobCompany, get_json_field_prompt("company", settings), fragments.get("company")),
         ("role", JobRole, get_json_field_prompt("role", settings), fragments.get("role")),
         ("location", JobLocation, get_json_field_prompt("location", settings), fragments.get("location")),
@@ -332,13 +334,13 @@ async def _run_multi_agent_json_extraction(structured_data: dict, text: str, req
         ("company_job_id", JobId, get_json_field_prompt("company_job_id", settings), fragments.get("job_id")),
         ("job_posted_date", PostedDate, get_json_field_prompt("job_posted_date", settings), fragments.get("posted_date")),
         ("application_deadline", DeadlineDate, get_json_field_prompt("application_deadline", settings), fragments.get("deadline")),
-        ("description", JobDescription, description_json_prompt, fragments.get("description")),
+        ("description", JobDescription, get_description_json_prompt(settings), fragments.get("description")),
     ]
     
     # Launch all tasks concurrently
     tasks = [
         _run_field_json_extraction(field, schema, prompt, text, fragment, request, semaphore, progress_cb, state=state)
-        for field, schema, prompt, fragment in metadata_tasks
+        for field, schema, prompt, fragment in json_tasks
     ]
     
     results_list = await asyncio.gather(*tasks)
@@ -492,11 +494,11 @@ async def extract_node(state: AgentState):
     try:
         from ai.chains import (
             get_extraction_prompt, JobDetails,
-            _create_description_prompt, get_json_ld_prompt
+            get_description_text_prompt, get_json_ld_extraction_prompt
         )
         extraction_prompt = get_extraction_prompt(app_settings)
-        description_extraction_prompt = _create_description_prompt(app_settings)
-        structured_data_validation_prompt = get_json_ld_prompt(app_settings)
+        description_text_prompt = get_description_text_prompt(app_settings)
+        structured_data_validation_prompt = get_json_ld_extraction_prompt(app_settings)
 
         # RETRY MODE: Triggered by description QA validator (stays on current source)
         is_fallback_transition = vf.startswith("FALLBACK_PHASE:") if vf else False
@@ -514,12 +516,12 @@ async def extract_node(state: AgentState):
             text_with_feedback = f"PREVIOUS ATTEMPT FAILED QA VALIDATION:\n{vf}\n\nORIGINAL TEXT:\n{text}" if vf else text
 
             if mode == "multi":
-                from ai.chains import JobDescription, description_extraction_prompt, description_json_prompt
+                from ai.chains import JobDescription, get_description_text_prompt, get_description_json_prompt
                 sema = asyncio.Semaphore(app_settings.get("max_concurrency", 1))
                 if active_source == "JSON-LD":
-                    _, desc_val = await _run_field_json_extraction("description", JobDescription, description_json_prompt, text_with_feedback, structured_data.get("description"), request, sema, progress_cb, state=state)
+                    _, desc_val = await _run_field_json_extraction("description", JobDescription, get_description_json_prompt(app_settings), text_with_feedback, structured_data.get("description"), request, sema, progress_cb, state=state)
                 else:    
-                    _, desc_val = await _run_field_extraction("description", JobDescription, description_extraction_prompt, text_with_feedback, url, request, sema, progress_cb, state=state)
+                    _, desc_val = await _run_field_extraction("description", JobDescription, get_description_text_prompt(app_settings), text_with_feedback, url, request, sema, progress_cb, state=state)
                 results["description"] = desc_val.get("description") if desc_val else None
             else:
                 llm = get_llm(num_ctx=app_settings["llm_config"].get("num_ctx"))
@@ -540,8 +542,8 @@ async def extract_node(state: AgentState):
                         "validation_feedback": f"PREVIOUS ATTEMPT FAILED QA VALIDATION:\n{vf}\nPLEASE FIX THESE ISSUES.\n" if vf else ""
                     }
                 
-                cg = app_settings.get("custom_prompts", {}).get("single_agent", "")
-                inputs["custom_guidance"] = f"ADDITIONAL USER INSTRUCTIONS:\n{cg}" if cg else ""
+                key = "json_ld" if active_source == "JSON-LD" else "extraction_base"
+                inputs["custom_guidance"] = get_custom_guidance(key, app_settings)
                 
                 result = await asyncio.wait_for(extractor.ainvoke(inputs), timeout=600)
                 results["description"] = result.model_dump().get("description")
@@ -596,8 +598,7 @@ async def extract_node(state: AgentState):
                     "validation_feedback": ""
                 }
                 
-                cg = app_settings.get("custom_prompts", {}).get("single_agent", "")
-                if cg: inputs["custom_guidance"] = f"ADDITIONAL USER INSTRUCTIONS:\n{cg}"
+                inputs["custom_guidance"] = get_custom_guidance("json_ld", app_settings)
 
                 result = await asyncio.wait_for(chain.ainvoke(inputs), timeout=600)
                 agnt_log("Extractor (JSON-LD)", task="RAW_AI_OUTPUT", result=str(result)[:200])
@@ -614,10 +615,18 @@ async def extract_node(state: AgentState):
             if mode == "multi":
                 # Determine fields that are still missing from Attempt 0
                 missing_fields = []
-                # All Multi-Agent fields from metadata_tasks
+                # All Multi-Agent fields from json_tasks
                 test_fields = ["company", "role", "location", "salary_range", "company_job_id", "job_posted_date", "application_deadline", "description"]
                 for f in test_fields:
-                    if not previous_json.get(f):
+                    val = previous_json.get(f)
+                    needs_re_extraction = False
+                    if not _is_valid_value(val):
+                        needs_re_extraction = True
+                    elif f == "description" and not state.get("description_verified"):
+                        # If description came from JSON but isn't verified, re-extract from TEXT
+                        needs_re_extraction = True
+                    
+                    if needs_re_extraction:
                         missing_fields.append(f)
                 
                 if not missing_fields:
@@ -632,8 +641,12 @@ async def extract_node(state: AgentState):
                 # Merge: JSON ground truth > Text results
                 final_results = previous_json.copy()
                 for k, v in new_results.items():
-                    # If JSON result is missing or a placeholder, use the Fallback Text result
-                    if not _is_valid_value(final_results.get(k)):
+                    # If JSON result is missing, or it's an unverified description, use the TEXT result
+                    use_fallback = not _is_valid_value(final_results.get(k))
+                    if k == "description" and not state.get("description_verified"):
+                        use_fallback = True
+                    
+                    if use_fallback:
                         final_results[k] = v
                 
                 state_update["extracted_data"] = final_results
@@ -681,7 +694,7 @@ async def extract_node(state: AgentState):
                 inputs = { 
                     "text": meta_context + text, 
                     "url": url or "Not provided",
-                    "custom_guidance": f"ADDITIONAL USER INSTRUCTIONS:\n{cg}" if cg else "",
+                    "custom_guidance": get_custom_guidance("extraction_base", app_settings),
                     "validation_feedback": f"{label}\n{vf}\n" if vf else ""
                 }
                     
@@ -705,7 +718,12 @@ async def extract_node(state: AgentState):
                 if previous_json:
                     for k, v in previous_json.items():
                         # ONLY preserve JSON value if it's actually valid content
-                        if _is_valid_value(v):
+                        # and (for descriptions) if it was actually verified.
+                        is_json_better = _is_valid_value(v)
+                        if k == "description" and not state.get("description_verified"):
+                            is_json_better = False # Force use of the fresh TEXT version
+                            
+                        if is_json_better:
                             final_results[k] = v
 
                 outcome = "SUCCESS" if final_results.get("company") and final_results.get("role") else "INCOMPLETE"
@@ -745,6 +763,12 @@ async def json_validator_node(state: AgentState):
         extracted["hallucination_reasons"] = state.get("validation_feedback", "Maximum validation attempts reached.")
         return {"extracted_data": extracted}
 
+    # 2. HTML Leakage Check (Especially for small models like Granite)
+    if any(tag in description.lower() for tag in ["<br", "<p", "<div", "<ul", "<li"]):
+        reason = "HTML tags detected in output description. Please strip ALL HTML tags and use clean Markdown (e.g., use - for lists instead of <ul><li>)."
+        agnt_log("JSON Validator", task="HTML_LEAKAGE", result=reason)
+        return {"retries": retries + 1, "validation_feedback": reason}
+
     # 2. HEURISTIC METADATA CHECK (Check if we need fallback soon)
     important_fields = {
         "company": "Company Name",
@@ -763,17 +787,24 @@ async def json_validator_node(state: AgentState):
             reason = f"'{val}'" if val is not None else "Missing"
             missing_reasons.append(f"  - {key} ({reason})")
 
+    state_update = {}
     if missing_reasons:
         missing_list = [r.split(" ")[3] for r in missing_reasons]
         missing_str = ", ".join(missing_list)
         agnt_log("JSON Validator", task="FALLBACK", result=f"Switching to TEXT mode. Missing fields: [{missing_str}]")
-        return {
+        state_update = {
             "active_source": "TEXT", 
             "use_text_fallback": True, 
             "previous_json_results": extracted,
             "validation_feedback": f"FALLBACK_PHASE: Incomplete JSON-LD metadata. Missing: {missing_str}",
             "retries": retries + 1
         }
+    
+    # If no description to validate, return the fallback state or success
+    if not description:
+        if state_update:
+            return state_update
+        return {"extracted_data": extracted, "validation_feedback": None}
 
     # 3. LLM FIDELITY QA (Even if metadata failed, we want to 'Verify' the description)
     from ai.chains import get_json_validation_prompt, DescriptionValidation
@@ -814,9 +845,17 @@ async def json_validator_node(state: AgentState):
         if result.is_valid and result.is_complete:
             agnt_log("JSON Validator", task="QA_DONE", result="PASS")
             description_verified = True
+            if state_update:
+                state_update["description_verified"] = True
+                return state_update
         else:
             reason = result.failure_reason or "Fidelity error"
             agnt_log("JSON Validator", task="QA_FAILURE", result=f"REJECTED: Fidelity check failed. Reason: {reason}")
+            
+            # If we were falling back, return the fallback state (description stays unverified)
+            if state_update:
+                return state_update
+
             # If description itself is bad, we retry extraction (not necessarily fallback yet)
             if retries >= 2:
                 extracted["hallucination_detected"] = True
@@ -826,9 +865,15 @@ async def json_validator_node(state: AgentState):
             
     except Exception as e:
         agnt_log("JSON Validator", task="ERROR", result=str(e))
+        if state_update:
+             return state_update
         return {"retries": 1, "validation_feedback": f"Fidelity error: {e}"}
 
-    return {"extracted_data": extracted, "validation_feedback": None, "description_verified": True}
+    if state_update:
+        state_update["description_verified"] = description_verified
+        return state_update
+
+    return {"extracted_data": extracted, "validation_feedback": None, "description_verified": description_verified}
 
 async def text_validator_node(state: AgentState):
     """
@@ -933,8 +978,8 @@ def get_agent_app():
     # These prompts are now generated with the LATEST settings on every call
     check_job_post_prompt = get_job_post_check_prompt(settings)
     extraction_prompt = get_extraction_prompt(settings)
-    description_extraction_prompt = _create_description_prompt(settings)
-    structured_data_validation_prompt = get_json_ld_prompt(settings)
+    description_text_prompt = get_description_text_prompt(settings)
+    structured_data_validation_prompt = get_json_ld_extraction_prompt(settings)
     
     workflow.add_node("check", check_job_post_node)
     workflow.add_node("extract", extract_node)
