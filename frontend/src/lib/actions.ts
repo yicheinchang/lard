@@ -29,9 +29,10 @@ async function callBackend(path: string, method: string, body?: any) {
     const response = await fetch(url, options);
 
     if (!response.ok) {
-      const errorText = await response.text();
-      console.error(`[ServerAction] Error ${method} ${path}:`, response.status, errorText);
-      throw new Error(`Backend Error (${response.status}): ${errorText || response.statusText}`);
+      const errorData = await response.json().catch(() => ({}));
+      const detail = errorData.detail || response.statusText;
+      console.error(`[ServerAction] Error ${method} ${path}:`, response.status, detail);
+      throw new Error(detail);
     }
 
     const data = await response.json();

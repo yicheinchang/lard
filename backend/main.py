@@ -1,5 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.exceptions import RequestValidationError
+from fastapi.responses import JSONResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 import os
 from contextlib import asynccontextmanager
@@ -85,6 +87,22 @@ def create_app() -> FastAPI:
     app.include_router(jobs.router)
     app.include_router(ai.router)
     app.include_router(settings.router)
+
+    @app.exception_handler(RequestValidationError)
+    async def validation_exception_handler(request, exc):
+        error_messages = []
+        for error in exc.errors():
+            # e.g., ["body", "hr_email"] -> "hr_email"
+            loc = error.get("loc", [])
+            field = " -> ".join([str(l) for l in loc if l != "body"])
+            msg = error.get("msg")
+            error_messages.append(f"[{field}]: {msg}")
+        
+        detail_str = "Validation failed: " + " | ".join(error_messages)
+        return JSONResponse(
+            status_code=422,
+            content={"detail": detail_str},
+        )
     
     return app
 

@@ -35,25 +35,9 @@ const defaultSettings: AppSettings = {
   extraction_mode: 'single',
   max_concurrency: 2,
   custom_prompts: {
-    single_agent: '',
-    multi_agent: {
-      company: '',
-      role: '',
-      location: '',
-      salary_range: '',
-      job_posted_date: '',
-      application_deadline: '',
-      description: ''
-    },
-    job_post_check: '',
-    qa_json: '',
-    qa_text: ''
-  },
-  system_prompts: {
     extraction_base: '',
     extraction_description: '',
     json_ld: '',
-    qa_validator: '',
     field_company: '',
     field_role: '',
     field_location: '',
@@ -70,8 +54,33 @@ const defaultSettings: AppSettings = {
     json_deadline: '',
     json_description: '',
     job_post_check: '',
-    qa_validator_json: '',
-    qa_validator_text: ''
+    qa_json: '',
+    qa_text: '',
+    assistant_system_prompt: ''
+  },
+  system_prompts: {
+    extraction_base: '',
+    extraction_description: '',
+    json_ld: '',
+    field_company: '',
+    field_role: '',
+    field_location: '',
+    field_salary: '',
+    field_id: '',
+    field_posted: '',
+    field_deadline: '',
+    json_company: '',
+    json_role: '',
+    json_location: '',
+    json_salary: '',
+    json_id: '',
+    json_posted: '',
+    json_deadline: '',
+    json_description: '',
+    job_post_check: '',
+    qa_json: '',
+    qa_text: '',
+    assistant_system_prompt: ''
   }
 };
 

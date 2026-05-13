@@ -1,5 +1,5 @@
-# 🗺️ Lard - Lazy AI-Powered Resume Database (v0.80.1)
-Last Updated: 2026-05-10T02:37:40Z
+# 🗺️ Lard - Lazy AI-Powered Resume Database (v0.81.0)
+Last Updated: 2026-05-13T03:42:00Z
 
 This document provides a summary of the project's architecture, tech stack, and key logic to give AI coding agents instant context.
 
@@ -265,6 +265,7 @@ Global configuration persisted on the server (`app_settings.json`).
 
 ### Settings (`/api/settings`)
 - `GET /settings`: Retrieve global app configuration.
+- `GET /settings/defaults`: [NEW] Fetch hardcoded factory default prompts from `backend/ai/prompts.py`.
 - `PUT /settings`: Update AI providers, models, and UI theme.
 - `POST /settings/rebuild-vectors`: Wipe and re-ingest all data into the vector store.
 - `POST /settings/test-llm`: Verify connectivity for a chosen LLM provider.
@@ -302,7 +303,7 @@ The workspace uses a formalized rule system in `.agents/rules/workspace-role.md`
     - **Background Eager Loading**: AI libraries (LangChain/PyTorch) and LangGraph workflows preloaded in background threads during FastAPI `lifespan`.
     - **Synchronized Initialization**: Incoming AI requests (Extraction, Chat) automatically wait for the background loading to complete using a global `Threading.Event`, preventing 500 errors caused by partial library imports.
     - **Global Embedding Cache**: HuggingFace instances cached to prevent PyTorch reloads.
-    - **Decoupled Prompts**: Raw system prompts isolated in `backend/ai/prompts.py` to prevent library hangs during initial config.
+    - **Decoupled Prompts**: Raw system prompts isolated in `backend/ai/prompts.py` to prevent library hangs during initial config. Served via `/api/settings/defaults` to ensure the frontend and backend remain synchronized without duplicate constants.
     - **Targeted Reloader**: `uvicorn` watches only source directories, explicitly excluding `.venv` and `node_modules`.
     - **Deep Lazy Loading**: Heavy AI utilities imported strictly inside the call functions.
     - **Persistent Model Cache**: Models cached locally in `backend/chroma_db/models/` to bypass re-downloads.
@@ -310,7 +311,7 @@ The workspace uses a formalized rule system in `.agents/rules/workspace-role.md`
 - **Git Tagging**: Automated tagging for every version.
 
 ### 5. State Management (LangGraph)
-The AI assistant uses **LangGraph** to manage conversational state, enabling multi-turn workflows and tool-calling (e.g., querying the database vs. searching documents).
+The AI assistant uses **LangGraph** to manage conversational state, enabling multi-turn workflows and tool-calling (e.g., querying the database vs. searching documents). Features **Chat Title Sanitization**: Generates clean, plain-text session titles by explicitly forbidding Markdown formatting in the generation prompt and applying a defensive `strip()` safety net to ensure a professional UI history.
 
 ### 6. Dynamic Configuration
 Settings are not just environment variables. They are persisted in `backend/app_settings.json`, allowing the user to change providers or themes at runtime via the UI without restarting the server.

@@ -5,15 +5,66 @@ from sqlalchemy.orm import Session, joinedload
 import os
 import shutil
 import json
-from pydantic import BaseModel, ConfigDict, field_validator
-from typing import List, Optional
+from enum import Enum
+from pydantic import (
+    BaseModel, 
+    ConfigDict, 
+    field_validator, 
+    model_validator, 
+    NameEmail, 
+    HttpUrl, 
+    AwareDatetime, 
+    StringConstraints,
+    BeforeValidator,
+    AfterValidator,
+    ValidationError
+)
+from typing import List, Optional, Annotated
 from datetime import datetime, timezone
 import email.utils
 from database.relational import get_db
 from database.models import JobApplication, InterviewStep, StepType, DocumentMeta, Company, EmploymentType
 from config import UPLOADS_DIR
 
+class JobStatus(str, Enum):
+    WISHLIST = "Wishlist"
+    APPLIED = "Applied"
+    INTERVIEWING = "Interviewing"
+    OFFERED = "Offered"
+    REJECTED = "Rejected"
+    DISCONTINUED = "Discontinued"
+    CLOSED = "Closed"
+
 router = APIRouter(prefix="/api", tags=["Jobs"])
+
+def to_db_dict(data: dict) -> dict:
+    """
+    Ensures complex Pydantic v2 types (NameEmail, HttpUrl) and Enums are 
+    converted to database-friendly formats (strings) before SQLAlchemy insertion.
+    """
+    for key, value in data.items():
+        if isinstance(value, (NameEmail, HttpUrl)):
+            data[key] = str(value)
+        elif isinstance(value, Enum):
+            data[key] = value.value
+    return data
+
+# --- Helpers for Normalization ---
+CleanStr = Annotated[str, StringConstraints(strip_whitespace=True)]
+
+def ensure_utc(v):
+    if isinstance(v, datetime) and v.tzinfo is None:
+        return v.replace(tzinfo=timezone.utc)
+    return v
+
+UTCDateTime = Annotated[datetime, BeforeValidator(ensure_utc)]
+
+def ensure_https(v):
+    if isinstance(v, str) and v and not v.startswith(("http://", "https://")):
+        return f"https://{v}"
+    return v
+
+NormalizedUrl = Annotated[HttpUrl, BeforeValidator(ensure_https)]
 
 # --- Pydantic Models ---
 class CompanyResponse(BaseModel):
@@ -27,7 +78,7 @@ class DocumentMetaResponse(BaseModel):
     title: str
     doc_type: str
     file_path: str
-    uploaded_at: datetime
+    uploaded_at: UTCDateTime
     model_config = ConfigDict(from_attributes=True)
 
 class StepTypeBase(BaseModel):
@@ -39,102 +90,111 @@ class StepTypeResponse(StepTypeBase):
 
 class InterviewStepCreate(BaseModel):
     step_type_name: str
-    step_date: Optional[datetime] = None
+    step_date: Optional[UTCDateTime] = None
     status: Optional[str] = "Scheduled"
     notes: Optional[str] = None
 
 class InterviewStepUpdate(BaseModel):
-    step_date: Optional[datetime] = None
+    step_date: Optional[UTCDateTime] = None
     status: Optional[str] = None
     notes: Optional[str] = None
 
 class InterviewStepResponse(BaseModel):
     id: int
     step_type: StepTypeResponse
-    step_date: Optional[datetime]
+    step_date: Optional[UTCDateTime]
     status: str
     notes: Optional[str]
     model_config = ConfigDict(from_attributes=True)
 
 class JobBase(BaseModel):
-    company: str
-    role: str
-    url: Optional[str] = None
-    status: Optional[str] = "Applied"
+    company: CleanStr
+    role: CleanStr
+    url: Optional[NormalizedUrl] = None
+    status: Optional[JobStatus] = JobStatus.APPLIED
     employment_type: Optional[EmploymentType] = EmploymentType.FTE
-    agency: Optional[str] = None
-    job_posted_date: Optional[datetime] = None
-    application_deadline: Optional[datetime] = None
-    company_job_id: Optional[str] = None
-    location: Optional[str] = None
+    agency: Optional[CleanStr] = None
+    job_posted_date: Optional[UTCDateTime] = None
+    application_deadline: Optional[UTCDateTime] = None
+    company_job_id: Optional[CleanStr] = None
+    location: Optional[CleanStr] = None
     description: Optional[str] = None
     company_id: Optional[int] = None
-    salary_range: Optional[str] = None
-    hr_email: Optional[str] = None
-    hiring_manager_name: Optional[str] = None
-    hiring_manager_email: Optional[str] = None
-    headhunter_name: Optional[str] = None
-    headhunter_email: Optional[str] = None
+    salary_range: Optional[CleanStr] = None
+    hr_email: Optional[NameEmail] = None
+    hiring_manager_name: Optional[CleanStr] = None
+    hiring_manager_email: Optional[NameEmail] = None
+    headhunter_name: Optional[CleanStr] = None
+    headhunter_email: Optional[NameEmail] = None
     notes: Optional[str] = None
-    created_at: Optional[datetime] = None
-    applied_date: Optional[datetime] = None
-    decision_date: Optional[datetime] = None
-    closed_date: Optional[datetime] = None
+    created_at: Optional[UTCDateTime] = None
+    applied_date: Optional[UTCDateTime] = None
+    decision_date: Optional[UTCDateTime] = None
+    closed_date: Optional[UTCDateTime] = None
     last_operation: Optional[str] = None
     is_starred: Optional[bool] = False
 
-    @field_validator("hr_email", "hiring_manager_email", "headhunter_email")
-    @classmethod
-    def validate_contact_email(cls, v: Optional[str]) -> Optional[str]:
-        if not v or not v.strip():
-            return None
-        # email.utils.parseaddr handles "Name <email@address.com>" and returns (name, email)
-        _, parsed_email = email.utils.parseaddr(v)
-        if not parsed_email or "@" not in parsed_email:
-            raise ValueError(f"Invalid email format: {v}")
-        return v
+    @model_validator(mode="after")
+    def extract_names_from_emails(self) -> "JobBase":
+        """
+        Extract names from NameEmail fields if dedicated name fields are empty.
+        Hiring Manager and Headhunter priority.
+        """
+        # Hiring Manager
+        if not self.hiring_manager_name and self.hiring_manager_email:
+            if self.hiring_manager_email.name:
+                self.hiring_manager_name = self.hiring_manager_email.name
+        
+        # Headhunter
+        if not self.headhunter_name and self.headhunter_email:
+            if self.headhunter_email.name:
+                self.headhunter_name = self.headhunter_email.name
+                
+        return self
 
 class JobCreate(JobBase):
     pass
 
 class JobUpdate(BaseModel):
-    company: Optional[str] = None
-    role: Optional[str] = None
-    url: Optional[str] = None
-    status: Optional[str] = None
+    company: Optional[CleanStr] = None
+    role: Optional[CleanStr] = None
+    url: Optional[NormalizedUrl] = None
+    status: Optional[JobStatus] = None
     employment_type: Optional[EmploymentType] = None
-    agency: Optional[str] = None
-    job_posted_date: Optional[datetime] = None
-    application_deadline: Optional[datetime] = None
-    company_job_id: Optional[str] = None
-    location: Optional[str] = None
+    agency: Optional[CleanStr] = None
+    job_posted_date: Optional[UTCDateTime] = None
+    application_deadline: Optional[UTCDateTime] = None
+    company_job_id: Optional[CleanStr] = None
+    location: Optional[CleanStr] = None
     description: Optional[str] = None
     company_id: Optional[int] = None
-    salary_range: Optional[str] = None
-    hr_email: Optional[str] = None
-    hiring_manager_name: Optional[str] = None
-    hiring_manager_email: Optional[str] = None
-    headhunter_name: Optional[str] = None
-    headhunter_email: Optional[str] = None
+    salary_range: Optional[CleanStr] = None
+    hr_email: Optional[NameEmail] = None
+    hiring_manager_name: Optional[CleanStr] = None
+    hiring_manager_email: Optional[NameEmail] = None
+    headhunter_name: Optional[CleanStr] = None
+    headhunter_email: Optional[NameEmail] = None
     notes: Optional[str] = None
-    created_at: Optional[datetime] = None
-    applied_date: Optional[datetime] = None
-    decision_date: Optional[datetime] = None
-    closed_date: Optional[datetime] = None
+    created_at: Optional[UTCDateTime] = None
+    applied_date: Optional[UTCDateTime] = None
+    decision_date: Optional[UTCDateTime] = None
+    closed_date: Optional[UTCDateTime] = None
     last_operation: Optional[str] = None
     is_starred: Optional[bool] = None
 
-    @field_validator("hr_email", "hiring_manager_email", "headhunter_email")
-    @classmethod
-    def validate_contact_email(cls, v: Optional[str]) -> Optional[str]:
-        if v is None:
-            return None
-        if not v.strip():
-            return None
-        _, parsed_email = email.utils.parseaddr(v)
-        if not parsed_email or "@" not in parsed_email:
-            raise ValueError(f"Invalid email format: {v}")
-        return v
+    @model_validator(mode="after")
+    def extract_names_from_emails(self) -> "JobUpdate":
+        # Hiring Manager
+        if not self.hiring_manager_name and self.hiring_manager_email:
+            if self.hiring_manager_email.name:
+                self.hiring_manager_name = self.hiring_manager_email.name
+        
+        # Headhunter
+        if not self.headhunter_name and self.headhunter_email:
+            if self.headhunter_email.name:
+                self.headhunter_name = self.headhunter_email.name
+                
+        return self
 
 class JobResponse(JobBase):
     id: int
@@ -223,7 +283,7 @@ async def create_job_stream(
             yield f"data: {json.dumps({'event': 'progress', 'msg': 'Saving job metadata...'})}\n\n"
             
             job_create = JobCreate.model_validate_json(job_data_str)
-            job_dict = job_create.model_dump(exclude_unset=True)
+            job_dict = to_db_dict(job_create.model_dump(exclude_unset=True))
             if "company" in job_dict and job_dict["company"]:
                 company = get_or_create_company(db, job_dict["company"])
                 job_dict["company_id"] = company.id
@@ -296,6 +356,9 @@ async def create_job_stream(
             update_job_status(db_job, db, operation="Job Created")
             yield f"data: {json.dumps({'event': 'completed', 'job_id': db_job.id})}\n\n"
             
+        except ValidationError as e:
+            error_messages = [f"[{' -> '.join(map(str, error['loc']))}]: {error['msg']}" for error in e.errors()]
+            yield f"data: {json.dumps({'event': 'error', 'msg': 'Validation failed: ' + ' | '.join(error_messages)})}\n\n"
         except Exception as e:
             yield f"data: {json.dumps({'event': 'error', 'msg': str(e)})}\n\n"
 
@@ -310,7 +373,7 @@ def update_job(job_id: int, job_update: JobUpdate, db: Session = Depends(get_db)
     if not db_job:
         raise HTTPException(status_code=404, detail="Job not found")
 
-    update_data = job_update.model_dump(exclude_unset=True)
+    update_data = to_db_dict(job_update.model_dump(exclude_unset=True))
     
     is_actually_different = False
     for key, value in update_data.items():
@@ -343,7 +406,7 @@ async def update_job_stream(job_id: int, job_update: JobUpdate, db: Session = De
                 yield f"data: {json.dumps({'event': 'error', 'msg': 'Job not found'})}\n\n"
                 return
 
-            update_data = job_update.model_dump(exclude_unset=True)
+            update_data = to_db_dict(job_update.model_dump(exclude_unset=True))
             
             # Check for changes
             is_actually_different = False
@@ -395,6 +458,9 @@ async def update_job_stream(job_id: int, job_update: JobUpdate, db: Session = De
             
             yield f"data: {json.dumps({'event': 'completed', 'job_id': job_id})}\n\n"
             
+        except ValidationError as e:
+            error_messages = [f"[{' -> '.join(map(str, error['loc']))}]: {error['msg']}" for error in e.errors()]
+            yield f"data: {json.dumps({'event': 'error', 'msg': 'Validation failed: ' + ' | '.join(error_messages)})}\n\n"
         except Exception as e:
             yield f"data: {json.dumps({'event': 'error', 'msg': str(e)})}\n\n"
 
@@ -518,7 +584,7 @@ def update_interview_step(step_id: int, step_update: InterviewStepUpdate, db: Se
     if not db_step:
         raise HTTPException(status_code=404, detail="Step not found")
     
-    update_data = step_update.model_dump(exclude_unset=True)
+    update_data = to_db_dict(step_update.model_dump(exclude_unset=True))
     
     if "step_type_name" in update_data:
         st = get_or_create_step_type(db, update_data.pop("step_type_name"))

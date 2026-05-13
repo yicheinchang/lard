@@ -106,25 +106,9 @@ export interface AppSettings {
   extraction_mode: 'single' | 'multi';
   max_concurrency: number;
   custom_prompts: {
-    single_agent: string;
-    multi_agent: {
-      company: string;
-      role: string;
-      location: string;
-      salary_range: string;
-      job_posted_date: string;
-      application_deadline: string;
-      description: string;
-    };
-    job_post_check: string;
-    qa_json: string;
-    qa_text: string;
-  };
-  system_prompts: {
     extraction_base: string;
     extraction_description: string;
     json_ld: string;
-    qa_validator: string;
     // Multi-Agent Fields (Text)
     field_company: string;
     field_role: string;
@@ -143,8 +127,35 @@ export interface AppSettings {
     json_deadline: string;
     json_description: string;
     job_post_check: string;
-    qa_validator_json: string;
-    qa_validator_text: string;
+    qa_json: string;
+    qa_text: string;
+    assistant_system_prompt: string;
+  };
+  system_prompts: {
+    extraction_base: string;
+    extraction_description: string;
+    json_ld: string;
+    // Multi-Agent Fields (Text)
+    field_company: string;
+    field_role: string;
+    field_location: string;
+    field_salary: string;
+    field_id: string;
+    field_posted: string;
+    field_deadline: string;
+    // Multi-Agent Fields (JSON)
+    json_company: string;
+    json_role: string;
+    json_location: string;
+    json_salary: string;
+    json_id: string;
+    json_posted: string;
+    json_deadline: string;
+    json_description: string;
+    job_post_check: string;
+    qa_json: string;
+    qa_text: string;
+    assistant_system_prompt: string;
   };
 }
 
@@ -158,7 +169,7 @@ export const updateSettings = async (data: Partial<AppSettings>): Promise<AppSet
 };
 
 export const getDefaultPrompts = async (): Promise<AppSettings['system_prompts']> => {
-  const response = await api.get('/settings/default-prompts');
+  const response = await api.get('/settings/defaults');
   return response.data;
 };
 
@@ -207,7 +218,8 @@ export const createJobStream = async (job: Partial<Job>, file: File | null, onPr
   });
 
   if (!response.ok) {
-    throw new Error(`Creation failed: ${response.statusText}`);
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(`Creation failed: ${errorData.detail || response.statusText}`);
   }
 
   const reader = response.body?.getReader();
@@ -247,7 +259,8 @@ export const updateJobStream = async (id: number, jobUpdate: Partial<Job>, onPro
   });
 
   if (!response.ok) {
-    throw new Error(`Update failed: ${response.statusText}`);
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(`Update failed: ${errorData.detail || response.statusText}`);
   }
 
   const reader = response.body?.getReader();
@@ -351,7 +364,8 @@ export const uploadJobDocumentStream = async (jobId: number, file: File, docType
   });
 
   if (!response.ok) {
-    throw new Error(`Upload failed: ${response.statusText}`);
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(`Upload failed: ${errorData.detail || response.statusText}`);
   }
 
   const reader = response.body?.getReader();

@@ -94,7 +94,7 @@ Table: job_applications
 - id: INTEGER (Primary Key)
 - company: TEXT (Company name)
 - role: TEXT (Job title)
-- status: TEXT (One of: 'Wishlist', 'Applied', 'Interviewing', 'Offered', 'Rejected')
+- status: TEXT (One of: 'Wishlist', 'Applied', 'Interviewing', 'Offered', 'Rejected', 'Discontinued', 'Closed')
 - location: TEXT
 - salary_range: TEXT
 - description: TEXT (Markdown format, use this with search_documents tool for detailed analysis)
@@ -131,13 +131,17 @@ async def get_assistant_agent():
     llm = get_llm()
     tools = [query_database, search_documents]
     
+    from ai.chains import get_assistant_prompt
+    from config import load_app_settings
+    app_settings = load_app_settings()
+    
     # Use AsyncSqliteSaver as a context manager (LangGraph 1.0 standard)
     async with AsyncSqliteSaver.from_conn_string(HISTORY_DB_PATH) as checkpointer:
         # LangChain v1.0 Standard Agent
         agent = create_agent(
             llm, 
             tools=tools,
-            system_prompt=f"You are a helpful AI job assistant. {SCHEMA_DESCRIPTION}",
+            system_prompt=get_assistant_prompt(app_settings),
             checkpointer=checkpointer
         )
         yield agent
