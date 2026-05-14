@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest, NextResponse, after } from 'next/server';
 
 export const dynamic = 'force-dynamic';
 export const maxDuration = 300; // 5 minutes
@@ -12,6 +12,7 @@ export const maxDuration = 300; // 5 minutes
 const INTERNAL_BACKEND_URL = process.env.INTERNAL_BACKEND_URL || 'http://localhost:8000';
 
 async function handleRequest(req: NextRequest, { params }: { params: Promise<{ path: string[] }> }) {
+  const startTime = Date.now();
   const { path: pathSegments } = await params;
   const path = pathSegments.join('/');
   
@@ -96,12 +97,19 @@ async function handleRequest(req: NextRequest, { params }: { params: Promise<{ p
     // Use a stream if available for maximum efficiency, otherwise fallback to blob
     const responseBody = response.body || await response.blob();
 
+    // Non-blocking Audit Logging using Next.js 16 after() hook
+    after(() => {
+      const duration = Date.now() - startTime;
+      console.info(`[NextProxy] Audit: ${req.method} /${targetPath} - Status: ${response.status} (${duration}ms)`);
+    });
+
     return new NextResponse(responseBody, {
       status: response.status,
       statusText: response.statusText,
       headers: responseHeaders,
     });
   } catch (error: any) {
+    const startTime = Date.now(); // Fallback if try fails early
     // Check if the request was aborted by the user (refresh/navigate)
     const isAborted = req.signal.aborted || 
                      error.name === 'AbortError' || 

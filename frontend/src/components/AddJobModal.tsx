@@ -67,7 +67,7 @@ const FilePicker = ({ label, hint, selectedFile, isExtracting, fileInputRef, onF
   <div>
     <input
       type="file"
-      accept=".pdf,.md,.txt"
+      accept=".pdf,.docx,.html,.htm,.md,.txt"
       className="hidden"
       ref={fileInputRef}
       onChange={onFileSelect}
@@ -530,8 +530,8 @@ export const AddJobModal: React.FC<AddJobModalProps> = ({ isOpen, onClose, onAdd
                 </p>
 
                 <FilePicker
-                  label="Upload Job Post (PDF / Markdown / Text)"
-                  hint="Supports .pdf, .md, .txt — takes priority over URL for extraction"
+                  label="Upload Job Post (PDF / DOCX / HTML / MD / TXT)"
+                  hint="Supports .pdf, .docx, .html, .md, .txt — takes priority over URL for extraction"
                   selectedFile={selectedFile}
                   isExtracting={isExtracting}
                   fileInputRef={fileInputRef}
@@ -579,7 +579,7 @@ export const AddJobModal: React.FC<AddJobModalProps> = ({ isOpen, onClose, onAdd
                   <span className="text-xs text-[var(--fg-subtle)]">(optional — will be saved with the application)</span>
                 </div>
                 <FilePicker
-                  label="Upload Job Post (PDF / Markdown / Text)"
+                  label="Upload Job Post (PDF / DOCX / HTML / MD / TXT)"
                   hint="Will be attached as a 'Job Post' document after saving"
                   selectedFile={selectedFile}
                   isExtracting={isExtracting}

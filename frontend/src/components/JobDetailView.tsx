@@ -927,7 +927,7 @@ export const JobDetailView: React.FC<JobDetailViewProps> = ({ job, onClose, onJo
                       </select>
                       <label className="cursor-pointer text-xs bg-violet-600 hover:bg-violet-500 text-white px-3 py-1.5 rounded-lg flex items-center gap-2 transition-all shrink-0">
                         <Plus className="w-3.5 h-3.5" /> Attach
-                        <input type="file" accept=".pdf,.md" className="hidden" onChange={handleAttachPdf} />
+                        <input type="file" accept=".pdf,.docx,.html,.htm,.md,.txt" className="hidden" onChange={handleAttachPdf} />
                       </label>
                     </div>
                   </div>

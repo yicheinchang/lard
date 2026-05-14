@@ -56,7 +56,7 @@ The backend explicitly manages model caching to prevent redundant downloads:
 
 ## 🧪 Testing
 
-The backend follows a script-based verification strategy. All test scripts are maintained in [backend/test](file:///home/Lard/backend/test).
+The backend follows a script-based verification strategy. All test scripts are maintained in [backend/test](file:///home/Lard/backend/test), with diagnostics and verification scripts organized in the `experiments/` subfolder.
 
 ### Running Tests
 To verify API endpoints or AI logic, use the provided test suite:
@@ -171,6 +171,7 @@ The system uses a multi-stage pipeline (Single vs. Multi-Agent) with a **QA Circ
 ### Lazy Loading & Startup
 The backend reaches a "Ready" state in **< 5 seconds** through:
 - **`app_factory` pattern**: Library imports are deferred until needed.
+- **Background Preloading**: Heavy AI components (LangGraph, Docling converter) are warmed up in a background thread during `lifespan` to eliminate first-use latency.
 - **Targeted Reloader**: `uvicorn` watches only `/backend` source files, ignoring `.venv` and `uploads`.
 - **Embedding Cache**: Local model cache for `sentence-transformers` to avoid cold-start downloads.
 

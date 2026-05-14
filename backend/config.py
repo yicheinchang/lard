@@ -130,7 +130,6 @@ DEFAULT_APP_SETTINGS = {
         "job_post_check": "",
         "qa_json": "",
         "qa_text": "",
-        "qa_validator": "",
         "assistant_system_prompt": ""
     },
     "system_prompts": {
@@ -155,7 +154,6 @@ DEFAULT_APP_SETTINGS = {
         "job_post_check": DEFAULT_SYSTEM_PROMPTS["job_post_check"],
         "qa_json": DEFAULT_SYSTEM_PROMPTS["qa_json"],
         "qa_text": DEFAULT_SYSTEM_PROMPTS["qa_text"],
-        "qa_validator": DEFAULT_SYSTEM_PROMPTS["qa_validator"],
         "assistant_system_prompt": DEFAULT_SYSTEM_PROMPTS["assistant_system_prompt"]
     }
 }

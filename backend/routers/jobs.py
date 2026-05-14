@@ -21,7 +21,6 @@ from pydantic import (
 )
 from typing import List, Optional, Annotated
 from datetime import datetime, timezone
-import email.utils
 from database.relational import get_db
 from database.models import JobApplication, InterviewStep, StepType, DocumentMeta, Company, EmploymentType
 from config import UPLOADS_DIR
@@ -363,8 +362,6 @@ async def create_job_stream(
             yield f"data: {json.dumps({'event': 'error', 'msg': str(e)})}\n\n"
 
     return StreamingResponse(generate(), media_type="text/event-stream")
-
-    return db_job
 
 @router.put("/jobs/{job_id}", response_model=JobResponse)
 def update_job(job_id: int, job_update: JobUpdate, db: Session = Depends(get_db)):

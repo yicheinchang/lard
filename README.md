@@ -26,8 +26,8 @@ An AI-powered, high-performance job application tracking system with automated d
 ## 🚀 Key Features
 
 ### 🤖 Intelligent AI Extraction
-- **Multi-Strategy Parsing**: Automated extraction from URLs, PDFs, and raw text.
 - **JSON-LD First**: Prioritizes structured Schema.org data for 100% extraction accuracy.
+- **Modern Extraction**: Uses **Docling** for high-fidelity extraction of `.docx` and `.html` files with automated preloading for sub-10s cold starts.
 - **Agentic Pipeline**: Supports both high-speed Single-Agent mode and high-fidelity Multi-Agent mode.
 - **Strict Validation**: Implements RFC-compliant `NameEmail` and `HttpUrl` validation with automated name extraction via Pydantic v2 `model_validators`.
 - **Field-Level Feedback**: Global error handling provides specific, human-readable feedback (e.g., `[hr_email]: invalid format`) directly to the frontend.
@@ -39,6 +39,7 @@ An AI-powered, high-performance job application tracking system with automated d
 - **Interview Tracking**: Manage every step with full CRUD, inline editing, and lifecycle guards (Applied/Interviewing status synchronization).
 
 ### ⚡ Extreme Performance
+- **Extreme Frontend Performance**: Utilizes **Next.js 16 `after()` hooks** for non-blocking audit logging and background tasks.
 - **Instant Backend Startup**: Cold start in **< 5 seconds** via background eager loading and `app_factory` patterns.
 - **Local Embedded Models**: Uses `all-MiniLM-L6-v2` with a persistent local model cache.
 - **Dynamic Settings**: Change LLM providers, models, or themes in real-time with **Deep Merge** settings persistence.
@@ -164,4 +165,4 @@ This project is licensed under the **MIT License**. See the [LICENSE](LICENSE) f
 
 ---
 Built with ❤️ by Antigravity.
-Final version synchronized with v0.81.0.
+Final version synchronized with v0.82.0.

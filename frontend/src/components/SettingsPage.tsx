@@ -188,7 +188,6 @@ export function SettingsPage() {
     job_post_check: '',
     qa_json: '',
     qa_text: '',
-    qa_validator: '',
     assistant_system_prompt: ''
   });
   const [systemPrompts, setSystemPrompts] = useState<AppSettings['system_prompts']>({
@@ -213,7 +212,6 @@ export function SettingsPage() {
     job_post_check: '',
     qa_json: '',
     qa_text: '',
-    qa_validator: '',
     assistant_system_prompt: ''
   });
   const [factoryPrompts, setFactoryPrompts] = useState<AppSettings['system_prompts']>({
@@ -238,7 +236,6 @@ export function SettingsPage() {
     job_post_check: '',
     qa_json: '',
     qa_text: '',
-    qa_validator: '',
     assistant_system_prompt: ''
   });
 
@@ -367,7 +364,6 @@ export function SettingsPage() {
       job_post_check: '',
       qa_json: '',
       qa_text: '',
-      qa_validator: '',
       assistant_system_prompt: ''
     });
     if (settings.system_prompts) {
@@ -954,7 +950,6 @@ export function SettingsPage() {
                             job_post_check: '',
                             qa_json: '',
                             qa_text: '',
-                            qa_validator: '',
                             assistant_system_prompt: ''
                           })}
                           className="mt-3 px-3 py-1.5 rounded-lg text-[10px] font-bold bg-[var(--surface)] border border-violet-500/20 hover:bg-violet-500/10 transition-all text-violet-300 uppercase tracking-tight"

@@ -1,5 +1,5 @@
-# 🗺️ Lard - Lazy AI-Powered Resume Database (v0.81.4)
-Last Updated: 2026-05-13T16:15:00Z
+# 🗺️ Lard - Lazy AI-Powered Resume Database (v0.82.0)
+Last Updated: 2026-05-14T23:43:00Z
 
 This document provides a summary of the project's architecture, tech stack, and key logic to give AI coding agents instant context.
 
@@ -17,7 +17,7 @@ This document provides a summary of the project's architecture, tech stack, and 
 - **Styling**: Tailwind CSS 4
 - **Language**: TypeScript
 - **Icons**: Lucide React & Custom Brand Logo (`/logo.png`)
-- **API Pattern**: Next.js API Proxy (Route Handlers) & Server Actions
+- **API Pattern**: Next.js API Proxy (Route Handlers) using **Next.js 16 `after()` hooks** for non-blocking audit logging.
 - **API Client**: Axios (Proxied) & Fetch (Proxied SSE)
 
 ---
@@ -45,7 +45,7 @@ This document provides a summary of the project's architecture, tech stack, and 
 - `.agents/rules/`: Operational rules and roles for AI completion.
 
 ### Backend (`/backend`)
-- `main.py`: Application entry point. Uses a `create_app()` factory and a `lifespan` handler for database initialization to ensure non-blocking, optimized startup.
+- `main.py`: Application entry point. Uses a `create_app()` factory and a `lifespan` handler for database initialization and **background AI preloading (Docling converter warm-up)** to ensure non-blocking, optimized startup.
 - `config.py`: Settings management (env vars + `app_settings.json`).
 - `routers/`:
   - `jobs.py`: 
@@ -67,7 +67,7 @@ This document provides a summary of the project's architecture, tech stack, and 
   - `status.py`: Synchronization primitives (Threading Events) for tracking heavy AI library loading during background startup.
   - `logger.py`: Standardized AI agent console logging.
 - `uploads/`: Local storage for uploaded job documents.
-- `test/`: Separate test scripts for backend API and logic verification.
+- `test/`: Structured test suite. Includes `experiments/` subfolder for diagnostics and verification scripts.
 - `run.sh`: Unified startup script. Development mode uses a targeted `uvicorn` reloader that excludes large directories (like `.venv`) to minimize file system scanning and CPU usage.
 
 ### Frontend (`/frontend`)
@@ -90,7 +90,7 @@ This document provides a summary of the project's architecture, tech stack, and 
   - `ProcessingOverlay.tsx`: **Portal-based full-screen overlay** for tracking long-running AI tasks with SSE updates. Feature: **Auto-closes 1.5s after success** and theme-aware styling.
   - `AutoSaveIndicator.tsx`: Small, non-blocking status indicator for background AI vectorization during note taking.
   - `tooltip-box`: Theme-aware CSS utility in `globals.css` ensuring readable tooltips in both light and dark modes.
-  - `AddJobModal.tsx`: Core form for new applications. Rendered via **React Portal**. Includes AI Auto-fill, Potential Hallucination Warning System, **Context Limit Warning System**, and **validation guards for required fields** (Company/Role).
+  - `AddJobModal.tsx`: Core form for new applications. Rendered via **React Portal**. Includes AI Auto-fill with support for **PDF, DOCX, HTML, and Text**, Potential Hallucination Warning System, **Context Limit Warning System**, and **validation guards for required fields** (Company/Role).
   - `ConfirmDialog.tsx`: Multi-functional modal replacing native prompts. Rendered via **React Portal**. Supports **Date Inputs**, **File Uploads**, and **Combobox Text Inputs** (with custom `<datalist>`). Includes variant-based styling (`danger`, `success`, `default`).
   - `ChatAssistant.tsx`: Global **Portal-based side drawer** for the AI agent. Features high-fidelity **Markdown rendering**, **LaTeX math**, and a **resizable width**. Includes **collapsible reasoning/thinking blocks** for supported models and **Session History management** with a dedicated drawer for navigating past conversations.
   - `SettingsPage.tsx`: Integrated configuration for LLMs and themes. Features a collapsible **Advanced AI Prompt Settings** subsection with:
@@ -261,7 +261,7 @@ Global configuration persisted on the server (`app_settings.json`).
 - `POST /ai/chat`: LangGraph-driven interactive chat with RAG. Blocks/waits for AI ready state.
 - `POST /ai/extract-url`: Scrape and extract job data from a webpage. Blocks/waits for AI ready state.
 - `POST /ai/extract-text`: Process raw text into a structured job.
-- `POST /ai/extract-file-stream`: Process uploaded file into a structured job via SSE. Sends "Initializing" message if backend is still loading.
+- `POST /ai/extract-file-stream`: Process uploaded file (PDF, DOCX, HTML, Text) into a structured job via SSE. Sends "Initializing" message if backend is still loading.
 
 ### Settings (`/api/settings`)
 - `GET /settings`: Retrieve global app configuration.

@@ -19,6 +19,8 @@ def _preload_ai_components():
         get_agent_app()
         from database.vector_store import get_embedding_function
         get_embedding_function() # This caches the embeddings
+        from routers.ai import get_docling_converter
+        get_docling_converter() # Warm up the Docling converter
         print("INFO:     AI libraries preloaded successfully.")
     except Exception as e:
         print(f"ERROR:    Failed to preload AI libraries: {e}")

@@ -7,7 +7,6 @@ import asyncio
 import os
 import shutil
 import logging
-import io
 import html
 import re
 from config import load_app_settings, settings

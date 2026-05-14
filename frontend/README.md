@@ -1,4 +1,4 @@
-# 🐱 Lard - Frontend (v0.81.0)
+# 🐱 Lard - Frontend (v0.82.0)
 
 Next.js-based high-performance frontend for the **Lard** (Lazy AI-powered Resume Database) application.
 
@@ -11,7 +11,7 @@ The frontend is built with a modern, high-isolation architecture designed for se
 - **Styling**: [Tailwind CSS 4](https://tailwindcss.com/) (Using modern `@theme` variables)
 - **Icons**: [Lucide React](https://lucide.dev/)
 - **API Pattern**: 
-    - **Secure Proxying**: All client-side requests are proxied via `src/app/api/proxy/` to isolate the backend from public exposure.
+    - **Secure Proxying**: All client-side requests are proxied via `src/app/api/proxy/`. Utilizes **Next.js 16 `after()` hooks** for non-blocking audit logging to ensure maximum responsiveness.
     - **Server Actions**: All mutations (Jobs, Steps, Settings) use Next.js Server Actions for secure, server-side execution.
     - **Streaming (SSE)**: Long-running AI tasks (Extraction, Vectorization) are streamed via Server-Sent Events for real-time progress updates.
 
@@ -43,6 +43,7 @@ The Settings page includes a sophisticated sub-section for AI prompt management:
 - **Granular Baseline Resets**: Restore any of the 18+ system prompts to factory defaults individually.
 - **Sync Guard**: Automatically pulls backend factory defaults via `/api/settings/defaults` to ensure logic consistency.
 - **Validation Feedback**: Displays granular, field-level error messages (e.g., `[hiring_manager_email]: invalid format`) directly in the `AddJobModal` based on strict Pydantic v2 validation.
+- **Modern File Support**: Synchronized support for **DOCX** and **HTML** files in both the `AddJobModal` (Auto-fill) and `JobDetailView` (Attachments).
 
 ---
 
@@ -64,7 +65,7 @@ As the AI assistant cannot access a browser, the following must be manually veri
 
 ---
 Built with ❤️ by Antigravity.
-Final version synchronized with v0.81.0.
+Final version synchronized with v0.82.0.
 
 ---
 
