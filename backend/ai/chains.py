@@ -261,6 +261,6 @@ def description_json_prompt(settings: dict | None = None):
 
 class DescriptionValidation(BaseModel):
     model_config = ConfigDict(populate_by_name=True)
-    is_valid: bool = Field(description="True if the description is formatted correctly as clean Markdown and does NOT contain AI filler/conversational wrappers.")
-    is_complete: bool = Field(description="True if the generated description contains ALL relevant information from the source, specifically ensuring the LAST items in lists and sections are present. True for JSON-LD if everything is present.")
-    failure_reason: str | None = Field(default=None, description="If is_valid or is_complete is False, provide a concise explanation (e.g. 'Missing the final responsibility item', 'Includes AI conversational filler').")
+    is_valid: bool = Field(description="True if the generated text meets all fidelity and verbatim criteria defined in the system prompt.")
+    is_complete: bool = Field(description="True if the generated text contains all information from the source fragment as required by the system prompt.")
+    failure_reason: str | None = Field(default=None, description="Detailed explanation of any fidelity or completeness failures.")

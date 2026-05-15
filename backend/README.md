@@ -1,4 +1,4 @@
-# 🐱 Lard - Backend
+# 🐱 Lard - Backend (v0.83.0)
 
 FastAPI-based backend for the **Lard** (Lazy AI-powered Resume Database) application.
 Designed for **Infrastructure Isolation**; this backend is kept private and is only accessible via the Next.js API Proxy.
@@ -72,7 +72,13 @@ uv run python -m test.test_ai_extraction  # Example
 **Lard** features a sophisticated AI extraction pipeline that adapts to both the model's capability and the source material's structure.
 
 ### 📊 Strategy vs. Input
-The system automatically routes tasks based on the **Extraction Strategy** (configured in Settings) and the **Input Type** detected by the parser.
+The system automatically routes tasks based on the **Extraction Strategy** (configured in Settings) and the **Input Type** detected by the parser. 
+
+#### 🧠 AI Logic & Fidelity
+- **Strict Verbatim Extraction**: The system uses a **"Strict Verbatim Text Extractor"** persona. It is explicitly forbidden from adding metadata labels (e.g., `**Title:**`), bold headers, or summaries. All descriptions are 1:1 Markdown conversions of the source text.
+- **JSON-LD Mapping Synchronization**: Both the Extractor and the QA Validator use a unified `_map_json_ld_fragments` utility to ensure they are always validating the same source of truth.
+- **Safety Fallback**: Implements a mandatory transition to TEXT mode if a targeted JSON-LD fragment returns an empty string, preventing empty-description hallucinations.
+- **UI-Controlled Prompts**: All fidelity logic is governed by system prompts editable in the UI, removing hidden Pydantic field constraints.
 
 | Strategy | Input: JSON-LD (URL) | Input: Text (URL, PDF, Markdown) |
 | :--- | :--- | :--- |

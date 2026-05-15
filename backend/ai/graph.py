@@ -816,17 +816,20 @@ async def json_validator_node(state: AgentState):
     llm = get_llm(num_ctx=settings["llm_config"].get("num_ctx"))
     validator = get_json_validation_prompt(settings) | llm.with_structured_output(DescriptionValidation)
     
-    def find_description(data):
-        if isinstance(data, dict):
-            if "@graph" in data: return find_description(data["@graph"])
-            if data.get("@type") == "JobPosting": return data.get("description", "")
-            if "all_json_ld" in data: return find_description(data["all_json_ld"])
-        elif isinstance(data, list):
-            for item in data:
-                res = find_description(item)
-                if res: return res
-        return ""
-    raw_source = html.unescape(find_description(state["structured_data"]))
+    # 3. Use unified mapping to find the source description for reference
+    from ai.graph import _map_json_ld_fragments
+    fragments = _map_json_ld_fragments(state["structured_data"])
+    raw_source = html.unescape(fragments.get("description", ""))
+    
+    # SAFETY CHECK: If the reference source description is missing from the JSON-LD
+    if not raw_source:
+        agnt_log("JSON Validator", task="FALLBACK", result="Description source missing in JSON-LD. Switching to TEXT.")
+        return {
+            "active_source": "TEXT",
+            "use_text_fallback": True,
+            "validation_feedback": "FALLBACK_PHASE: Description reference not found in JSON-LD. Verifying via full text.",
+            "retries": retries + 1
+        }
     
     custom_guidance = settings.get("custom_prompts", {}).get("qa_json", "")
     agnt_log("JSON Validator", task="Validating Fidelity", input_data=str(description)[:50])
