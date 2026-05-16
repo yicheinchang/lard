@@ -1,4 +1,4 @@
-# 🐱 Lard - Backend (v0.83.0)
+# 🐱 Lard - Backend (v0.84.0)
 
 FastAPI-based backend for the **Lard** (Lazy AI-powered Resume Database) application.
 Designed for **Infrastructure Isolation**; this backend is kept private and is only accessible via the Next.js API Proxy.
@@ -75,9 +75,7 @@ uv run python -m test.test_ai_extraction  # Example
 The system automatically routes tasks based on the **Extraction Strategy** (configured in Settings) and the **Input Type** detected by the parser. 
 
 #### 🧠 AI Logic & Fidelity
-- **Strict Verbatim Extraction**: The system uses a **"Strict Verbatim Text Extractor"** persona. It is explicitly forbidden from adding metadata labels (e.g., `**Title:**`), bold headers, or summaries. All descriptions are 1:1 Markdown conversions of the source text.
-- **JSON-LD Mapping Synchronization**: Both the Extractor and the QA Validator use a unified `_map_json_ld_fragments` utility to ensure they are always validating the same source of truth.
-- **Safety Fallback**: Implements a mandatory transition to TEXT mode if a targeted JSON-LD fragment returns an empty string, preventing empty-description hallucinations.
+- **Prompt Infrastructure**: Centralized prompt management in `prompts.py` with structural instruction separators (`--- ADDITIONAL USER INSTRUCTIONS ---`, `--- SELF-CORRECTION / FEEDBACK ---`) and data isolation via triple-quote (`"""`) delimitation. This ensures consistent behavioral enforcement and prevents instruction bleeding.
 - **UI-Controlled Prompts**: All fidelity logic is governed by system prompts editable in the UI, removing hidden Pydantic field constraints.
 
 | Strategy | Input: JSON-LD (URL) | Input: Text (URL, PDF, Markdown) |
@@ -169,7 +167,7 @@ The **Chat Assistant** is a stateful LangGraph agent utilizing `AsyncSqliteSaver
 The system uses a multi-stage pipeline (Single vs. Multi-Agent) with a **QA Circuit Breaker**:
 - **Verification Nodes**: Confirms "is_job_post" before proceeding.
 - **Guided Retries**: If validation (JSON/Text) fails, specific feedback is injected into the prompt for up to 3 guided extraction attempts.
-- **Prompt Sync**: All 18+ system prompts are isolated in `backend/ai/prompts.py` and served via `/api/settings/defaults` to ensure the frontend reset UI remains synchronized with the backend logic.
+- **Prompt Sync**: All system prompts are isolated in `backend/ai/prompts.py` and served via `/api/settings/defaults` to ensure the frontend reset UI remains synchronized with the backend logic. Employs structural headers and triple-quote delimiters for robust data isolation.
 
 ---
 

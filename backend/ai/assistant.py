@@ -87,42 +87,7 @@ def search_documents(query: str, job_id: Optional[int] = None):
 
 # --- Agent Setup --- #
 
-SCHEMA_DESCRIPTION = r"""
-You have access to a SQLite database with the following schema:
-
-Table: job_applications
-- id: INTEGER (Primary Key)
-- company: TEXT (Company name)
-- role: TEXT (Job title)
-- status: TEXT (One of: 'Wishlist', 'Applied', 'Interviewing', 'Offered', 'Rejected', 'Discontinued', 'Closed')
-- location: TEXT
-- salary_range: TEXT
-- description: TEXT (Markdown format, use this with search_documents tool for detailed analysis)
-- applied_date: DATETIME
-- job_posted_date: DATETIME
-- application_deadline: DATETIME
-
-Table: interview_steps
-- id: INTEGER (Primary Key)
-- job_application_id: INTEGER (Foreign Key to job_applications.id)
-- step_type_id: INTEGER (Foreign Key to step_types.id)
-- step_date: DATETIME
-- status: TEXT ('Scheduled', 'Completed', 'Passed', 'Requested')
-- notes: TEXT
-
-Table: step_types
-- id: INTEGER (Primary Key)
-- name: TEXT (e.g., 'Phone Screen', 'Technical Interview', 'Onsite', 'HR Round')
-
-When the user asks a question:
-1. Use 'query_database' for structured filters (status, company, date). 
-2. Use 'search_documents' for semantic details (skills, experience, culture) or to analyze descriptions of specific jobs.
-3. You can use both tools in sequence! For example, find wishlist jobs via SQL, then search their descriptions via RAG.
-4. IMPORTANT: Always use the provided tools to get data before answering. Do NOT describe the tool call you are about to make. Just call the tool.
-5. If you need to use a tool, output ONLY the tool call. Do not add any "I will now call..." or other explanation.
-6. Always provide a clear, helpful answer based on the data retrieved.
-7. For any mathematical formulas or equations, you MUST use LaTeX notation with \[ ... \] for block math and \( ... \) for inline math. Do NOT use single $ signs for math to avoid conflict with currency symbols.
-"""
+# Assistant schema and instructions are now centralized in prompts.py
 
 @asynccontextmanager
 async def get_assistant_agent():

@@ -1,5 +1,5 @@
-# 🗺️ Lard - Lazy AI-Powered Resume Database (v0.83.0)
-Last Updated: 2026-05-15T01:28:00Z
+# 🗺️ Lard - Lazy AI-Powered Resume Database (v0.84.0)
+Last Updated: 2026-05-15T23:40:00Z
 
 This document provides a summary of the project's architecture, tech stack, and key logic to give AI coding agents instant context.
 
@@ -61,7 +61,8 @@ This document provides a summary of the project's architecture, tech stack, and 
 - `ai/`:
   - `assistant.py`: LangGraph-based conversational agent logic (LangChain v1.0 standard). Uses `AsyncSqliteSaver` for persistent session history in `data/db/ai_history.db`.
   - `llm_factory.py`: Multi-provider support (Ollama, OpenAI, Anthropic).
-  - `chains.py`: Specific LangChain sequences (e.g., for extraction).
+  - `chains.py`: AI agent factory layer. Dynamically assembles prompts using centralized system templates and structural instruction headers.
+  - `prompts.py`: Centralized source of truth for all system prompts, field-level descriptions, and instructional block separators.
   - `debug.py`: Custom diagnostics, including the `DebugLLMCallbackHandler` to capture raw inputs/outputs to `data/tmp`.
   - `graph.py`: LangGraph state machine definitions.
   - `status.py`: Synchronization primitives (Threading Events) for tracking heavy AI library loading during background startup.
@@ -333,10 +334,7 @@ The system uses a multi-stage pipeline to extract job details from URLs, PDFs, a
 - **JSON-LD First Strategy**: Prioritizes `application/ld+json` script tags for metadata. Features **Robust Identification Helpers**: Automatically maps non-standard corporate fields (e.g., `jobBenefits` for salary, `positionID` for Job ID) to the internal schema, handles list-based locations and organizations, and synchronizes normalized keys with the multi-agent graph to minimize unnecessary full-text fallbacks.
 - **Optimized JSON-LD Multi-Agent Routing**: If JSON-LD is found and multi-agent mode is enabled, the system bypasses massive payload overhead by slicing the JSON and distributing specific fragments (e.g., `baseSalary`) only to the relevant agents. Missing fragments bypass the LLM completely, optimizing speed and reducing token limits. **Internal Name Wrapping**: Fragments are wrapped in contextual dictionaries using internal field names (e.g., `{"job_posted_date": "..."}`) to ensure reliable AI identification and prevent ambiguity rejections.
 - **Streaming & Progress UI**: Extraction tasks use Server-Sent Events (SSE). The frontend `Ticker.tsx` displays real-time status updates (e.g., "Extracting Salary Range...", "Finalizing Description..."). Implements a **15s SSE heartbeat mechanism** (comments) and increased Next.js proxy timeouts to ensure stability during long LLM processing on hardware-limited systems.
-- **AI Validation & Completeness**: Uses:
-    - **json_validator_node**: Specialized validator for JSON-LD data. Checks metadata for placeholders and performs a fidelity QA on the HTML-to-Markdown description conversion.
-    - **text_validator_node**: Specialized validator for raw text data. Performs comprehensive QA on the isolated job description, checking for completeness, hallucinations, and boundary accuracy. Includes a **Fast Pass** mechanism: if a description was already verified by the JSON fidelity pass, it bypasses the text re-validation to prevent false-positive rejections on noisy pages.
-- **Guided AI Retries**: If validation fails, the specific feedback from the QA validator is injected into the next extraction prompt (Attempts 2 and 3), guiding the LLM to fix specifically identified issues like truncation or hallucinations. Features **robust variable injection** for `validation_feedback` and `custom_guidance` to support user-defined prompt overrides.
+- **Prompt Infrastructure**: Centralized prompt management in `prompts.py` with structural instruction separators (`--- ADDITIONAL USER INSTRUCTIONS ---`, `--- SELF-CORRECTION / FEEDBACK ---`) and data isolation via triple-quote (`"""`) delimitation. This ensures consistent behavioral enforcement and prevents data/instruction confusion.
 - **Fail-Safe UI Warnings**: If validation still fails after 3 retries, the system preserves the output but sets `hallucination_detected: True` and `hallucination_reasons` (using the final QA block), which triggers an amber warning banner. **Context-Aware Flagging**: If the active data source (JSON or Text) was truncated during the centralized pre-processing, the system sets `context_limit_reached: True`, triggering a violet Zap warning banner in the frontend `AddJobModal.tsx` to inform the user of limited validation completeness.
 - **Cancellation & Safety**: Explicit support for `AbortController`. If a user cancels in the UI, the backend immediately terminates the background AI processing.
 - **Selective Pass Logic**: Skips structured JSON extraction for the description field, using a direct verbatim retrieval prompt for speed and reliability, and defaults to generous 600s timeouts on hardware-limited setups. **Strict Verbatim Enforcement**: All extraction and QA prompts use a "Strict Verbatim Text Extractor" persona that explicitly forbids the injection of bold labels, headers, or metadata not found in the raw source.

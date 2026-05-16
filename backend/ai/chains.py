@@ -44,7 +44,7 @@ def get_custom_guidance(key: str, settings: dict | None = None) -> str:
     
     target = settings["custom_prompts"].get(key, "")
     if target and isinstance(target, str) and target.strip():
-        return f"\n\nADDITIONAL USER INSTRUCTIONS:\n{target}"
+        return target.strip()
     return ""
 
 # --- Single Agent (Base Baseline) ---
@@ -140,14 +140,14 @@ def get_field_prompt(field_name: str, settings: dict | None = None):
     
     return ChatPromptTemplate.from_messages([
         ("system", base + "{validation_feedback}{custom_guidance}"),
-        ("user", "SOURCE URL: {url}\n\nCONTENT:\n\"\"\"\n{text}\n\"\"\"")
+        ("user", "CONTENT TO PROCESS:\n\"\"\"\n{text}\n\"\"\"")
     ])
 
 def get_description_text_prompt(settings: dict | None = None):
     base = escape_braces(get_base_prompt("extraction_description", settings))
     return ChatPromptTemplate.from_messages([
         ("system", base + "{validation_feedback}{custom_guidance}"),
-        ("user", "CONTENT TO PROCESS:\n\"\"\"\n{text}\n\"\"\"\n\nProduce the verbatim Markdown description now. Do NOT include any preamble or commentary:")
+        ("user", "CONTENT TO PROCESS:\n\"\"\"\n{text}\n\"\"\"")
     ])
 
 # Helper to create extraction prompt
@@ -155,7 +155,7 @@ def get_extraction_prompt(settings: dict | None = None):
     base = escape_braces(get_base_prompt("extraction_base", settings))
     return ChatPromptTemplate.from_messages([
         ("system", base + "{validation_feedback}{custom_guidance}"),
-        ("user", "SOURCE URL: {url}\n\nCONTENT TO PROCESS:\n\"\"\"\n{text}\n\"\"\"")
+        ("user", "CONTENT TO PROCESS:\n\"\"\"\n{text}\n\"\"\"")
     ])
 
 # Helper to create JSON-LD prompt
@@ -165,7 +165,7 @@ def get_json_ld_extraction_prompt(settings: dict | None = None):
     
     return ChatPromptTemplate.from_messages([
         ("system", base + "{validation_feedback}{custom_guidance}"),
-        ("human", "{json_ld_data}")
+        ("user", "METADATA FRAGMENT:\n\"\"\"\n{json_ld_data}\n\"\"\"")
     ])
 
 # Helper to create JSON-LD QA validation prompt
@@ -173,7 +173,7 @@ def get_json_validation_prompt(settings: dict | None = None):
     base = escape_braces(get_base_prompt("qa_json", settings))
     return ChatPromptTemplate.from_messages([
         ("system", base + "{custom_guidance}"),
-        ("user", "SOURCE TYPE: JSON-LD\n\nRAW SOURCE FRAGMENT:\n\"\"\"\n{source_text}\n\"\"\"\n\nGENERATED DESCRIPTION:\n\"\"\"\n{generated_description}\n\"\"\"")
+        ("user", "SOURCE:\n\"\"\"\n{source_text}\n\"\"\"\n\nDESCRIPTION:\n\"\"\"\n{generated_description}\n\"\"\"")
     ])
 
 # Helper to create Raw Text QA validation prompt
@@ -181,7 +181,7 @@ def get_text_validation_prompt(settings: dict | None = None):
     base = escape_braces(get_base_prompt("qa_text", settings))
     return ChatPromptTemplate.from_messages([
         ("system", base + "{custom_guidance}"),
-        ("user", "SOURCE TYPE: RAW TEXT\n\nRAW SOURCE PAGE:\n\"\"\"\n{source_text}\n\"\"\"\n\nGENERATED DESCRIPTION:\n\"\"\"\n{generated_description}\n\"\"\"")
+        ("user", "SOURCE:\n\"\"\"\n{source_text}\n\"\"\"\n\nDESCRIPTION:\n\"\"\"\n{generated_description}\n\"\"\"")
     ])
 
 # Helper to create Job Post Check prompt
@@ -191,7 +191,7 @@ def get_job_post_check_prompt(settings: dict | None = None):
         
     return ChatPromptTemplate.from_messages([
         ("system", base),
-        ("user", "CONTENT TO ANALYZE:\n\"\"\"\n{text}\n\"\"\"")
+        ("user", "CONTENT:\n\"\"\"\n{text}\n\"\"\"")
     ])
 
 # --- JSON Metadata Support ---
@@ -213,7 +213,7 @@ def get_json_field_prompt(field_name: str, settings: dict | None = None):
 
     return ChatPromptTemplate.from_messages([
         ("system", base + "{validation_feedback}{custom_guidance}"),
-        ("user", "METADATA FRAGMENT:\n{json_fragment}")
+        ("user", "FRAGMENT:\n\"\"\"\n{json_fragment}\n\"\"\"")
     ])
 
 def get_description_json_prompt(settings: dict | None = None):
@@ -221,39 +221,19 @@ def get_description_json_prompt(settings: dict | None = None):
     base = escape_braces(get_base_prompt("json_description", settings))
     return ChatPromptTemplate.from_messages([
         ("system", base + "{validation_feedback}{custom_guidance}"),
-        ("user", "METADATA FRAGMENT TO PROCESS (Markdown Output Required):\n\"\"\"\n{json_fragment}\n\"\"\"\n\nProduce the verbatim Markdown description now. Do NOT include any preamble or commentary:")
+        ("user", "FRAGMENT:\n\"\"\"\n{json_fragment}\n\"\"\"")
     ])
 
-def get_qa_prompt(mode: str = "json", settings: dict | None = None):
-    """Prompt for QA Validation agent."""
-    key = "qa_json" if mode == "json" else "qa_text"
-    custom_guidance = get_custom_guidance(key, settings)
-    base = escape_braces(get_base_prompt(key, settings) + custom_guidance)
-    
-    return ChatPromptTemplate.from_messages([
-        ("system", base),
-        ("human", "SOURCE TEXT:\n{source_text}\n\nEXTRACTED DESCRIPTION:\n{extracted_content}")
-    ])
 
 def get_assistant_prompt(settings: dict | None = None):
     """Dynamic system prompt for the Chat Assistant."""
     key = "assistant_system_prompt"
     custom_guidance = get_custom_guidance(key, settings)
-    base = get_base_prompt(key, settings)
+    base = escape_braces(get_base_prompt(key, settings))
     
-    # We import SCHEMA_DESCRIPTION here to avoid circular imports
-    from ai.assistant import SCHEMA_DESCRIPTION
-    
-    full_prompt = f"{base}\n\n{custom_guidance}\n\n{SCHEMA_DESCRIPTION}"
-    return full_prompt
-
-# --- Aliases for Graph Compatibility ---
-
-def description_extraction_prompt(settings: dict | None = None):
-    return _create_description_prompt(settings)
-
-def description_json_prompt(settings: dict | None = None):
-    return _create_description_json_prompt(settings)
+    if custom_guidance:
+        return f"{base}\n\n--- ADDITIONAL USER INSTRUCTIONS ---\n{custom_guidance}"
+    return base
 
 # --- End of Prompt Factories ---
 

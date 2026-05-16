@@ -88,16 +88,15 @@ async def _run_field_extraction(field, schema, prompt, text, url, request, semap
                 prompt_vars = prompt.input_variables if hasattr(prompt, 'input_variables') else []
                 inputs = {
                     "text": text,
-                    "url": url or "Not provided",
                     "validation_feedback": "",
-                    "custom_guidance": custom_guidance
+                    "custom_guidance": f"\n\n--- ADDITIONAL USER INSTRUCTIONS ---\n{custom_guidance}" if custom_guidance else ""
                 }
                 
                 # Check for validation feedback on retry
                 vf = state.get("validation_feedback", "") if state else ""
                 if vf:
                     label = "TRANSITION FEEDBACK (FALLBACK TO TEXT):" if state.get("use_text_fallback") else "PREVIOUS ATTEMPT FAILED QA VALIDATION:"
-                    inputs["validation_feedback"] = f"{label}\n{vf}\n"
+                    inputs["validation_feedback"] = f"\n\n--- SELF-CORRECTION / FEEDBACK ---\n{label}\n{vf}\n"
                     
                 raw_res = await asyncio.wait_for(
                     raw_chain.ainvoke(inputs),
@@ -133,8 +132,7 @@ async def _run_field_extraction(field, schema, prompt, text, url, request, semap
             chain = prompt | llm.with_structured_output(schema)
             inputs = {
                 "text": text,
-                "url": url or "Not provided",
-                "custom_guidance": custom_guidance,
+                "custom_guidance": f"\n\n--- ADDITIONAL USER INSTRUCTIONS ---\n{custom_guidance}" if custom_guidance else "",
                 "validation_feedback": ""
             }
             
@@ -142,7 +140,7 @@ async def _run_field_extraction(field, schema, prompt, text, url, request, semap
             vf = state.get("validation_feedback", "") if state else ""
             if vf:
                 label = "TRANSITION FEEDBACK (FALLBACK TO TEXT):" if state.get("use_text_fallback") else "PREVIOUS ATTEMPT FAILED QA VALIDATION:"
-                inputs["validation_feedback"] = f"{label}\n{vf}\n"
+                inputs["validation_feedback"] = f"\n\n--- SELF-CORRECTION / FEEDBACK ---\n{label}\n{vf}\n"
 
             res = await asyncio.wait_for(
                 chain.ainvoke(inputs),
@@ -253,14 +251,14 @@ async def _run_field_json_extraction(field, schema, prompt, text, fragment, requ
                 inputs = {
                     "json_fragment": html.unescape(fragment) if isinstance(fragment, str) else json.dumps(fragment, indent=2),
                     "validation_feedback": "",
-                    "custom_guidance": custom_guidance
+                    "custom_guidance": f"\n\n--- ADDITIONAL USER INSTRUCTIONS ---\n{custom_guidance}" if custom_guidance else ""
                 }
 
                 # Dynamic check for variables in description prompt (JSON)
                 vf = state.get("validation_feedback", "") if state else ""
                 if vf:
                     label = "TRANSITION FEEDBACK (FALLBACK TO TEXT):" if state.get("use_text_fallback") else "PREVIOUS ATTEMPT FAILED QA VALIDATION:"
-                    inputs["validation_feedback"] = f"{label}\n{vf}\n"
+                    inputs["validation_feedback"] = f"\n\n--- SELF-CORRECTION / FEEDBACK ---\n{label}\n{vf}\n"
 
                 raw_res = await asyncio.wait_for(raw_chain.ainvoke(inputs), timeout=600)
                 val = raw_res.content
@@ -275,7 +273,7 @@ async def _run_field_json_extraction(field, schema, prompt, text, fragment, requ
             
             inputs = {
                 "json_fragment": json.dumps(fragment, indent=2),
-                "custom_guidance": custom_guidance,
+                "custom_guidance": f"\n\n--- ADDITIONAL USER INSTRUCTIONS ---\n{custom_guidance}" if custom_guidance else "",
                 "validation_feedback": ""
             }
             
@@ -283,7 +281,7 @@ async def _run_field_json_extraction(field, schema, prompt, text, fragment, requ
             vf = state.get("validation_feedback", "") if state else ""
             if vf:
                 label = "TRANSITION FEEDBACK (FALLBACK TO TEXT):" if state.get("use_text_fallback") else "PREVIOUS ATTEMPT FAILED QA VALIDATION:"
-                inputs["validation_feedback"] = f"{label}\n{vf}\n"
+                inputs["validation_feedback"] = f"\n\n--- SELF-CORRECTION / FEEDBACK ---\n{label}\n{vf}\n"
 
             res = await asyncio.wait_for(chain.ainvoke(inputs), timeout=300)
             val = res.model_dump()
@@ -531,19 +529,19 @@ async def extract_node(state: AgentState):
                     inputs = {
                         "json_ld_data": json.dumps(structured_data, indent=2),
                         "raw_text": text,
-                        "validation_feedback": f"PREVIOUS ATTEMPT FAILED QA VALIDATION:\n{vf}\nPLEASE FIX THESE ISSUES.\n" if vf else "",
+                        "validation_feedback": f"\n\n--- SELF-CORRECTION / FEEDBACK ---\nPREVIOUS ATTEMPT FAILED QA VALIDATION:\n{vf}\nPLEASE FIX THESE ISSUES.\n" if vf else "",
                         "custom_guidance": ""
                     }
                 else:
                     extractor = get_extraction_prompt(app_settings) | llm.with_structured_output(JobDetails)
                     inputs = { 
                         "text": text_with_feedback, 
-                        "url": url or "Not provided",
-                        "validation_feedback": f"PREVIOUS ATTEMPT FAILED QA VALIDATION:\n{vf}\nPLEASE FIX THESE ISSUES.\n" if vf else ""
+                        "validation_feedback": f"\n\n--- SELF-CORRECTION / FEEDBACK ---\nPREVIOUS ATTEMPT FAILED QA VALIDATION:\n{vf}\nPLEASE FIX THESE ISSUES.\n" if vf else ""
                     }
                 
                 key = "json_ld" if active_source == "JSON-LD" else "extraction_base"
-                inputs["custom_guidance"] = get_custom_guidance(key, app_settings)
+                cg = get_custom_guidance(key, app_settings)
+                inputs["custom_guidance"] = f"\n\n--- ADDITIONAL USER INSTRUCTIONS ---\n{cg}" if cg else ""
                 
                 result = await asyncio.wait_for(extractor.ainvoke(inputs), timeout=600)
                 results["description"] = result.model_dump().get("description")
@@ -592,13 +590,12 @@ async def extract_node(state: AgentState):
                 except Exception as e:
                     print(f"Error saving diagnostic JSON: {e}")
 
+                cg = get_custom_guidance("json_ld", app_settings)
                 inputs = {
                     "json_ld_data": json.dumps(structured_data, indent=2),
-                    "custom_guidance": "",
+                    "custom_guidance": f"\n\n--- ADDITIONAL USER INSTRUCTIONS ---\n{cg}" if cg else "",
                     "validation_feedback": ""
                 }
-                
-                inputs["custom_guidance"] = get_custom_guidance("json_ld", app_settings)
 
                 result = await asyncio.wait_for(chain.ainvoke(inputs), timeout=600)
                 agnt_log("Extractor (JSON-LD)", task="RAW_AI_OUTPUT", result=str(result)[:200])
@@ -691,11 +688,11 @@ async def extract_node(state: AgentState):
                 # Determine correct label for validation_feedback
                 label = "TRANSITION FEEDBACK (FALLBACK TO TEXT):" if use_text_fallback else "PREVIOUS ATTEMPT FAILED QA VALIDATION:"
                 
+                cg = get_custom_guidance("extraction_base", app_settings)
                 inputs = { 
                     "text": meta_context + text, 
-                    "url": url or "Not provided",
-                    "custom_guidance": get_custom_guidance("extraction_base", app_settings),
-                    "validation_feedback": f"{label}\n{vf}\n" if vf else ""
+                    "custom_guidance": f"\n\n--- ADDITIONAL USER INSTRUCTIONS ---\n{cg}" if cg else "",
+                    "validation_feedback": f"\n\n--- SELF-CORRECTION / FEEDBACK ---\n{label}\n{vf}\n" if vf else ""
                 }
                     
                 agnt_log("Extractor (Text)", task="Full Extraction", input_data=str(text)[:50])
@@ -840,7 +837,7 @@ async def json_validator_node(state: AgentState):
             validator.ainvoke({
                 "source_text": str(raw_source), 
                 "generated_description": str(description),
-                "custom_guidance": f"ADDITIONAL QA GUIDANCE:\n{custom_guidance}" if custom_guidance else ""
+                "custom_guidance": f"\n\n--- ADDITIONAL USER INSTRUCTIONS ---\n{custom_guidance}" if custom_guidance else ""
             }),
             timeout=180
         )
@@ -927,7 +924,7 @@ async def text_validator_node(state: AgentState):
             validator.ainvoke({
                 "source_text": str(state["text"]), 
                 "generated_description": str(description),
-                "custom_guidance": f"ADDITIONAL QA GUIDANCE:\n{custom_guidance}" if custom_guidance else ""
+                "custom_guidance": f"\n\n--- ADDITIONAL USER INSTRUCTIONS ---\n{custom_guidance}" if custom_guidance else ""
             }),
             timeout=180
         )
