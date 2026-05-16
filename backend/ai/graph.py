@@ -99,7 +99,7 @@ async def _run_field_extraction(field, schema, prompt, text, url, request, semap
                     inputs["validation_feedback"] = f"\n\n--- SELF-CORRECTION / FEEDBACK ---\n{label}\n{vf}\n"
                     
                 raw_res = await asyncio.wait_for(
-                    raw_chain.ainvoke(inputs),
+                    raw_chain.ainvoke(inputs, config={"tags": [f"agent:{field}"]}),
                     timeout=600
                 )
                 verbatim_text = raw_res.content
@@ -143,7 +143,7 @@ async def _run_field_extraction(field, schema, prompt, text, url, request, semap
                 inputs["validation_feedback"] = f"\n\n--- SELF-CORRECTION / FEEDBACK ---\n{label}\n{vf}\n"
 
             res = await asyncio.wait_for(
-                chain.ainvoke(inputs),
+                chain.ainvoke(inputs, config={"tags": [f"agent:{field}"]}),
                 timeout=300
             )
             val = res.model_dump()
@@ -260,7 +260,10 @@ async def _run_field_json_extraction(field, schema, prompt, text, fragment, requ
                     label = "TRANSITION FEEDBACK (FALLBACK TO TEXT):" if state.get("use_text_fallback") else "PREVIOUS ATTEMPT FAILED QA VALIDATION:"
                     inputs["validation_feedback"] = f"\n\n--- SELF-CORRECTION / FEEDBACK ---\n{label}\n{vf}\n"
 
-                raw_res = await asyncio.wait_for(raw_chain.ainvoke(inputs), timeout=600)
+                raw_res = await asyncio.wait_for(
+                    raw_chain.ainvoke(inputs, config={"tags": [f"agent:{field}:json"]}), 
+                    timeout=600
+                )
                 val = raw_res.content
                 if progress_cb:
                     await progress_cb({"event": "field_done", "field": field, "msg": f"Captured Description (JSON)"})
@@ -283,7 +286,10 @@ async def _run_field_json_extraction(field, schema, prompt, text, fragment, requ
                 label = "TRANSITION FEEDBACK (FALLBACK TO TEXT):" if state.get("use_text_fallback") else "PREVIOUS ATTEMPT FAILED QA VALIDATION:"
                 inputs["validation_feedback"] = f"\n\n--- SELF-CORRECTION / FEEDBACK ---\n{label}\n{vf}\n"
 
-            res = await asyncio.wait_for(chain.ainvoke(inputs), timeout=300)
+            res = await asyncio.wait_for(
+                chain.ainvoke(inputs, config={"tags": [f"agent:{field}:json"]}), 
+                timeout=300
+            )
             val = res.model_dump()
 
             if progress_cb:

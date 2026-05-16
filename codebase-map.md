@@ -1,5 +1,5 @@
-# 🗺️ Lard - Lazy AI-Powered Resume Database (v0.84.0)
-Last Updated: 2026-05-15T23:40:00Z
+# 🗺️ Lard - Lazy AI-Powered Resume Database (v0.84.1)
+Last Updated: 2026-05-16T00:00:00Z
 
 This document provides a summary of the project's architecture, tech stack, and key logic to give AI coding agents instant context.
 
@@ -63,8 +63,8 @@ This document provides a summary of the project's architecture, tech stack, and 
   - `llm_factory.py`: Multi-provider support (Ollama, OpenAI, Anthropic).
   - `chains.py`: AI agent factory layer. Dynamically assembles prompts using centralized system templates and structural instruction headers.
   - `prompts.py`: Centralized source of truth for all system prompts, field-level descriptions, and instructional block separators.
-  - `debug.py`: Custom diagnostics, including the `DebugLLMCallbackHandler` to capture raw inputs/outputs to `data/tmp`.
-  - `graph.py`: LangGraph state machine definitions.
+  - `debug.py`: Custom diagnostics, including the `DebugLLMCallbackHandler` to capture raw inputs/outputs to `data/tmp`. Features **microsecond-level file isolation** and robust `run_id` management to prevent log collisions during high-concurrency multi-agent execution.
+  - `graph.py`: LangGraph state machine definitions. Employs **field-specific tagging** (`agent:<field>`) for all LLM calls in Multi-Agent mode to ensure descriptive and isolated diagnostic logs.
   - `status.py`: Synchronization primitives (Threading Events) for tracking heavy AI library loading during background startup.
   - `logger.py`: Standardized AI agent console logging.
 - `uploads/`: Local storage for uploaded job documents.

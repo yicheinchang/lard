@@ -19,13 +19,29 @@ class DebugLLMCallbackHandler(BaseCallbackHandler):
     def on_chat_model_start(self, serialized: dict, messages: list[list[BaseMessage]], **kwargs):
         """Called when a chat model starts running."""
         try:
-            # Generate a unique invocation tag based on tags or a random UUID
+            # Generate a unique invocation tag based on tags
             tags = kwargs.get("tags", [])
-            tag_str = tags[0] if tags else "unknown_agent"
-            run_id = str(kwargs.get("run_id", uuid.uuid4()))[:8]
+            tag_str = "unknown_agent"
+            for t in tags:
+                if t.startswith("agent:"):
+                    # Use the descriptive agent tag if present
+                    tag_str = t
+                    break
+            else:
+                if tags:
+                    tag_str = tags[0]
             
-            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-            filename = f"debug_llm_call_{timestamp}_{tag_str}_{run_id}.txt"
+            # Use the actual run_id as the dictionary key to prevent collisions 
+            # if run_id is None or identical across parallel calls.
+            actual_run_id = kwargs.get("run_id")
+            if not actual_run_id:
+                actual_run_id = uuid.uuid4()
+            
+            short_id = str(actual_run_id)[:8]
+            
+            # Use microsecond precision to minimize collision risk in same-second parallel calls
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S_%f")[:20] 
+            filename = f"debug_llm_call_{timestamp}_{tag_str}_{short_id}.txt"
             filepath = os.path.join(settings.TMP_DIR, filename)
 
             with open(filepath, "w", encoding="utf-8") as f:
@@ -53,7 +69,7 @@ class DebugLLMCallbackHandler(BaseCallbackHandler):
             # Store filepath in the run cache to append to it later in on_llm_end
             if not hasattr(self, 'run_files'):
                 self.run_files = {}
-            self.run_files[kwargs.get("run_id")] = filepath
+            self.run_files[actual_run_id] = filepath
             
             agnt_log("Debug", task=f"LLM Call Started -> {filename}")
 

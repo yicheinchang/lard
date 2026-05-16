@@ -1,4 +1,4 @@
-# 🐱 Lard - Backend (v0.84.0)
+# 🐱 Lard - Backend (v0.84.1)
 
 FastAPI-based backend for the **Lard** (Lazy AI-powered Resume Database) application.
 Designed for **Infrastructure Isolation**; this backend is kept private and is only accessible via the Next.js API Proxy.
@@ -46,7 +46,7 @@ The backend uses [pydantic-settings](https://docs.pydantic.dev/latest/concepts/p
 | `LARD_UPLOADS_DIR` | Directory for uploaded documents. | `DATA_DIR/uploads` |
 | `LARD_CHROMA_DIR` | Directory for vector storage. | `DATA_DIR/chroma_db` |
 | `LARD_HF_HOME` | Centralized AI model cache. | `DATA_DIR/huggingface` |
-| `LARD_TMP_DIR` | Temporary diagnostic logs. | `DATA_DIR/tmp` |
+| `LARD_TMP_DIR` | Temporary diagnostic logs. Features microsecond-level isolation for concurrent agents. | `DATA_DIR/tmp` |
 | `LARD_OLLAMA_BASE_URL` | Ollama API endpoint. | `http://host.docker.internal:11434` |
 
 ### AI Model Management
