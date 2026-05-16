@@ -14,6 +14,7 @@ from ai.chains import (
     get_json_ld_extraction_prompt,
     get_custom_guidance
 )
+from ai.debug import log_diagnostic_info
 
 class AgentState(TypedDict):
     text: str
@@ -436,7 +437,10 @@ async def check_job_post_node(state: AgentState):
     try:
         # Check first portion for identification
         res = await asyncio.wait_for(
-            checker.ainvoke({"text": state["text"][:verification_limit]}),
+            checker.ainvoke(
+                {"text": state["text"][:verification_limit]},
+                config={"tags": ["agent:check_job_post"], "callbacks": llm.callbacks}
+            ),
             timeout=120
         )
         if not res.is_job_post or res.likelihood < 0.8:
@@ -549,7 +553,10 @@ async def extract_node(state: AgentState):
                 cg = get_custom_guidance(key, app_settings)
                 inputs["custom_guidance"] = f"\n\n--- ADDITIONAL USER INSTRUCTIONS ---\n{cg}" if cg else ""
                 
-                result = await asyncio.wait_for(extractor.ainvoke(inputs), timeout=600)
+                result = await asyncio.wait_for(
+                    extractor.ainvoke(inputs, config={"tags": ["seq:step:1", "agent:extractor:text"], "callbacks": llm.callbacks}), 
+                    timeout=600
+                )
                 results["description"] = result.model_dump().get("description")
  
             state_update["extracted_data"] = results
@@ -603,7 +610,10 @@ async def extract_node(state: AgentState):
                     "validation_feedback": ""
                 }
 
-                result = await asyncio.wait_for(chain.ainvoke(inputs), timeout=600)
+                result = await asyncio.wait_for(
+                    chain.ainvoke(inputs, config={"tags": ["seq:step:1", "agent:extractor:json"], "callbacks": llm.callbacks}), 
+                    timeout=600
+                )
                 agnt_log("Extractor (JSON-LD)", task="RAW_AI_OUTPUT", result=str(result)[:200])
                 data = result.model_dump()
                 outcome = "SUCCESS" if data.get("company") and data.get("role") else "INCOMPLETE"
@@ -702,7 +712,10 @@ async def extract_node(state: AgentState):
                 }
                     
                 agnt_log("Extractor (Text)", task="Full Extraction", input_data=str(text)[:50])
-                result = await asyncio.wait_for(extractor.ainvoke(inputs), timeout=600)
+                result = await asyncio.wait_for(
+                    extractor.ainvoke(inputs, config={"tags": ["agent:extractor:text"], "callbacks": llm.callbacks}), 
+                    timeout=600
+                )
                 data = result.model_dump()
                 
                 # Verification Step (Only on Fresh Pass, not Fallback)
@@ -770,6 +783,10 @@ async def json_validator_node(state: AgentState):
     if any(tag in description.lower() for tag in ["<br", "<p", "<div", "<ul", "<li"]):
         reason = "HTML tags detected in output description. Please strip ALL HTML tags and use clean Markdown (e.g., use - for lists instead of <ul><li>)."
         agnt_log("JSON Validator", task="HTML_LEAKAGE", result=reason)
+        
+        # Log this heuristic failure as a diagnostic file so it appears in data/tmp
+        log_diagnostic_info("agent:validator:heuristic", f"FAILURE_REASON: {reason}\n\nDESCRIPTION:\n{description}")
+        
         return {"retries": retries + 1, "validation_feedback": reason}
 
     # 2. HEURISTIC METADATA CHECK (Check if we need fallback soon)
@@ -840,11 +857,11 @@ async def json_validator_node(state: AgentState):
     description_verified = False
     try:
         result = await asyncio.wait_for(
-            validator.ainvoke({
-                "source_text": str(raw_source), 
-                "generated_description": str(description),
-                "custom_guidance": f"\n\n--- ADDITIONAL USER INSTRUCTIONS ---\n{custom_guidance}" if custom_guidance else ""
-            }),
+                validator.ainvoke({
+                    "source_text": str(raw_source), 
+                    "generated_description": str(description),
+                    "custom_guidance": f"\n\n--- ADDITIONAL USER INSTRUCTIONS ---\n{custom_guidance}" if custom_guidance else ""
+                }, config={"tags": ["agent:validator:json"], "callbacks": llm.callbacks}),
             timeout=180
         )
         
@@ -927,11 +944,11 @@ async def text_validator_node(state: AgentState):
     
     try:
         result = await asyncio.wait_for(
-            validator.ainvoke({
-                "source_text": str(state["text"]), 
-                "generated_description": str(description),
-                "custom_guidance": f"\n\n--- ADDITIONAL USER INSTRUCTIONS ---\n{custom_guidance}" if custom_guidance else ""
-            }),
+                validator.ainvoke({
+                    "source_text": str(state["text"]), 
+                    "generated_description": str(description),
+                    "custom_guidance": f"\n\n--- ADDITIONAL USER INSTRUCTIONS ---\n{custom_guidance}" if custom_guidance else ""
+                }, config={"tags": ["agent:validator:text"], "callbacks": llm.callbacks}),
             timeout=180
         )
         

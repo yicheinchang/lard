@@ -10,6 +10,43 @@ from langchain_core.outputs import LLMResult
 from config import settings
 from .logger import agnt_log
 
+import threading
+
+# Global counter for absolute uniqueness within a process
+_log_counter = 0
+_log_lock = threading.Lock()
+
+def _get_next_count():
+    global _log_counter
+    with _log_lock:
+        _log_counter += 1
+        return _log_counter
+
+def log_diagnostic_info(tag: str, content: str, level: str = "INFO"):
+    """
+    Manually log diagnostic information to a file in settings.TMP_DIR.
+    Useful for logging heuristic checks or skipped LLM calls.
+    """
+    try:
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S_%f")[:20]
+        pid = os.getpid()
+        count = _get_next_count()
+        
+        filename = f"diag_{timestamp}_{tag}_{pid}_{count}.txt"
+        filepath = os.path.join(settings.TMP_DIR, filename)
+        
+        os.makedirs(settings.TMP_DIR, exist_ok=True)
+        with open(filepath, "w", encoding="utf-8") as f:
+            f.write(f"=== DIAGNOSTIC {level}: {timestamp} ===\n")
+            f.write(f"Tag: {tag}\n")
+            f.write(f"PID: {pid} | Count: {count}\n")
+            f.write("\n--- CONTENT ---\n")
+            f.write(content)
+            
+        agnt_log("Debug", task=f"Diagnostic Logged -> {filename}")
+    except Exception as e:
+        print(f"Error logging diagnostic info: {e}")
+
 class DebugLLMCallbackHandler(BaseCallbackHandler):
     """
     A custom callback handler that logs the exact exact raw prompt and LLM response 
@@ -39,9 +76,12 @@ class DebugLLMCallbackHandler(BaseCallbackHandler):
             
             short_id = str(actual_run_id)[:8]
             
-            # Use microsecond precision to minimize collision risk in same-second parallel calls
+            # Use microsecond precision, PID, and a counter to GUARANTEE uniqueness
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S_%f")[:20] 
-            filename = f"debug_llm_call_{timestamp}_{tag_str}_{short_id}.txt"
+            pid = os.getpid()
+            count = _get_next_count()
+            
+            filename = f"debug_llm_call_{timestamp}_{tag_str}_{pid}_{count}_{short_id}.txt"
             filepath = os.path.join(settings.TMP_DIR, filename)
 
             with open(filepath, "w", encoding="utf-8") as f:

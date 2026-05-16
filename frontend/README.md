@@ -1,4 +1,4 @@
-# 🐱 Lard - Frontend (v0.84.1)
+# 🐱 Lard - Frontend (v0.84.2)
 
 Next.js-based high-performance frontend for the **Lard** (Lazy AI-powered Resume Database) application.
 
