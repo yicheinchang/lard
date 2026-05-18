@@ -787,7 +787,11 @@ async def json_validator_node(state: AgentState):
         # Log this heuristic failure as a diagnostic file so it appears in data/tmp
         log_diagnostic_info("agent:validator:heuristic", f"FAILURE_REASON: {reason}\n\nDESCRIPTION:\n{description}")
         
-        return {"retries": retries + 1, "validation_feedback": reason}
+        if retries >= 2:
+            extracted["hallucination_detected"] = True
+            extracted["hallucination_reasons"] = f"HTML Leakage (Final): {reason}"
+            return {"extracted_data": extracted, "retries": 1, "validation_feedback": reason}
+        return {"retries": 1, "validation_feedback": reason}
 
     # 2. HEURISTIC METADATA CHECK (Check if we need fallback soon)
     important_fields = {
@@ -817,7 +821,7 @@ async def json_validator_node(state: AgentState):
             "use_text_fallback": True, 
             "previous_json_results": extracted,
             "validation_feedback": f"FALLBACK_PHASE: Incomplete JSON-LD metadata. Missing: {missing_str}",
-            "retries": retries + 1
+            "retries": 1
         }
     
     # If no description to validate, return the fallback state or success
@@ -848,7 +852,7 @@ async def json_validator_node(state: AgentState):
             "active_source": "TEXT",
             "use_text_fallback": True,
             "validation_feedback": "FALLBACK_PHASE: Description reference not found in JSON-LD. Verifying via full text.",
-            "retries": retries + 1
+            "retries": 1
         }
     
     custom_guidance = settings.get("custom_prompts", {}).get("qa_json", "")
@@ -890,7 +894,12 @@ async def json_validator_node(state: AgentState):
         agnt_log("JSON Validator", task="ERROR", result=str(e))
         if state_update:
              return state_update
-        return {"retries": 1, "validation_feedback": f"Fidelity error: {e}"}
+        reason = f"Fidelity error: {e}"
+        if retries >= 2:
+            extracted["hallucination_detected"] = True
+            extracted["hallucination_reasons"] = f"QA Error (Final): {reason}"
+            return {"extracted_data": extracted, "retries": 1, "validation_feedback": reason}
+        return {"retries": 1, "validation_feedback": reason}
 
     if state_update:
         state_update["description_verified"] = description_verified
@@ -964,7 +973,12 @@ async def text_validator_node(state: AgentState):
         agnt_log("Text Validator", task="DONE", result="PASS")
         return {"extracted_data": extracted, "validation_feedback": None}
     except Exception as e:
-        return {"retries": 1, "validation_feedback": f"Text QA error: {e}"}
+        reason = f"Text QA error: {e}"
+        if retries >= 2:
+            extracted["hallucination_detected"] = True
+            extracted["hallucination_reasons"] = f"QA Error (Final): {reason}"
+            return {"extracted_data": extracted, "retries": 1, "validation_feedback": reason}
+        return {"retries": 1, "validation_feedback": reason}
 
 def should_continue_after_check(state: AgentState):
     if state.get("error"):
