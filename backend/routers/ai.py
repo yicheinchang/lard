@@ -533,10 +533,32 @@ async def extract_from_file(request: Request, file: UploadFile = File(...)):
 async def extract_from_pdf(request: Request, file: UploadFile = File(...)):
     return await extract_from_file(request, file)
 
+class ChatMessage(BaseModel):
+    role: str
+    content: str
+
 class ChatRequest(BaseModel):
     message: str
     job_id: int | None = None
     session_id: str | None = None
+    history: list[ChatMessage] | None = None
+
+def clear_thread_history(thread_id: str):
+    """Cleanly purge checkpoints and writes to reset/replay the LangGraph conversation state."""
+    import sqlite3
+    from ai.assistant import HISTORY_DB_PATH
+    conn = sqlite3.connect(HISTORY_DB_PATH)
+    cursor = conn.cursor()
+    try:
+        cursor.execute("DELETE FROM checkpoints WHERE thread_id = ?", (thread_id,))
+        cursor.execute("DELETE FROM writes WHERE thread_id = ?", (thread_id,))
+        conn.commit()
+    except Exception as e:
+        conn.rollback()
+        logger.error(f"Failed to clear thread history for {thread_id}: {e}")
+        raise e
+    finally:
+        conn.close()
 
 @router.get("/sessions")
 async def get_chat_sessions():
@@ -596,17 +618,43 @@ async def get_chat_history(session_id: str):
         
         return {"history": messages}
 
+@router.delete("/chat/{session_id}")
+async def delete_chat_session(session_id: str):
+    """Permanently delete a chat session and all its message checkpoints."""
+    _check_ai_enabled()
+    import sqlite3
+    from ai.assistant import HISTORY_DB_PATH
+    conn = sqlite3.connect(HISTORY_DB_PATH)
+    cursor = conn.cursor()
+    try:
+        cursor.execute("DELETE FROM chat_sessions WHERE id = ?", (session_id,))
+        cursor.execute("DELETE FROM checkpoints WHERE thread_id = ?", (session_id,))
+        cursor.execute("DELETE FROM writes WHERE thread_id = ?", (session_id,))
+        conn.commit()
+        return {"status": "success", "message": f"Session {session_id} deleted successfully."}
+    except Exception as e:
+        conn.rollback()
+        logger.error(f"Failed to delete session {session_id}: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        conn.close()
+
 @router.post("/chat")
 async def chat_with_assistant(req: ChatRequest):
     _check_ai_enabled()
     await _ensure_ai_ready()
     try:
         from ai.assistant import get_assistant_agent, HISTORY_DB_PATH
-        from langchain_core.messages import HumanMessage
+        from langchain_core.messages import HumanMessage, AIMessage
         import sqlite3
         
         if not req.session_id:
             raise HTTPException(status_code=400, detail="session_id is required for persistent chat.")
+
+        # If a pre-populated history is provided, we purge all checkpoints
+        # for this session, letting us "replay" history from the beginning.
+        if req.history is not None:
+            clear_thread_history(req.session_id)
 
         # 1. Ensure session exists or create it
         # We still use sync sqlite3 for simple metadata, or we could refactor this too.
@@ -650,9 +698,19 @@ async def chat_with_assistant(req: ChatRequest):
         if req.job_id:
             query = f"(Context: the user is currently looking at job ID {req.job_id}) {query}"
             
+        messages_to_send = []
+        if req.history:
+            for msg in req.history:
+                if msg.role == "user":
+                    messages_to_send.append(HumanMessage(content=msg.content))
+                elif msg.role == "assistant":
+                    messages_to_send.append(AIMessage(content=msg.content))
+        
+        messages_to_send.append(HumanMessage(content=query))
+            
         async with get_assistant_agent() as agent:
             config = {"configurable": {"thread_id": req.session_id}}
-            result = await agent.ainvoke({"messages": [HumanMessage(content=query)]}, config=config)
+            result = await agent.ainvoke({"messages": messages_to_send}, config=config)
             
             # 3. Extract reply and reasoning
             last_msg = result["messages"][-1]

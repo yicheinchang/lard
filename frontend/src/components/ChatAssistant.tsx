@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Bot, Send, X, Loader2, Sparkles, User, History, Plus, ChevronLeft } from 'lucide-react';
+import { Bot, Send, X, Loader2, Sparkles, User, History, Plus, ChevronLeft, Copy, Check, Edit3, RotateCw, Trash2 } from 'lucide-react';
 import api from '../lib/api';
 import { Portal } from './Portal';
 import { useSettings } from '../lib/SettingsContext';
@@ -44,6 +44,11 @@ export const ChatAssistant: React.FC<{
   const [width, setWidth] = useState(400);
   const isResizing = useRef(false);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
+  const [editInput, setEditInput] = useState('');
 
   // Initialize Session ID
   useEffect(() => {
@@ -66,6 +71,18 @@ export const ChatAssistant: React.FC<{
       content: 'Hello! I am your AI Job Application Assistant. Ask me anything about your saved jobs, uploaded resumes, or application strategies.'
     }]);
     setView('chat');
+  };
+
+  const handleDeleteSession = async (id: string) => {
+    try {
+      await api.delete(`/ai/chat/${id}`);
+      await fetchSessions();
+      if (id === sessionId) {
+        startNewChat();
+      }
+    } catch (err) {
+      console.error("Failed to delete session:", err);
+    }
   };
 
   const fetchSessions = async () => {
@@ -149,6 +166,14 @@ export const ChatAssistant: React.FC<{
     }
   }, [messages, isTyping, isInitializing]);
 
+  // Adjust input textarea height dynamically
+  useEffect(() => {
+    if (textareaRef.current) {
+      textareaRef.current.style.height = 'auto';
+      textareaRef.current.style.height = `${Math.min(textareaRef.current.scrollHeight, 160)}px`;
+    }
+  }, [input]);
+
   // AI Readiness Polling
   useEffect(() => {
     let pollInterval: NodeJS.Timeout;
@@ -179,12 +204,29 @@ export const ChatAssistant: React.FC<{
 
   if (!isOpen) return null;
 
-  const handleSend = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!input.trim() || isTyping) return;
+  const sendMessage = async (messageContent: string, historyOverride?: Message[]) => {
+    if (!messageContent.trim() || isTyping) return;
 
-    const userMsg: Message = { id: Date.now().toString(), role: 'user', content: input.trim() };
-    setMessages(prev => [...prev, userMsg]);
+    const userMsg: Message = { id: Date.now().toString(), role: 'user', content: messageContent.trim() };
+    
+    let nextMessages: Message[];
+    let apiHistory: { role: string; content: string }[] | undefined = undefined;
+
+    if (historyOverride) {
+      // Pruning flow (Edit/Retry or Regenerate)
+      nextMessages = [...historyOverride, userMsg];
+      apiHistory = historyOverride
+        .filter(m => m.id !== 'welcome')
+        .map(m => ({
+          role: m.role,
+          content: m.content
+        }));
+    } else {
+      // Normal incremental flow
+      nextMessages = [...messages, userMsg];
+    }
+
+    setMessages(nextMessages);
     setInput('');
     setIsTyping(true);
 
@@ -192,11 +234,11 @@ export const ChatAssistant: React.FC<{
       const response = await api.post('/ai/chat', { 
         message: userMsg.content,
         session_id: sessionId,
+        history: apiHistory,
         ...(jobId ? { job_id: jobId } : {})
       });
       
       const { reply: replyContent, reasoning: replyReasoning, error: replyError } = response.data;
-      
       const finalContent = replyError ? `Error: ${replyError}` : replyContent;
 
       setMessages(prev => [...prev, {
@@ -214,6 +256,54 @@ export const ChatAssistant: React.FC<{
     } finally {
       setIsTyping(false);
     }
+  };
+
+  const handleSend = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    await sendMessage(input);
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      handleSend();
+    }
+  };
+
+  const handleCopy = (id: string, text: string) => {
+    navigator.clipboard.writeText(text);
+    setCopiedId(id);
+    setTimeout(() => {
+      setCopiedId(null);
+    }, 2000);
+  };
+
+  const startEditing = (id: string, content: string) => {
+    setEditingMessageId(id);
+    setEditInput(content);
+  };
+
+  const handleSaveEdit = async (msgId: string) => {
+    if (!editInput.trim() || isTyping) return;
+    
+    const msgIdx = messages.findIndex(m => m.id === msgId);
+    if (msgIdx === -1) return;
+
+    const prunedHistory = messages.slice(0, msgIdx);
+    setEditingMessageId(null);
+    setEditInput('');
+    await sendMessage(editInput.trim(), prunedHistory);
+  };
+
+  const handleRegenerate = async () => {
+    if (isTyping || messages.length < 2) return;
+
+    const lastUserMsgIdx = messages.map(m => m.role).lastIndexOf('user');
+    if (lastUserMsgIdx === -1) return;
+
+    const lastUserMsg = messages[lastUserMsgIdx];
+    const prunedHistory = messages.slice(0, lastUserMsgIdx);
+    await sendMessage(lastUserMsg.content, prunedHistory);
   };
 
   return (
@@ -287,11 +377,48 @@ export const ChatAssistant: React.FC<{
                   <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${msg.role === 'user' ? 'bg-violet-600' : 'bg-[var(--surface-alt)] border border-[var(--border-color)]'}`}>
                     {msg.role === 'user' ? <User className="w-4 h-4 text-white" /> : <Bot className="w-4 h-4 text-violet-400" />}
                   </div>
-                  <div className={`max-w-[90%] rounded-2xl overflow-hidden flex flex-col ${
+                  <div className={`relative group/message max-w-[90%] rounded-2xl overflow-hidden flex flex-col ${
                     msg.role === 'user' 
                       ? 'bg-violet-600/20 text-[var(--fg)]' 
                       : 'bg-[var(--surface-hover)] text-[var(--fg-muted)] border border-[var(--border-color)]'
                   }`}>
+                    {/* Action Buttons (Copy, Edit, Regenerate) */}
+                    {editingMessageId !== msg.id && (
+                      <div className="absolute right-2 top-2 opacity-0 group-hover/message:opacity-100 transition-opacity flex items-center gap-1 z-10">
+                        <button
+                          onClick={() => handleCopy(msg.id, msg.content)}
+                          className="p-1 rounded-md bg-[var(--surface)] border border-[var(--border-color)] text-[var(--fg-subtle)] hover:text-[var(--fg)] hover:bg-[var(--surface-hover)] transition-all shadow-sm shrink-0"
+                          title="Copy to clipboard"
+                        >
+                          {copiedId === msg.id ? (
+                            <Check className="w-3.5 h-3.5 text-green-500" />
+                          ) : (
+                            <Copy className="w-3.5 h-3.5" />
+                          )}
+                        </button>
+                        
+                        {msg.role === 'user' && (
+                          <button
+                            onClick={() => startEditing(msg.id, msg.content)}
+                            className="p-1 rounded-md bg-[var(--surface)] border border-[var(--border-color)] text-[var(--fg-subtle)] hover:text-[var(--fg)] hover:bg-[var(--surface-hover)] transition-all shadow-sm shrink-0"
+                            title="Edit prompt"
+                          >
+                            <Edit3 className="w-3.5 h-3.5" />
+                          </button>
+                        )}
+
+                        {msg.role === 'assistant' && messages[messages.length - 1]?.id === msg.id && messages.length > 1 && (
+                          <button
+                            onClick={handleRegenerate}
+                            disabled={isTyping}
+                            className="p-1 rounded-md bg-[var(--surface)] border border-[var(--border-color)] text-[var(--fg-subtle)] hover:text-[var(--fg)] hover:bg-[var(--surface-hover)] disabled:opacity-50 transition-all shadow-sm shrink-0"
+                            title="Regenerate response"
+                          >
+                            <RotateCw className={`w-3.5 h-3.5 ${isTyping ? 'animate-spin' : ''}`} />
+                          </button>
+                        )}
+                      </div>
+                    )}
                     {/* Reasoning Section (Collapsible) */}
                     {msg.reasoning && (
                       <details className="border-b border-[var(--border-color)] bg-[var(--surface-alt)]/50 group">
@@ -315,8 +442,39 @@ export const ChatAssistant: React.FC<{
                       </details>
                     )}
 
-                    {/* Main Content */}
-                    <div className={`p-4 text-sm prose prose-sm ${resolvedGlobalTheme === 'dark' ? 'prose-invert' : ''} max-w-none break-words overflow-hidden`}>
+                    {editingMessageId === msg.id ? (
+                      <div className="p-3 flex flex-col gap-2 min-w-[200px] bg-[var(--surface-hover)]">
+                        <textarea
+                          value={editInput}
+                          onChange={e => setEditInput(e.target.value)}
+                          className="w-full min-h-[60px] bg-[var(--input-bg)] border border-violet-500/50 rounded-lg p-2.5 text-sm text-[var(--fg)] focus:outline-none focus:border-violet-500 custom-scrollbar resize-y"
+                          placeholder="Edit your prompt..."
+                        />
+                        <div className="flex justify-end gap-2 shrink-0">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setEditingMessageId(null);
+                              setEditInput('');
+                            }}
+                            className="px-2.5 py-1 rounded-md border border-[var(--border-color)] text-xs text-[var(--fg-subtle)] hover:text-[var(--fg)] hover:bg-[var(--surface-hover)] transition-all"
+                          >
+                            Cancel
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleSaveEdit(msg.id)}
+                            disabled={!editInput.trim() || isTyping}
+                            className="px-2.5 py-1 rounded-md bg-violet-600 hover:bg-violet-500 disabled:opacity-50 text-xs text-white font-medium transition-all shadow-sm"
+                          >
+                            Save & Submit
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <>
+                        {/* Main Content */}
+                        <div className={`p-4 text-sm prose prose-sm ${resolvedGlobalTheme === 'dark' ? 'prose-invert' : ''} max-w-none break-words overflow-hidden`}>
                       <div className="[&>*:first-child]:mt-0 [&>*:last-child]:mb-0 overflow-x-auto custom-scrollbar">
                         <ReactMarkdown 
                           remarkPlugins={[[remarkMath, { singleDollar: true }], remarkGfm]} 
@@ -334,7 +492,9 @@ export const ChatAssistant: React.FC<{
                             .replace(/\\\)/g, '$')}
                         </ReactMarkdown>
                       </div>
-                    </div>
+                        </div>
+                      </>
+                    )}
                   </div>
                 </div>
               ))}
@@ -364,19 +524,22 @@ export const ChatAssistant: React.FC<{
 
             {/* Input */}
             <div className="p-4 border-t border-[var(--border-color)] bg-[var(--bg)] shrink-0">
-              <form onSubmit={handleSend} className="relative flex items-center">
-                <input
-                  type="text"
+              <form onSubmit={handleSend} className="relative flex items-end">
+                <textarea
+                  ref={textareaRef}
                   value={input}
                   onChange={e => setInput(e.target.value)}
+                  onKeyDown={handleKeyDown}
                   placeholder="Ask about your applications..."
-                  className="w-full bg-[var(--input-bg)] border border-[var(--border-color)] rounded-xl pl-4 pr-12 py-3 text-sm text-[var(--fg)] focus:outline-none focus:border-violet-500 transition-colors placeholder-[var(--fg-subtle)]"
+                  rows={1}
+                  style={{ height: 'auto', maxHeight: '160px' }}
+                  className="w-full bg-[var(--input-bg)] border border-[var(--border-color)] rounded-xl pl-4 pr-12 py-3 text-sm text-[var(--fg)] focus:outline-none focus:border-violet-500 transition-colors placeholder-[var(--fg-subtle)] custom-scrollbar resize-none overflow-y-auto"
                   disabled={isTyping}
                 />
                 <button
                   type="submit"
                   disabled={!input.trim() || isTyping}
-                  className="absolute right-2 p-2 text-violet-400 hover:text-violet-500 disabled:opacity-50 transition-colors"
+                  className="absolute right-2 bottom-2 p-2 text-violet-400 hover:text-violet-500 disabled:opacity-50 transition-colors"
                 >
                   <Send className="w-5 h-5" />
                 </button>
@@ -396,27 +559,42 @@ export const ChatAssistant: React.FC<{
             ) : (
               <div className="space-y-1">
                 {sessions.map(s => (
-                  <button
+                  <div
                     key={s.id}
                     onClick={() => loadSession(s.id)}
-                    className={`w-full text-left p-3 rounded-xl transition-all border ${
+                    className={`group/session-item relative w-full text-left p-3 pr-10 rounded-xl transition-all border flex justify-between items-center cursor-pointer ${
                       s.id === sessionId 
                         ? 'bg-violet-600/10 border-violet-500/30' 
                         : 'border-transparent hover:bg-[var(--surface-hover)]'
                     }`}
                   >
-                    <div className="flex justify-between items-start mb-1">
-                      <span className={`text-sm font-medium line-clamp-1 ${s.id === sessionId ? 'text-violet-400' : 'text-[var(--fg)]'}`}>
-                        {s.title || 'Untitled Session'}
-                      </span>
-                      <span className="text-[10px] text-[var(--fg-subtle)] shrink-0">
-                        {new Date(s.updated_at + 'Z').toLocaleDateString()}
-                      </span>
+                    <div className="flex-1 min-w-0 pr-2">
+                      <div className="flex justify-between items-start mb-1">
+                        <span className={`text-sm font-medium line-clamp-1 ${s.id === sessionId ? 'text-violet-400' : 'text-[var(--fg)]'}`}>
+                          {s.title || 'Untitled Session'}
+                        </span>
+                        <span className="text-[10px] text-[var(--fg-subtle)] shrink-0 ml-2">
+                          {new Date(s.updated_at + 'Z').toLocaleDateString()}
+                        </span>
+                      </div>
+                      <p className="text-[10px] text-[var(--fg-muted)] line-clamp-1 opacity-70">
+                        Last active: {new Date(s.updated_at + 'Z').toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                      </p>
                     </div>
-                    <p className="text-[10px] text-[var(--fg-muted)] line-clamp-1 opacity-70">
-                      Last active: {new Date(s.updated_at + 'Z').toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                    </p>
-                  </button>
+                    {/* Delete button (visible on hover) */}
+                    <button
+                      onClick={async (e) => {
+                        e.stopPropagation();
+                        if (confirm('Are you sure you want to delete this chat session?')) {
+                          await handleDeleteSession(s.id);
+                        }
+                      }}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 p-2 rounded-lg bg-[var(--surface)] border border-[var(--border-color)] text-red-400 hover:text-red-500 hover:bg-red-500/10 opacity-0 group-hover/session-item:opacity-100 focus:opacity-100 transition-all shadow-sm shrink-0"
+                      title="Delete chat session"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
                 ))}
               </div>
             )}

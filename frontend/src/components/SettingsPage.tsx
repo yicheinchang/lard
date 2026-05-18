@@ -410,7 +410,7 @@ export function SettingsPage() {
       if (activeSystemTab !== 'global') {
         setActiveSystemTab('global');
         setActiveSystemPrompt('extraction_base');
-      } else if (activeSystemPrompt !== 'extraction_base' && activeSystemPrompt !== 'json_ld' && activeSystemPrompt !== 'qa_json' && activeSystemPrompt !== 'qa_text') {
+      } else if (activeSystemPrompt !== 'extraction_base' && activeSystemPrompt !== 'json_ld' && activeSystemPrompt !== 'qa_json' && activeSystemPrompt !== 'qa_text' && activeSystemPrompt !== 'assistant_system_prompt') {
         // If we were on a field prompt and switched to single-mode, reset to extraction_base
         setActiveSystemPrompt('extraction_base');
       }
