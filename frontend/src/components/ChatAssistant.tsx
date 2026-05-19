@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Bot, Send, X, Loader2, Sparkles, User, History, Plus, ChevronLeft, Copy, Check, Edit3, RotateCw, Trash2 } from 'lucide-react';
 import api from '../lib/api';
 import { Portal } from './Portal';
+import { ConfirmDialog } from './ConfirmDialog';
 import { useSettings } from '../lib/SettingsContext';
 import ReactMarkdown from 'react-markdown';
 import remarkMath from 'remark-math';
@@ -49,6 +50,7 @@ export const ChatAssistant: React.FC<{
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
   const [editInput, setEditInput] = useState('');
+  const [deleteConfirmSessionId, setDeleteConfirmSessionId] = useState<string | null>(null);
 
   // Initialize Session ID
   useEffect(() => {
@@ -583,11 +585,9 @@ export const ChatAssistant: React.FC<{
                     </div>
                     {/* Delete button (visible on hover) */}
                     <button
-                      onClick={async (e) => {
+                      onClick={(e) => {
                         e.stopPropagation();
-                        if (confirm('Are you sure you want to delete this chat session?')) {
-                          await handleDeleteSession(s.id);
-                        }
+                        setDeleteConfirmSessionId(s.id);
                       }}
                       className="absolute right-3 top-1/2 -translate-y-1/2 p-2 rounded-lg bg-[var(--surface)] border border-[var(--border-color)] text-red-400 hover:text-red-500 hover:bg-red-500/10 opacity-0 group-hover/session-item:opacity-100 focus:opacity-100 transition-all shadow-sm shrink-0"
                       title="Delete chat session"
@@ -600,6 +600,20 @@ export const ChatAssistant: React.FC<{
             )}
           </div>
         )}
+        <ConfirmDialog
+          isOpen={deleteConfirmSessionId !== null}
+          title="Delete Chat Session"
+          message="Are you sure you want to delete this chat session? This action cannot be undone."
+          variant="danger"
+          confirmLabel="Delete"
+          onConfirm={async () => {
+            if (deleteConfirmSessionId) {
+              await handleDeleteSession(deleteConfirmSessionId);
+              setDeleteConfirmSessionId(null);
+            }
+          }}
+          onCancel={() => setDeleteConfirmSessionId(null)}
+        />
       </div>
     </Portal>
     <style jsx global>{`
