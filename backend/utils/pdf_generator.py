@@ -27,13 +27,10 @@ def format_date(dt) -> str:
             return dt
     return dt.strftime("%b %d, %Y")
 
-def markdown_to_reportlab(text: str, body_style: ParagraphStyle, h2_style: ParagraphStyle, h3_style: ParagraphStyle, bullet_style: ParagraphStyle) -> list:
-    """
-    Parses simple markdown formatting (bold, italic, inline code, lists) 
-    and returns a list of ReportLab Flowables.
-    """
+def parse_inline_markdown(text: str) -> str:
+    """Escapes HTML and translates standard inline Markdown formats to XML tags."""
     if not text:
-        return []
+        return ""
     
     # 1. Escape HTML special characters since Paragraph parses XML tags
     escaped_text = html.escape(text)
@@ -52,37 +49,125 @@ def markdown_to_reportlab(text: str, body_style: ParagraphStyle, h2_style: Parag
     # 5. Translate links ([text](url))
     escaped_text = re.sub(r'\[(.*?)\]\((.*?)\)', r'<u><font color="#0000ff">\1</font></u>', escaped_text)
     
-    flowables = []
-    paragraphs = escaped_text.split('\n\n')
+    return escaped_text
+
+def markdown_to_reportlab(text: str, body_style: ParagraphStyle, bullet_style: ParagraphStyle, h1: ParagraphStyle, h2: ParagraphStyle, h3: ParagraphStyle, h4: ParagraphStyle, h5: ParagraphStyle, h6: ParagraphStyle) -> list:
+    """
+    Parses dynamic markdown text into ReportLab Flowables.
+    Line-by-line single-pass parser supporting:
+      - Headings (H1-H6)
+      - Bullet lists (- / * / +)
+      - Numbered lists (1. / 2.)
+      - Tables (| Header | Header |)
+      - Horizontal rules (--- / ***)
+      - Paragraph lines grouped naturally.
+    """
+    if not text:
+        return []
     
-    for p in paragraphs:
-        p = p.strip()
-        if not p:
-            continue
-        
-        # Check for headings
-        if p.startswith('### '):
-            flowables.append(Paragraph(p[4:], h3_style))
-        elif p.startswith('## '):
-            flowables.append(Paragraph(p[3:], h2_style))
-        elif p.startswith('# '):
-            h1_style = ParagraphStyle('H1Style', parent=h2_style, fontSize=15, leading=19, spaceBefore=10)
-            flowables.append(Paragraph(p[2:], h1_style))
-        # Check for list items
-        elif p.startswith('- ') or p.startswith('* '):
-            lines = p.split('\n')
-            for line in lines:
-                line = line.strip()
-                if line.startswith('- ') or line.startswith('* '):
-                    bullet_text = f"&bull; {line[2:]}"
-                    flowables.append(Paragraph(bullet_text, bullet_style))
-                else:
-                    flowables.append(Paragraph(line, body_style))
-        else:
-            # Preserve single line breaks as <br/>
-            p_formatted = p.replace('\n', '<br/>')
-            flowables.append(Paragraph(p_formatted, body_style))
+    lines = text.split('\n')
+    flowables = []
+    current_paragraph = []
+    current_table_rows = []
+    
+    def flush_paragraph():
+        if current_paragraph:
+            content = " ".join(current_paragraph).strip()
+            if content:
+                flowables.append(Paragraph(parse_inline_markdown(content), body_style))
+            current_paragraph.clear()
             
+    def flush_table():
+        if current_table_rows:
+            table_data = []
+            for row in current_table_rows:
+                row_data = [Paragraph(parse_inline_markdown(cell), body_style) for cell in row]
+                table_data.append(row_data)
+            
+            num_cols = len(table_data[0]) if table_data else 1
+            col_width = 504.0 / num_cols
+            t = Table(table_data, colWidths=[col_width] * num_cols)
+            t.setStyle(TableStyle([
+                ('VALIGN', (0,0), (-1,-1), 'TOP'),
+                ('GRID', (0,0), (-1,-1), 0.5, colors.HexColor("#cbd5e1")),
+                ('TOPPADDING', (0,0), (-1,-1), 5),
+                ('BOTTOMPADDING', (0,0), (-1,-1), 5),
+                ('LEFTPADDING', (0,0), (-1,-1), 6),
+                ('RIGHTPADDING', (0,0), (-1,-1), 6),
+            ]))
+            flowables.append(Spacer(1, 4))
+            flowables.append(t)
+            flowables.append(Spacer(1, 6))
+            current_table_rows.clear()
+            
+    def flush_all():
+        flush_paragraph()
+        flush_table()
+        
+    for line in lines:
+        stripped = line.strip()
+        if not stripped:
+            flush_all()
+            continue
+            
+        # Check for table rows
+        if stripped.startswith('|') and stripped.endswith('|'):
+            flush_paragraph() # Table breaks paragraph
+            cells = [c.strip() for c in stripped.split('|')[1:-1]]
+            if all(re.match(r'^:?-+:?$', c) for c in cells):
+                continue
+            current_table_rows.append(cells)
+            continue
+            
+        # Check headings
+        match_h = re.match(r'^(#{1,6})\s+(.*)$', stripped)
+        if match_h:
+            flush_all()
+            level = len(match_h.group(1))
+            heading_text = re.sub(r'\s+#+$', '', match_h.group(2).strip())
+            heading_content = parse_inline_markdown(heading_text)
+            
+            styles = [h1, h2, h3, h4, h5, h6]
+            heading_style = styles[min(level - 1, 5)]
+            flowables.append(Paragraph(heading_content, heading_style))
+            continue
+            
+        # Check bullet list
+        match_b = re.match(r'^[\-\*\+]\s+(.*)$', stripped)
+        if match_b:
+            flush_all()
+            bullet_content = parse_inline_markdown(match_b.group(1).strip())
+            flowables.append(Paragraph(f"&bull; {bullet_content}", bullet_style))
+            continue
+            
+        # Check numbered list
+        match_n = re.match(r'^(\d+)\.\s+(.*)$', stripped)
+        if match_n:
+            flush_all()
+            num_str, num_content = match_n.groups()
+            numbered_content = parse_inline_markdown(num_content.strip())
+            flowables.append(Paragraph(f"{num_str}. {numbered_content}", bullet_style))
+            continue
+            
+        # Check horizontal rule
+        if re.match(r'^(?:-{3,}|\*{3,}|_{3,})$', stripped):
+            flush_all()
+            hr_table = Table([[""]], colWidths=[504])
+            hr_table.setStyle(TableStyle([
+                ('LINEBELOW', (0,0), (-1,-1), 0.5, colors.HexColor("#cbd5e1")),
+                ('BOTTOMPADDING', (0,0), (-1,-1), 2),
+                ('TOPPADDING', (0,0), (-1,-1), 2),
+            ]))
+            flowables.append(Spacer(1, 4))
+            flowables.append(hr_table)
+            flowables.append(Spacer(1, 4))
+            continue
+            
+        # Regular paragraph text line
+        flush_table() # Paragraph breaks table
+        current_paragraph.append(stripped)
+        
+    flush_all()
     return flowables
 
 def add_footer(canvas, doc):
@@ -178,6 +263,14 @@ def generate_job_pdf_buffer(job) -> BytesIO:
         bulletIndent=5,
         spaceAfter=4
     )
+
+    # Heading styles specifically for Markdown content (H1-H6)
+    md_h1 = ParagraphStyle('MDH1', parent=styles['Heading1'], fontName='Helvetica-Bold', fontSize=15, leading=19, textColor=colors.black, spaceBefore=10, spaceAfter=5, keepWithNext=True)
+    md_h2 = ParagraphStyle('MDH2', parent=styles['Heading2'], fontName='Helvetica-Bold', fontSize=13, leading=17, textColor=colors.black, spaceBefore=9, spaceAfter=4.5, keepWithNext=True)
+    md_h3 = ParagraphStyle('MDH3', parent=styles['Heading3'], fontName='Helvetica-Bold', fontSize=11, leading=15, textColor=colors.HexColor("#1f2937"), spaceBefore=8, spaceAfter=4, keepWithNext=True)
+    md_h4 = ParagraphStyle('MDH4', parent=styles['Heading4'], fontName='Helvetica-Bold', fontSize=10, leading=14, textColor=colors.HexColor("#1f2937"), spaceBefore=7, spaceAfter=3.5, keepWithNext=True)
+    md_h5 = ParagraphStyle('MDH5', parent=styles['Heading5'], fontName='Helvetica-Bold', fontSize=9.5, leading=13.5, textColor=colors.HexColor("#374151"), spaceBefore=6, spaceAfter=3, keepWithNext=True)
+    md_h6 = ParagraphStyle('MDH6', parent=styles['Heading6'], fontName='Helvetica-Bold', fontSize=9.5, leading=13.5, textColor=colors.HexColor("#4b5563"), spaceBefore=5, spaceAfter=2, keepWithNext=True)
     
     meta_label_style = ParagraphStyle(
         'PDFMetaLabel',
@@ -334,7 +427,7 @@ def generate_job_pdf_buffer(job) -> BytesIO:
     description = getattr(job, "description", None)
     if description:
         story.append(Paragraph("Job Description", h2_style))
-        desc_flowables = markdown_to_reportlab(description, body_style, h2_style, h3_style, bullet_style)
+        desc_flowables = markdown_to_reportlab(description, body_style, bullet_style, md_h1, md_h2, md_h3, md_h4, md_h5, md_h6)
         story.extend(desc_flowables)
         story.append(Spacer(1, 14))
         
@@ -342,7 +435,7 @@ def generate_job_pdf_buffer(job) -> BytesIO:
     notes = getattr(job, "notes", None)
     if notes:
         story.append(Paragraph("Personal Notes", h2_style))
-        notes_flowables = markdown_to_reportlab(notes, body_style, h2_style, h3_style, bullet_style)
+        notes_flowables = markdown_to_reportlab(notes, body_style, bullet_style, md_h1, md_h2, md_h3, md_h4, md_h5, md_h6)
         story.extend(notes_flowables)
         story.append(Spacer(1, 14))
         
