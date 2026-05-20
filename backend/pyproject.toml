@@ -1,12 +1,13 @@
 [project]
 name = "lard-backend"
-version = "0.84.5"
+version = "0.85.0"
 description = "Add your description here"
 license = "MIT"
 readme = "README.md"
 requires-python = ">=3.14"
 dependencies = [
     "beautifulsoup4>=4.14.3",
+    "reportlab>=4.3.1",
     "chromadb>=1.5.5",
     "fastapi>=0.135.2",
     "httpx>=0.28.1",

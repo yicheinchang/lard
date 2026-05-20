@@ -1,0 +1,404 @@
+import re
+import html
+from io import BytesIO
+from datetime import datetime
+from reportlab.lib.pagesizes import letter
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, PageBreak
+from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+from reportlab.lib import colors
+
+def get_string_val(val) -> str:
+    """Helper to convert optional and enum values into clean strings."""
+    if val is None:
+        return ""
+    if hasattr(val, "value"):
+        return str(val.value)
+    return str(val)
+
+def format_date(dt) -> str:
+    """Safely format standard datetime values."""
+    if not dt:
+        return "N/A"
+    if isinstance(dt, str):
+        try:
+            # Parse ISO date prefix
+            dt = datetime.fromisoformat(dt.replace("Z", "+00:00"))
+        except Exception:
+            return dt
+    return dt.strftime("%b %d, %Y")
+
+def markdown_to_reportlab(text: str, body_style: ParagraphStyle, h2_style: ParagraphStyle, h3_style: ParagraphStyle, bullet_style: ParagraphStyle) -> list:
+    """
+    Parses simple markdown formatting (bold, italic, inline code, lists) 
+    and returns a list of ReportLab Flowables.
+    """
+    if not text:
+        return []
+    
+    # 1. Escape HTML special characters since Paragraph parses XML tags
+    escaped_text = html.escape(text)
+    
+    # 2. Translate Markdown Bold (**text** or __text__)
+    escaped_text = re.sub(r'\*\*(.*?)\*\*', r'<b>\1</b>', escaped_text)
+    escaped_text = re.sub(r'__(.*?)__', r'<b>\1</b>', escaped_text)
+    
+    # 3. Translate Markdown Italic (*text* or _text_)
+    escaped_text = re.sub(r'\*(.*?)\*', r'<i>\1</i>', escaped_text)
+    escaped_text = re.sub(r'_(.*?)_', r'<i>\1</i>', escaped_text)
+    
+    # 4. Translate inline code (`code`)
+    escaped_text = re.sub(r'`(.*?)`', r'<font face="Courier" color="#111827"><b>\1</b></font>', escaped_text)
+    
+    # 5. Translate links ([text](url))
+    escaped_text = re.sub(r'\[(.*?)\]\((.*?)\)', r'<u><font color="#0000ff">\1</font></u>', escaped_text)
+    
+    flowables = []
+    paragraphs = escaped_text.split('\n\n')
+    
+    for p in paragraphs:
+        p = p.strip()
+        if not p:
+            continue
+        
+        # Check for headings
+        if p.startswith('### '):
+            flowables.append(Paragraph(p[4:], h3_style))
+        elif p.startswith('## '):
+            flowables.append(Paragraph(p[3:], h2_style))
+        elif p.startswith('# '):
+            h1_style = ParagraphStyle('H1Style', parent=h2_style, fontSize=15, leading=19, spaceBefore=10)
+            flowables.append(Paragraph(p[2:], h1_style))
+        # Check for list items
+        elif p.startswith('- ') or p.startswith('* '):
+            lines = p.split('\n')
+            for line in lines:
+                line = line.strip()
+                if line.startswith('- ') or line.startswith('* '):
+                    bullet_text = f"&bull; {line[2:]}"
+                    flowables.append(Paragraph(bullet_text, bullet_style))
+                else:
+                    flowables.append(Paragraph(line, body_style))
+        else:
+            # Preserve single line breaks as <br/>
+            p_formatted = p.replace('\n', '<br/>')
+            flowables.append(Paragraph(p_formatted, body_style))
+            
+    return flowables
+
+def add_footer(canvas, doc):
+    """Draw a clean monochrome footer line with a page number on the right."""
+    canvas.saveState()
+    canvas.setStrokeColor(colors.HexColor("#9ca3af"))  # Clean gray divider
+    canvas.setLineWidth(0.5)
+    canvas.line(54, 45, doc.pagesize[0] - 54, 45)
+    
+    canvas.setFont('Helvetica', 8)
+    canvas.setFillColor(colors.HexColor("#4b5563"))
+    canvas.drawRightString(doc.pagesize[0] - 54, 30, f"Page {doc.page}")
+    canvas.restoreState()
+
+def generate_job_pdf_buffer(job) -> BytesIO:
+    """
+    Generates a beautifully typeset, monochrome-optimized PDF representing
+    the job details and layout.
+    """
+    buffer = BytesIO()
+    
+    # 54pt margin = 0.75 in
+    doc = SimpleDocTemplate(
+        buffer,
+        pagesize=letter,
+        leftMargin=54,
+        rightMargin=54,
+        topMargin=54,
+        bottomMargin=60
+    )
+    
+    styles = getSampleStyleSheet()
+    
+    # --- Custom styles optimized for Monochrome Laser Printers ---
+    title_style = ParagraphStyle(
+        'PDFTitle',
+        parent=styles['Heading1'],
+        fontName='Helvetica-Bold',
+        fontSize=22,
+        leading=26,
+        textColor=colors.black,
+        spaceAfter=4
+    )
+    
+    subtitle_style = ParagraphStyle(
+        'PDFSubtitle',
+        parent=styles['Heading2'],
+        fontName='Helvetica-Bold',
+        fontSize=13,
+        leading=17,
+        textColor=colors.HexColor("#1f2937"),
+        spaceAfter=12
+    )
+    
+    h2_style = ParagraphStyle(
+        'PDFSectionHeader',
+        parent=styles['Heading2'],
+        fontName='Helvetica-Bold',
+        fontSize=12,
+        leading=16,
+        textColor=colors.black,
+        spaceBefore=14,
+        spaceAfter=6,
+        keepWithNext=True
+    )
+
+    h3_style = ParagraphStyle(
+        'PDFSectionSubHeader',
+        parent=styles['Heading3'],
+        fontName='Helvetica-Bold',
+        fontSize=10,
+        leading=14,
+        textColor=colors.HexColor("#1f2937"),
+        spaceBefore=8,
+        spaceAfter=4,
+        keepWithNext=True
+    )
+    
+    body_style = ParagraphStyle(
+        'PDFBody',
+        parent=styles['BodyText'],
+        fontName='Helvetica',
+        fontSize=9.5,
+        leading=13.5,
+        textColor=colors.HexColor("#1f2937"),
+        spaceAfter=6
+    )
+    
+    bullet_style = ParagraphStyle(
+        'PDFBullet',
+        parent=body_style,
+        leftIndent=15,
+        bulletIndent=5,
+        spaceAfter=4
+    )
+    
+    meta_label_style = ParagraphStyle(
+        'PDFMetaLabel',
+        parent=body_style,
+        fontName='Helvetica-Bold',
+        textColor=colors.black,
+        spaceAfter=0
+    )
+    
+    meta_val_style = ParagraphStyle(
+        'PDFMetaVal',
+        parent=body_style,
+        fontName='Helvetica',
+        textColor=colors.HexColor("#1f2937"),
+        spaceAfter=0
+    )
+    
+    table_header_style = ParagraphStyle(
+        'PDFTableHeader',
+        parent=body_style,
+        fontName='Helvetica-Bold',
+        fontSize=9,
+        leading=12,
+        textColor=colors.black,
+        spaceAfter=0
+    )
+    
+    story = []
+    
+    # 1. Header Block (Company & Role)
+    company_name = get_string_val(getattr(job, "company", "Unknown Company"))
+    role_name = get_string_val(getattr(job, "role", "Unknown Role"))
+    story.append(Paragraph(company_name, title_style))
+    story.append(Paragraph(role_name, subtitle_style))
+    
+    # Subtle black divider line
+    line_table = Table([[""]], colWidths=[504])
+    line_table.setStyle(TableStyle([
+        ('LINEBELOW', (0,0), (-1,-1), 1, colors.HexColor("#4b5563")),
+        ('BOTTOMPADDING', (0,0), (-1,-1), 0),
+        ('TOPPADDING', (0,0), (-1,-1), 0),
+    ]))
+    story.append(line_table)
+    story.append(Spacer(1, 10))
+    
+    # 2. Metadata Grid (2 columns, pure white background for printer safety)
+    status_str = get_string_val(getattr(job, "status", "N/A"))
+    employment_type_str = get_string_val(getattr(job, "employment_type", "N/A"))
+    location_str = get_string_val(getattr(job, "location", "N/A"))
+    salary_str = get_string_val(getattr(job, "salary_range", "N/A"))
+    job_id_str = get_string_val(getattr(job, "company_job_id", "N/A"))
+    url_str = get_string_val(getattr(job, "url", "N/A"))
+    
+    posted_date = format_date(getattr(job, "job_posted_date", None))
+    deadline = format_date(getattr(job, "application_deadline", None))
+    applied_date = format_date(getattr(job, "applied_date", None))
+    
+    # Build key-value pairs formatted cleanly in cells
+    def make_cell(label, val):
+        return [Paragraph(label, meta_label_style), Paragraph(val if val else "N/A", meta_val_style)]
+    
+    meta_data = [
+        [make_cell("Status:", status_str), make_cell("Job ID:", job_id_str)],
+        [make_cell("Employment Type:", employment_type_str), make_cell("Posted Date:", posted_date)],
+        [make_cell("Location:", location_str), make_cell("Application Deadline:", deadline)],
+        [make_cell("Salary Range:", salary_str), make_cell("Actually Applied:", applied_date)],
+    ]
+    
+    # URL spans the full bottom row (merged)
+    url_escaped = html.escape(url_str)
+    url_link = f'<u><font color="#0000ff"><a href="{url_escaped}">{url_escaped}</a></font></u>' if url_str != "N/A" else "N/A"
+    meta_data.append([
+        [Paragraph("URL:", meta_label_style), Paragraph(url_link, meta_val_style)],
+        ["", ""] # Empty cell to satisfy grid size
+    ])
+    
+    # Construct sub-tables for each cell to prevent alignment issues
+    meta_table_cells = []
+    for row in meta_data:
+        row_cells = []
+        for cell in row:
+            if isinstance(cell, list):
+                # Sub table for label/value side-by-side or stacked
+                sub_t = Table([[cell[0], cell[1]]], colWidths=[100, 142])
+                sub_t.setStyle(TableStyle([
+                    ('VALIGN', (0,0), (-1,-1), 'TOP'),
+                    ('LEFTPADDING', (0,0), (-1,-1), 0),
+                    ('RIGHTPADDING', (0,0), (-1,-1), 0),
+                    ('TOPPADDING', (0,0), (-1,-1), 0),
+                    ('BOTTOMPADDING', (0,0), (-1,-1), 0),
+                ]))
+                row_cells.append(sub_t)
+            else:
+                row_cells.append(cell)
+        meta_table_cells.append(row_cells)
+        
+    meta_table = Table(meta_table_cells, colWidths=[252, 252])
+    meta_table.setStyle(TableStyle([
+        ('SPAN', (0, 4), (1, 4)), # Merge the URL cell across both columns
+        ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+        ('BOX', (0, 0), (-1, -1), 1, colors.HexColor("#4b5563")),  # High contrast crisp border
+        ('INNERGRID', (0, 0), (-1, -1), 0.5, colors.HexColor("#cbd5e1")),
+        ('TOPPADDING', (0, 0), (-1, -1), 8),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 8),
+        ('LEFTPADDING', (0, 0), (-1, -1), 8),
+        ('RIGHTPADDING', (0, 0), (-1, -1), 8),
+    ]))
+    
+    story.append(meta_table)
+    story.append(Spacer(1, 14))
+    
+    # 3. Contacts Section (if any exist)
+    hr_email = get_string_val(getattr(job, "hr_email", None))
+    hm_name = get_string_val(getattr(job, "hiring_manager_name", None))
+    hm_email = get_string_val(getattr(job, "hiring_manager_email", None))
+    hh_name = get_string_val(getattr(job, "headhunter_name", None))
+    hh_email = get_string_val(getattr(job, "headhunter_email", None))
+    
+    has_contacts = hr_email or hm_name or hm_email or hh_name or hh_email
+    
+    if has_contacts:
+        story.append(Paragraph("Contact Information", h2_style))
+        contact_rows = []
+        if hm_name or hm_email:
+            contact_rows.append([
+                Paragraph("Hiring Manager", meta_label_style),
+                Paragraph(f"{hm_name} ({hm_email})" if hm_name and hm_email else (hm_name or hm_email), meta_val_style)
+            ])
+        if hr_email:
+            contact_rows.append([
+                Paragraph("HR / Recruiter", meta_label_style),
+                Paragraph(hr_email, meta_val_style)
+            ])
+        if hh_name or hh_email:
+            contact_rows.append([
+                Paragraph("Headhunter / Agency", meta_label_style),
+                Paragraph(f"{hh_name} ({hh_email})" if hh_name and hh_email else (hh_name or hh_email), meta_val_style)
+            ])
+            
+        contact_table = Table(contact_rows, colWidths=[150, 354])
+        contact_table.setStyle(TableStyle([
+            ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+            ('BOX', (0, 0), (-1, -1), 0.75, colors.HexColor("#4b5563")),
+            ('INNERGRID', (0, 0), (-1, -1), 0.5, colors.HexColor("#cbd5e1")),
+            ('TOPPADDING', (0, 0), (-1, -1), 6),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 6),
+            ('LEFTPADDING', (0, 0), (-1, -1), 8),
+            ('RIGHTPADDING', (0, 0), (-1, -1), 8),
+        ]))
+        story.append(contact_table)
+        story.append(Spacer(1, 14))
+        
+    # 4. Job Description Section
+    description = getattr(job, "description", None)
+    if description:
+        story.append(Paragraph("Job Description", h2_style))
+        desc_flowables = markdown_to_reportlab(description, body_style, h2_style, h3_style, bullet_style)
+        story.extend(desc_flowables)
+        story.append(Spacer(1, 14))
+        
+    # 5. Personal / Application Notes
+    notes = getattr(job, "notes", None)
+    if notes:
+        story.append(Paragraph("Personal Notes", h2_style))
+        notes_flowables = markdown_to_reportlab(notes, body_style, h2_style, h3_style, bullet_style)
+        story.extend(notes_flowables)
+        story.append(Spacer(1, 14))
+        
+    # 6. Timeline / Interview Process (On separate page at the very end)
+    steps = getattr(job, "steps", [])
+    if steps:
+        story.append(PageBreak())  # Force placement to the very end on a clean page
+        story.append(Paragraph("Interview Process Timeline", h2_style))
+        
+        # Sort steps by date (ascending for sequential timeline progression)
+        def step_date_key(s):
+            if not s.step_date:
+                return datetime.max.replace(tzinfo=timezone.utc) if hasattr(datetime, "max") else datetime.max
+            if isinstance(s.step_date, str):
+                try:
+                    return datetime.fromisoformat(s.step_date.replace("Z", "+00:00"))
+                except Exception:
+                    pass
+            return s.step_date
+            
+        sorted_steps = sorted(steps, key=step_date_key)
+        
+        timeline_rows = [[
+            Paragraph("Date", table_header_style),
+            Paragraph("Stage / Event", table_header_style),
+            Paragraph("Status", table_header_style),
+            Paragraph("Feedback & Notes", table_header_style),
+        ]]
+        
+        for step in sorted_steps:
+            step_date_str = format_date(step.step_date)
+            step_name = get_string_val(step.step_type.name if hasattr(step, "step_type") and step.step_type else getattr(step, "step_type_name", "Stage"))
+            step_status = get_string_val(step.status)
+            step_notes = get_string_val(step.notes)
+            
+            # Wrap all cell strings in Paragraphs to enforce automatic cell wrapping
+            timeline_rows.append([
+                Paragraph(step_date_str, body_style),
+                Paragraph(step_name, body_style),
+                Paragraph(step_status, body_style),
+                Paragraph(step_notes if step_notes else "", body_style),
+            ])
+            
+        timeline_table = Table(timeline_rows, colWidths=[80, 120, 80, 224])
+        timeline_table.setStyle(TableStyle([
+            ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+            ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor("#4b5563")),
+            ('TOPPADDING', (0, 0), (-1, -1), 6),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 6),
+            ('LEFTPADDING', (0, 0), (-1, -1), 8),
+            ('RIGHTPADDING', (0, 0), (-1, -1), 8),
+        ]))
+        story.append(timeline_table)
+
+    # Build the document, calling add_footer on page draw
+    doc.build(story, onFirstPage=add_footer, onLaterPages=add_footer)
+    
+    buffer.seek(0)
+    return buffer

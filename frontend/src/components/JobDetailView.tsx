@@ -641,6 +641,14 @@ export const JobDetailView: React.FC<JobDetailViewProps> = ({ job, onClose, onJo
           </div>
           <div className="flex items-center gap-2">
             <button 
+              onClick={() => window.open(`/api/proxy/jobs/${job.id}/pdf`, '_blank')}
+              className="p-2 hover:bg-[var(--surface-hover)] rounded-full text-[var(--fg-subtle)] hover:text-[var(--fg)] transition flex items-center gap-1.5"
+              title="Download Job Details PDF"
+            >
+              <FileText className="w-5 h-5" />
+              <span className="text-xs font-medium hidden sm:inline">PDF</span>
+            </button>
+            <button 
               onClick={() => setIsFullScreen(!isFullScreen)} 
               className="p-2 hover:bg-[var(--surface-hover)] rounded-full text-[var(--fg-subtle)] hover:text-[var(--fg)] transition hidden md:block"
               title={isFullScreen ? "Exit Full Screen" : "Enter Full Screen"}

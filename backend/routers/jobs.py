@@ -778,3 +778,30 @@ def delete_document(doc_id: int, db: Session = Depends(get_db)):
             update_job_status(db_job, db, operation="Deleted Document")
 
     return {"status": "deleted"}
+
+@router.get("/jobs/{job_id}/pdf")
+def get_job_pdf(job_id: int, db: Session = Depends(get_db)):
+    """Generates and streams a monochrome-optimized PDF representing the job application."""
+    db_job = db.query(JobApplication).options(
+        joinedload(JobApplication.steps).joinedload(InterviewStep.step_type),
+        joinedload(JobApplication.documents)
+    ).filter(JobApplication.id == job_id).first()
+    
+    if not db_job:
+        raise HTTPException(status_code=404, detail="Job not found")
+        
+    from utils.pdf_generator import generate_job_pdf_buffer
+    pdf_buffer = generate_job_pdf_buffer(db_job)
+    
+    # Safe filename encoding
+    safe_company = db_job.company.replace(" ", "_").replace("/", "")
+    safe_role = db_job.role.replace(" ", "_").replace("/", "")
+    filename = f"{safe_company}_{safe_role}_details.pdf"
+    
+    return StreamingResponse(
+        pdf_buffer,
+        media_type="application/pdf",
+        headers={
+            "Content-Disposition": f'attachment; filename="{filename}"'
+        }
+    )

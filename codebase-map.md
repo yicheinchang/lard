@@ -1,5 +1,5 @@
-# 🗺️ Lard - Lazy AI-Powered Resume Database (v0.84.5)
-Last Updated: 2026-05-19T14:40:00Z
+# 🗺️ Lard - Lazy AI-Powered Resume Database (v0.85.0)
+Last Updated: 2026-05-20T15:07:00Z
 
 This document provides a summary of the project's architecture, tech stack, and key logic to give AI coding agents instant context.
 
@@ -68,6 +68,8 @@ This document provides a summary of the project's architecture, tech stack, and 
   - `status.py`: Synchronization primitives (Threading Events) for tracking heavy AI library loading during background startup.
   - `logger.py`: Standardized AI agent console logging.
 - `uploads/`: Local storage for uploaded job documents.
+- `utils/`:
+  - `pdf_generator.py`: [NEW] Reusable PDF generation engine using ReportLab. Formats job details, metadata, and description with monochrome-optimized grids, custom footers, and timeline placement at the end behind a page break.
 - `test/`: Structured test suite. Includes `experiments/` subfolder for diagnostics and verification scripts.
 - `run.sh`: Unified startup script. Development mode uses a targeted `uvicorn` reloader that excludes large directories (like `.venv`) to minimize file system scanning and CPU usage.
 
@@ -256,6 +258,7 @@ Global configuration persisted on the server (`app_settings.json`).
 - `POST /jobs/{id}/steps`: Add a new interview step (auto-creates `StepType`).
 - `PUT /jobs/steps/{step_id}`: Update interview step details (Name, Date, Status, Notes).
 - `DELETE /api/jobs/steps/{step_id}`: Permanently remove an interview step (triggers status recalculation).
+- `GET /jobs/{id}/pdf`: [NEW] Generates and streams a print-ready, monochrome-optimized PDF representing the job application details.
 
 ### AI (`/api/ai`)
 - `GET /ai/status`: Check if heavy AI libraries are fully loaded.
