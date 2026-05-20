@@ -40,9 +40,22 @@ def to_db_dict(data: dict) -> dict:
     """
     Ensures complex Pydantic v2 types (NameEmail, HttpUrl) and Enums are 
     converted to database-friendly formats (strings) before SQLAlchemy insertion.
+
+    NameEmail is serialized as a canonical RFC-compliant string:
+      - With display name:    "Name" <email@address.com>  (always quoted)
+      - Without display name: email@address.com
+    
+    This avoids the str(NameEmail) pitfall which strips quotes from display
+    names, producing unquoted strings that fail NameEmail validation on read.
     """
     for key, value in data.items():
-        if isinstance(value, (NameEmail, HttpUrl)):
+        if isinstance(value, NameEmail):
+            if value.name:
+                escaped = value.name.replace('"', '\\"')
+                data[key] = f'"{escaped}" <{value.email}>'
+            else:
+                data[key] = str(value.email)
+        elif isinstance(value, HttpUrl):
             data[key] = str(value)
         elif isinstance(value, Enum):
             data[key] = value.value
