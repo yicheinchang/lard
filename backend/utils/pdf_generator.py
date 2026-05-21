@@ -353,8 +353,12 @@ def generate_job_pdf_buffer(job) -> BytesIO:
         row_cells = []
         for cell in row:
             if isinstance(cell, list):
+                # Check if this cell is the URL cell by checking if cell[0] is a Paragraph with text "URL:"
+                is_url = len(cell) > 0 and hasattr(cell[0], "text") and cell[0].text == "URL:"
+                col_widths = [100, 388] if is_url else [100, 142]
+                
                 # Sub table for label/value side-by-side or stacked
-                sub_t = Table([[cell[0], cell[1]]], colWidths=[100, 142])
+                sub_t = Table([[cell[0], cell[1]]], colWidths=col_widths)
                 sub_t.setStyle(TableStyle([
                     ('VALIGN', (0,0), (-1,-1), 'TOP'),
                     ('LEFTPADDING', (0,0), (-1,-1), 0),
