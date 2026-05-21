@@ -195,7 +195,7 @@ export const TableView: React.FC<TableViewProps> = ({ jobs, onUpdateStatus, onJo
                   </td>
                   <td className="px-4 py-3 text-[var(--fg-subtle)]">{job.location || '—'}</td>
                   <td className="px-4 py-3 text-[var(--fg-subtle)]">
-                    {job.applied_date ? new Date(job.applied_date).toLocaleDateString() : '—'}
+                    {job.applied_date ? new Date(job.applied_date).toLocaleDateString('en-US', { timeZone: 'UTC' }) : '—'}
                   </td>
                   <td className="px-4 py-3 text-[var(--fg-subtle)]">
                     {job.last_updated ? new Date(job.last_updated).toLocaleDateString() : '—'}

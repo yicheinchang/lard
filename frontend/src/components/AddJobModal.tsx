@@ -386,7 +386,7 @@ export const AddJobModal: React.FC<AddJobModalProps> = ({ isOpen, onClose, onAdd
 
         if (check.status === 'exact_match') {
           const dateLabel = check.job.status === 'Wishlist' ? 'Added' : 'Applied';
-          setError(`This role already exists! Found matching ${check.match_type} for ${check.job.company} - ${check.job.role} (${dateLabel} on ${new Date(check.job.applied_date).toLocaleDateString()}).`);
+          setError(`This role already exists! Found matching ${check.match_type} for ${check.job.company} - ${check.job.role} (${dateLabel} on ${new Date(check.job.applied_date).toLocaleDateString('en-US', { timeZone: 'UTC' })}).`);
           setIsSubmitting(false);
           return;
         }
@@ -403,6 +403,14 @@ export const AddJobModal: React.FC<AddJobModalProps> = ({ isOpen, onClose, onAdd
       const jobData = Object.fromEntries(
         Object.entries(formData).map(([k, v]) => [k, v === '' ? null : v])
       );
+
+      // Anchor bare date strings (YYYY-MM-DD) to noon UTC to prevent timezone shift.
+      const DATE_ONLY_FIELDS = ['applied_date', 'decision_date', 'closed_date', 'job_posted_date', 'application_deadline'];
+      for (const field of DATE_ONLY_FIELDS) {
+        if (jobData[field] && typeof jobData[field] === 'string' && jobData[field].length === 10) {
+          jobData[field] = jobData[field] + 'T12:00:00.000Z';
+        }
+      }
       
       setIsUploadingDoc(true);
       setUploadError(null);
@@ -829,10 +837,10 @@ export const AddJobModal: React.FC<AddJobModalProps> = ({ isOpen, onClose, onAdd
               <p className="text-xs text-[var(--fg-subtle)]">Current Status: <span className="text-violet-400 font-medium">{duplicateCheckResult.job.status}</span></p>
               <p className="text-xs text-[var(--fg-subtle)]">
                 {duplicateCheckResult.job.status === 'Wishlist' ? 'Added to system: ' : 'Applied on: '}
-                {new Date(duplicateCheckResult.job.applied_date).toLocaleDateString()}
+                {new Date(duplicateCheckResult.job.applied_date).toLocaleDateString('en-US', { timeZone: 'UTC' })}
               </p>
               {duplicateCheckResult.job.job_posted_date && (
-                <p className="text-xs text-[var(--fg-subtle)]">Job Posted on: {new Date(duplicateCheckResult.job.job_posted_date).toLocaleDateString()}</p>
+                <p className="text-xs text-[var(--fg-subtle)]">Job Posted on: {new Date(duplicateCheckResult.job.job_posted_date).toLocaleDateString('en-US', { timeZone: 'UTC' })}</p>
               )}
             </div>
             <p className="mt-3 text-[var(--fg)]">Are you sure you want to add this as a new application?</p>

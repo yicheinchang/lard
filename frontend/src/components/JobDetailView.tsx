@@ -323,7 +323,7 @@ export const JobDetailView: React.FC<JobDetailViewProps> = ({ job, onClose, onJo
   const handleAddStep = async () => {
     if (!newStepName) return;
     try {
-      await addInterviewStep(job.id!, newStepName, newStepDate || undefined, 'Scheduled');
+      await addInterviewStep(job.id!, newStepName, newStepDate ? newStepDate + 'T12:00:00.000Z' : undefined, 'Scheduled');
       setNewStepName('');
       setNewStepDate('');
       setIsAdding(false);
@@ -423,7 +423,7 @@ export const JobDetailView: React.FC<JobDetailViewProps> = ({ job, onClose, onJo
       const updateData: any = {};
 
       if (editStepForm.name !== step?.step_type.name) updateData.step_type_name = editStepForm.name;
-      if (editStepForm.date !== (step?.step_date ? step.step_date.substring(0, 10) : '')) updateData.step_date = editStepForm.date ? new Date(editStepForm.date).toISOString() : null;
+      if (editStepForm.date !== (step?.step_date ? step.step_date.substring(0, 10) : '')) updateData.step_date = editStepForm.date ? editStepForm.date + 'T12:00:00.000Z' : null;
       if (editStepForm.status !== step?.status) updateData.status = editStepForm.status;
       if (editStepForm.notes !== step?.notes) updateData.notes = editStepForm.notes;
 
@@ -468,6 +468,16 @@ export const JobDetailView: React.FC<JobDetailViewProps> = ({ job, onClose, onJo
       const cleanData = Object.fromEntries(
         Object.entries(editFormData).map(([k, v]) => [k, v === '' ? null : v])
       );
+
+      // Anchor bare date strings (YYYY-MM-DD) to noon UTC to prevent timezone shift.
+      // The backend UTCDateTime validator would otherwise coerce them to midnight UTC,
+      // which renders as the previous calendar day in negative-offset timezones.
+      const DATE_ONLY_FIELDS = ['applied_date', 'decision_date', 'closed_date', 'job_posted_date', 'application_deadline'];
+      for (const field of DATE_ONLY_FIELDS) {
+        if (cleanData[field] && typeof cleanData[field] === 'string' && cleanData[field].length === 10) {
+          cleanData[field] = cleanData[field] + 'T12:00:00.000Z';
+        }
+      }
 
       const currentStatus = cleanData.status as string;
       const allowedWishlistTransitions = ['Wishlist', 'Discontinued', 'Closed'];
@@ -783,7 +793,7 @@ export const JobDetailView: React.FC<JobDetailViewProps> = ({ job, onClose, onJo
                         step.step_date && (
                           <div className="flex items-center gap-1.5 text-xs text-[var(--fg-subtle)] mt-2">
                             <Calendar className="w-3.5 h-3.5" />
-                            {new Date(step.step_date).toLocaleDateString()}
+                            {new Date(step.step_date).toLocaleDateString('en-US', { timeZone: 'UTC' })}
                           </div>
                         )
                       )}
@@ -1273,20 +1283,20 @@ export const JobDetailView: React.FC<JobDetailViewProps> = ({ job, onClose, onJo
                       </div>
                       <div>
                         <span className="text-[var(--fg-subtle)] block text-xs mb-1">Actually Applied</span>
-                        <span className="text-[var(--fg-muted)] font-medium text-violet-400">{job.applied_date ? new Date(job.applied_date).toLocaleDateString() : 'Not Applied'}</span>
+                        <span className="text-[var(--fg-muted)] font-medium text-violet-400">{job.applied_date ? new Date(job.applied_date).toLocaleDateString('en-US', { timeZone: 'UTC' }) : 'Not Applied'}</span>
                       </div>
                     </div>
                     <div className="grid grid-cols-2 gap-4 pt-2">
                       {job.job_posted_date && (
                         <div>
                           <span className="text-[var(--fg-subtle)] block text-xs mb-1">Posted Date</span>
-                          <span className="text-[var(--fg-muted)]">{new Date(job.job_posted_date).toLocaleDateString()}</span>
+                          <span className="text-[var(--fg-muted)]">{new Date(job.job_posted_date).toLocaleDateString('en-US', { timeZone: 'UTC' })}</span>
                         </div>
                       )}
                       {job.application_deadline && (
                         <div>
                           <span className="text-[var(--fg-subtle)] block text-xs mb-1">Deadline</span>
-                          <span className="text-[var(--fg-muted)]">{new Date(job.application_deadline).toLocaleDateString()}</span>
+                          <span className="text-[var(--fg-muted)]">{new Date(job.application_deadline).toLocaleDateString('en-US', { timeZone: 'UTC' })}</span>
                         </div>
                       )}
                     </div>
@@ -1299,13 +1309,13 @@ export const JobDetailView: React.FC<JobDetailViewProps> = ({ job, onClose, onJo
                     {['Offered', 'Rejected', 'Discontinued'].includes(job.status) && job.decision_date && (
                       <div className="pt-2">
                         <span className="text-[var(--fg-subtle)] block text-xs mb-1">Decision Date</span>
-                        <span className="text-[var(--fg-muted)] font-medium text-amber-400/80">{new Date(job.decision_date).toLocaleDateString()}</span>
+                        <span className="text-[var(--fg-muted)] font-medium text-amber-400/80">{new Date(job.decision_date).toLocaleDateString('en-US', { timeZone: 'UTC' })}</span>
                       </div>
                     )}
                     {job.status === 'Closed' && job.closed_date && (
                       <div className="pt-2">
                         <span className="text-[var(--fg-subtle)] block text-xs mb-1">Job Closed Date</span>
-                        <span className="text-[var(--fg-muted)] font-medium text-red-400/80">{new Date(job.closed_date).toLocaleDateString()}</span>
+                        <span className="text-[var(--fg-muted)] font-medium text-red-400/80">{new Date(job.closed_date).toLocaleDateString('en-US', { timeZone: 'UTC' })}</span>
                       </div>
                     )}
 
