@@ -75,7 +75,7 @@ export const JobCard: React.FC<JobCardProps> = ({ job, onUpdateStatus, onClick, 
         confirmState.nextStatus, 
         date,
         file, 
-        confirmState.nextStatus === 'Applied' ? 'resume' : undefined
+        confirmState.nextStatus === 'Applied' ? 'submitted_resume' : undefined
       );
     }
     setConfirmState({ isOpen: false, nextStatus: '', variant: 'default' });

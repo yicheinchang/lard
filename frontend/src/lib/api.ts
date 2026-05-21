@@ -353,10 +353,13 @@ export const extractJobFromPdf = async (file: File, signal?: AbortSignal) => {
   return extractJobFromFile(file, signal);
 };
 
-export const uploadJobDocumentStream = async (jobId: number, file: File, docType: string, onProgress: (event: string, msg: string, data?: any) => void) => {
+export const uploadJobDocumentStream = async (jobId: number, file: File, docType: string, onProgress: (event: string, msg: string, data?: any) => void, operation?: string) => {
   const formData = new FormData();
   formData.append('file', file);
   formData.append('doc_type', docType);
+  if (operation) {
+    formData.append('operation', operation);
+  }
 
   const response = await fetch(`/api/proxy/jobs/${jobId}/documents/stream`, {
     method: 'POST',

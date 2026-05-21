@@ -216,13 +216,25 @@ class JobResponse(JobBase):
     model_config = ConfigDict(from_attributes=True)
 
 
+def get_friendly_doc_type(doc_type: str) -> str:
+    if doc_type == "submitted_resume":
+        return "CV"
+    elif doc_type == "job_post":
+        return "Job Post"
+    elif doc_type == "additional_document":
+        return "Document"
+    return doc_type.replace("_", " ").title()
+
 TERMINAL_STATUSES = ["Rejected", "Offered", "Discontinued", "Closed"]
 
-def update_job_status(db_job: JobApplication, db: Session, operation: Optional[str] = None):
+def update_job_status(db_job: JobApplication, db: Session, original_status: Optional[str] = None, operation: Optional[str] = None):
     """
     Automatically recalculate and update the application status based on internal logic.
+    Accepts original_status and operation explicitly to capture precise user actions.
     """
-    original_status = db_job.status
+    if original_status is None:
+        original_status = db_job.status
+        
     has_meaningful_change = False
     
     # 1. Terminal statuses stay as-is unless manually changed
@@ -238,23 +250,55 @@ def update_job_status(db_job: JobApplication, db: Session, operation: Optional[s
             db_job.status = "Interviewing"
         else:
             db_job.status = "Applied"
-    
+            
     status_changed = db_job.status != original_status
     
-    # Update last_operation and last_updated ONLY if something changed or explicit operation provided
-    if operation or status_changed:
-        # If both a manual operation and a status change occurred, prefer the status change for clarity
-        # unless the status change was to "Wishlist/Applied/Interviewing" (automated)
-        if status_changed:
-            db_job.last_operation = f"Status Change: {db_job.status}"
-            has_meaningful_change = True
-        elif operation:
-            db_job.last_operation = operation
-            has_meaningful_change = True
+    # Map status transition to premium, user-friendly copy
+    status_op = None
+    if status_changed:
+        # Wishlist -> Applied
+        if original_status == "Wishlist" and db_job.status == "Applied":
+            status_op = "Advanced to Applied"
+        # Applied -> Interviewing
+        elif original_status == "Applied" and db_job.status == "Interviewing":
+            status_op = "Advanced to Interviewing"
+        # Interviewing -> Applied
+        elif original_status == "Interviewing" and db_job.status == "Applied":
+            status_op = "Reverted to Applied"
+        # Applied -> Wishlist
+        elif original_status == "Applied" and db_job.status == "Wishlist":
+            status_op = "Reverted to Wishlist"
+        # Transition to Offered
+        elif db_job.status == "Offered":
+            status_op = "Received Offer"
+        # Transition to terminal status
+        elif db_job.status in ["Rejected", "Closed", "Discontinued"]:
+            status_op = f"Marked as {db_job.status}"
+        # Resumed from terminal
+        elif original_status in TERMINAL_STATUSES and db_job.status not in TERMINAL_STATUSES:
+            status_op = "Resumed Application"
+        else:
+            status_op = f"Status Changed: {db_job.status}"
             
-        if has_meaningful_change:
-            db_job.last_updated = datetime.now(timezone.utc)
-    
+    # Determine the final operation name
+    # Status changes take precedence unless it's a generic status change and we have a specific operation
+    final_op = operation
+    if status_op:
+        # If we have an interview step added, customize the Advanced to Interviewing copy
+        if status_op == "Advanced to Interviewing" and operation and "Added Interview Step:" in operation:
+            step_name = operation.split("Added Interview Step:")[1].strip()
+            final_op = f"Advanced to Interviewing ({step_name})"
+        else:
+            final_op = status_op
+            
+    if final_op or status_changed:
+        if final_op:
+            db_job.last_operation = final_op
+        has_meaningful_change = True
+        
+    if has_meaningful_change:
+        db_job.last_updated = datetime.now(timezone.utc)
+        
     db.commit()
 
 # --- Routes ---
@@ -364,7 +408,7 @@ async def create_job_stream(
                     metadata={"job_id": db_job.id, "source": f"{db_job.company} - {db_job.role}", "type": "job_description"}
                 )
 
-            update_job_status(db_job, db, operation="Job Created")
+            update_job_status(db_job, db, operation="Application Created")
             yield f"data: {json.dumps({'event': 'completed', 'job_id': db_job.id})}\n\n"
             
         except ValidationError as e:
@@ -382,23 +426,46 @@ def update_job(job_id: int, job_update: JobUpdate, db: Session = Depends(get_db)
     if not db_job:
         raise HTTPException(status_code=404, detail="Job not found")
 
+    original_status = db_job.status
     update_data = to_db_dict(job_update.model_dump(exclude_unset=True))
     
     is_actually_different = False
+    star_changed = False
+    new_star_value = None
+    
     for key, value in update_data.items():
         if hasattr(db_job, key):
             current_val = getattr(db_job, key)
-            # Treat None and "" as equivalent for comparison
-            if (current_val or "") != (value or ""):
-                is_actually_different = True
-                setattr(db_job, key, value)
+            if isinstance(current_val, bool) or isinstance(value, bool):
+                if current_val != value:
+                    is_actually_different = True
+                    setattr(db_job, key, value)
+                    if key == "is_starred":
+                        star_changed = True
+                        new_star_value = value
+            else:
+                if (current_val or "") != (value or ""):
+                    is_actually_different = True
+                    setattr(db_job, key, value)
                 
     if update_data.get('company'):
         company = get_or_create_company(db, update_data['company'])
         db_job.company_id = company.id
 
     if is_actually_different:
-        update_job_status(db_job, db, operation="Job Details Updated")
+        # Determine the operation type
+        operation = update_data.get("last_operation")
+        if not operation:
+            if star_changed:
+                operation = "Starred Application" if new_star_value else "Unstarred Application"
+            elif "description" in update_data:
+                operation = "Updated Job Description"
+            elif "notes" in update_data:
+                operation = "Updated Application Notes"
+            else:
+                operation = "Updated Job Details"
+                
+        update_job_status(db_job, db, original_status=original_status, operation=operation)
         
     db.refresh(db_job)
     return db_job
@@ -415,6 +482,7 @@ async def update_job_stream(job_id: int, job_update: JobUpdate, db: Session = De
                 yield f"data: {json.dumps({'event': 'error', 'msg': 'Job not found'})}\n\n"
                 return
 
+            original_status = db_job.status
             update_data = to_db_dict(job_update.model_dump(exclude_unset=True))
             
             # Check for changes
@@ -422,9 +490,14 @@ async def update_job_stream(job_id: int, job_update: JobUpdate, db: Session = De
             for key, value in update_data.items():
                 if hasattr(db_job, key):
                     current_val = getattr(db_job, key)
-                    if (current_val or "") != (value or ""):
-                        is_actually_different = True
-                        break
+                    if isinstance(current_val, bool) or isinstance(value, bool):
+                        if current_val != value:
+                            is_actually_different = True
+                            break
+                    else:
+                        if (current_val or "") != (value or ""):
+                            is_actually_different = True
+                            break
             
             if not is_actually_different:
                 yield f"data: {json.dumps({'event': 'completed', 'job_id': job_id})}\n\n"
@@ -444,8 +517,17 @@ async def update_job_stream(job_id: int, job_update: JobUpdate, db: Session = De
             
             db.commit()
             
-            operation = update_data.get("last_operation") or "Modified Job Details"
-            update_job_status(db_job, db, operation=operation)
+            # Formulate friendly operation
+            operation = update_data.get("last_operation")
+            if not operation:
+                if description_changed:
+                    operation = "Updated Job Description"
+                elif notes_changed:
+                    operation = "Updated Application Notes"
+                else:
+                    operation = "Updated Job Details"
+                    
+            update_job_status(db_job, db, original_status=original_status, operation=operation)
 
             if description_changed and db_job.description:
                 yield f"data: {json.dumps({'event': 'progress', 'msg': 'Vectorizing job description...'})}\n\n"
@@ -569,6 +651,7 @@ def add_interview_step(job_id: int, step: InterviewStepCreate, db: Session = Dep
     if not db_job:
         raise HTTPException(status_code=404, detail="Job not found")
     
+    original_status = db_job.status
     st = get_or_create_step_type(db, step.step_type_name)
     
     new_step = InterviewStep(
@@ -582,7 +665,7 @@ def add_interview_step(job_id: int, step: InterviewStepCreate, db: Session = Dep
     db.commit()
     
     # Recalculate job status
-    update_job_status(db_job, db, operation=f"Added Interview Step: {st.name}")
+    update_job_status(db_job, db, original_status=original_status, operation=f"Added Interview Step: {st.name}")
     
     db.refresh(new_step)
     return new_step
@@ -608,7 +691,8 @@ def update_interview_step(step_id: int, step_update: InterviewStepUpdate, db: Se
     # Recalculate associated job status
     db_job = db.query(JobApplication).filter(JobApplication.id == db_step.job_application_id).first()
     if db_job:
-        update_job_status(db_job, db, operation=f"Updated Interview Step: {db_step.step_type.name}")
+        original_status = db_job.status
+        update_job_status(db_job, db, original_status=original_status, operation=f"Updated Interview Step: {db_step.step_type.name}")
         
     return db_step
 
@@ -619,18 +703,20 @@ def delete_interview_step(step_id: int, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="Step not found")
     
     job_id = db_step.job_application_id
+    step_name = db_step.step_type.name
     db.delete(db_step)
     db.commit()
     
     # Recalculate status
     db_job = db.query(JobApplication).filter(JobApplication.id == job_id).first()
     if db_job:
-        update_job_status(db_job, db, operation="Deleted Interview Step")
+        original_status = db_job.status
+        update_job_status(db_job, db, original_status=original_status, operation=f"Deleted Interview Step: {step_name}")
         
     return {"status": "deleted"}
 
 @router.post("/jobs/{job_id}/documents", response_model=DocumentMetaResponse)
-async def upload_job_document(job_id: int, file: UploadFile = File(...), doc_type: str = Form(...), db: Session = Depends(get_db)):
+async def upload_job_document(job_id: int, file: UploadFile = File(...), doc_type: str = Form(...), operation: Optional[str] = Form(None), db: Session = Depends(get_db)):
     db_job = db.query(JobApplication).filter(JobApplication.id == job_id).first()
     if not db_job:
         raise HTTPException(status_code=404, detail="Job not found")
@@ -683,14 +769,16 @@ async def upload_job_document(job_id: int, file: UploadFile = File(...), doc_typ
     except Exception as e:
         print(f"Warning: Failed to vectorize document {doc.id}: {e}")
         
-        
     # Update Job status and operation
-    update_job_status(db_job, db, operation=f"Attached Document: {doc.title}")
+    original_status = db_job.status
+    friendly_type = get_friendly_doc_type(doc_type)
+    op = operation or f"Attached {friendly_type}: {doc.title}"
+    update_job_status(db_job, db, original_status=original_status, operation=op)
     
     return doc
 
 @router.post("/jobs/{job_id}/documents/stream")
-async def upload_job_document_stream(job_id: int, file: UploadFile = File(...), doc_type: str = Form(...), db: Session = Depends(get_db)):
+async def upload_job_document_stream(job_id: int, file: UploadFile = File(...), doc_type: str = Form(...), operation: Optional[str] = Form(None), db: Session = Depends(get_db)):
     """
     Same as upload_job_document but returns a StreamingResponse with SSE progress updates.
     """
@@ -703,6 +791,7 @@ async def upload_job_document_stream(job_id: int, file: UploadFile = File(...), 
                 yield f"data: {json.dumps({'event': 'error', 'msg': 'Job not found'})}\n\n"
                 return
 
+            original_status = db_job.status
             os.makedirs(UPLOADS_DIR, exist_ok=True)
             safe_filename = file.filename.replace(" ", "_").replace("/", "")
             timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
@@ -754,7 +843,9 @@ async def upload_job_document_stream(job_id: int, file: UploadFile = File(...), 
                 
             # Update Job status and operation
             yield f"data: {json.dumps({'event': 'progress', 'msg': 'Finalizing attachment...'})}\n\n"
-            update_job_status(db_job, db, operation=f"Attached Document: {doc.title}")
+            friendly_type = get_friendly_doc_type(doc_type)
+            op = operation or f"Attached {friendly_type}: {doc.title}"
+            update_job_status(db_job, db, original_status=original_status, operation=op)
             
             yield f"data: {json.dumps({'event': 'completed', 'doc_id': doc.id, 'title': doc.title})}\n\n"
             
@@ -781,13 +872,15 @@ def delete_document(doc_id: int, db: Session = Depends(get_db)):
             print(f"Error deleting file {local_path}: {e}")
             
     job_id = doc.job_id
+    doc_title = doc.title
     db.delete(doc)
     db.commit()
 
     if job_id:
         db_job = db.query(JobApplication).filter(JobApplication.id == job_id).first()
         if db_job:
-            update_job_status(db_job, db, operation="Deleted Document")
+            original_status = db_job.status
+            update_job_status(db_job, db, original_status=original_status, operation=f"Deleted Document: {doc_title}")
 
     return {"status": "deleted"}
 

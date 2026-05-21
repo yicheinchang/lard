@@ -1,4 +1,4 @@
-# 🐱 Lard - Backend (v0.85.5)
+# 🐱 Lard - Backend (v0.86.1)
 
 FastAPI-based backend for the **Lard** (Lazy AI-powered Resume Database) application.
 Designed for **Infrastructure Isolation**; this backend is kept private and is only accessible via the Next.js API Proxy.
@@ -168,6 +168,13 @@ The system uses a multi-stage pipeline (Single vs. Multi-Agent) with a **QA Circ
 - **Verification Nodes**: Confirms "is_job_post" before proceeding.
 - **Guided Retries**: If validation (JSON/Text) fails, specific feedback is injected into the prompt for up to 3 guided extraction attempts.
 - **Prompt Sync**: All system prompts are isolated in `backend/ai/prompts.py` and served via `/api/settings/defaults` to ensure the frontend reset UI remains synchronized with the backend logic. Employs structural headers and triple-quote delimiters for robust data isolation.
+
+### 5. Precise Status Transitions & Audit Logging
+The backend implements a highly high-fidelity user interaction logging system via `update_job_status`:
+- **State Capture**: Captures the application's `original_status` before any data mutations occur in router handlers.
+- **Friendly Mapping**: Maps complex transition events (e.g. Wishlist → Applied: `"Advanced to Applied"`, deletion of last remaining interview step: `"Reverted to Applied"`) and entities (e.g., `"Added Interview Step: Phone Screen"`, `"Deleted Document: resume.pdf"`) into human-readable user action logs.
+- **Deterministic Multi-Event Overrides**: Allows the client to pass custom `operation` overrides (such as `"Advanced to Applied + Attached CV: resume.pdf"` when transitioning state and attaching a document at the same time), resolving fragile, time-based merging logic.
+- **Any-Status Robustness**: Seamlessly captures granular edits like Markdown job description saves and debounced notes auto-saves in any lifecycle status.
 
 ---
 

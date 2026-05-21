@@ -1,5 +1,5 @@
-# 🗺️ Lard - Lazy AI-Powered Resume Database (v0.85.5)
-Last Updated: 2026-05-21T13:38:00Z
+# 🗺️ Lard - Lazy AI-Powered Resume Database (v0.86.1)
+Last Updated: 2026-05-21T14:55:00Z
 
 This document provides a summary of the project's architecture, tech stack, and key logic to give AI coding agents instant context.
 
@@ -196,7 +196,7 @@ Global configuration persisted on the server (`app_settings.json`).
 - `company_id`: (FK -> `companies.id`, Nullable)
 - `company`: (String, index) Redundant company name for display/legacy caching.
   - `closed_date`: Optional date when the job listing was closed.
-  - `last_operation`: Controlled vocabulary string for audit trails. Automatically managed by `update_job_status`.
+  - `last_operation`: Friendly string for detailed user-action audit logs. Automatically captures exact status transitions, step modifications (with name), document uploads/deletions, stars, description, and notes edits.
 - `status`: Lifecycle stage (Wishlist, Applied, Interviewing, Offered, Rejected, Closed, Discontinued).
 - `last_updated`: Refreshed on successful, meaningful application-related changes.
 - `url`: (String) Application web link.

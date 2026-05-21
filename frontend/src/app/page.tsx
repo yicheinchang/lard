@@ -297,10 +297,16 @@ export default function Home() {
         });
         
         if (file && docType) {
+          const finalDocType = docType === 'resume' ? 'submitted_resume' : docType;
+          let combinedOp: string | undefined = undefined;
+          if (currentJob?.status === 'Wishlist' && status === 'Applied') {
+            combinedOp = `Advanced to Applied + Attached CV: ${file.name}`;
+          }
+
           // If we also had a file, we continue with the document stream
           // Note: The backend update_job_stream doesn't handle files, only create_job_stream does.
           // For updates with files, we still use the separate upload stream.
-          await uploadJobDocumentStream(id, file, docType, (event, msg) => {
+          await uploadJobDocumentStream(id, file, finalDocType, (event, msg) => {
             if (event === 'progress') {
               setUploadTasks(prev => {
                 const currentTasks = [...prev];
@@ -317,7 +323,7 @@ export default function Home() {
             } else if (event === 'error') {
               setUploadError(msg);
             }
-          });
+          }, combinedOp);
         }
       } catch (err: any) {
         console.error("Failed to update status", err);
@@ -351,7 +357,8 @@ export default function Home() {
     try {
       await updateJobStream(pendingStatusUpdate.id, { 
         status: pendingStatusUpdate.status,
-        applied_date: date ? new Date(date).toISOString() : new Date().toISOString()
+        applied_date: date ? new Date(date).toISOString() : new Date().toISOString(),
+        last_operation: "Advanced to Applied"
       }, (event, msg) => {
           if (event === 'progress') {
             setUploadTasks(prev => {
@@ -373,7 +380,8 @@ export default function Home() {
 
       if (file) {
         try {
-          await uploadJobDocumentStream(pendingStatusUpdate.id, file, 'resume', (event, msg) => {
+          const combinedOp = `Advanced to Applied + Attached CV: ${file.name}`;
+          await uploadJobDocumentStream(pendingStatusUpdate.id, file, 'submitted_resume', (event, msg) => {
             if (event === 'progress') {
               setUploadTasks(prev => {
                 const currentTasks = [...prev];
@@ -392,7 +400,7 @@ export default function Home() {
             } else if (event === 'error') {
               setUploadError(msg);
             }
-          });
+          }, combinedOp);
         } catch (err: any) {
           console.error("Failed to upload resume during advance", err);
           setUploadError(err.message || 'Upload failed');
