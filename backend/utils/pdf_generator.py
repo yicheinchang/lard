@@ -472,11 +472,13 @@ def generate_job_pdf_buffer(job) -> BytesIO:
             step_notes = get_string_val(step.notes)
             
             # Wrap all cell strings in Paragraphs to enforce automatic cell wrapping
+            # Convert \n to <br/> AFTER markdown parsing so ReportLab renders line breaks
+            notes_html = parse_inline_markdown(step_notes).replace("\n", "<br/>") if step_notes else ""
             timeline_rows.append([
                 Paragraph(step_date_str, body_style),
                 Paragraph(step_name, body_style),
                 Paragraph(step_status, body_style),
-                Paragraph(step_notes if step_notes else "", body_style),
+                Paragraph(notes_html, body_style),
             ])
             
         timeline_table = Table(timeline_rows, colWidths=[80, 120, 80, 224])

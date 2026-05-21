@@ -23,6 +23,7 @@ else
       --reload-dir ai \
       --reload-dir routers \
       --reload-dir database \
+      --reload-dir utils \
       --reload-include main.py \
       --reload-include config.py \
       --reload-exclude '.venv/*' \

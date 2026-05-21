@@ -1,5 +1,5 @@
-# 🗺️ Lard - Lazy AI-Powered Resume Database (v0.85.3)
-Last Updated: 2026-05-21T02:22:00Z
+# 🗺️ Lard - Lazy AI-Powered Resume Database (v0.85.4)
+Last Updated: 2026-05-21T02:34:00Z
 
 This document provides a summary of the project's architecture, tech stack, and key logic to give AI coding agents instant context.
 
@@ -69,7 +69,7 @@ This document provides a summary of the project's architecture, tech stack, and 
   - `logger.py`: Standardized AI agent console logging.
 - `uploads/`: Local storage for uploaded job documents.
 - `utils/`:
-  - `pdf_generator.py`: [NEW] Reusable PDF generation engine using ReportLab. Formats job details, metadata, and description with monochrome-optimized grids, custom footers, and timeline placement at the end behind a page break.
+  - `pdf_generator.py`: [NEW] Reusable PDF generation engine using ReportLab. Formats job details, metadata, and description with monochrome-optimized grids, custom footers, and timeline placement at the end behind a page break. **Newline-aware**: `\n` characters in Feedback & Notes are rendered as `<br/>` line breaks in the exported PDF.
 - `test/`: Structured test suite. Includes `experiments/` subfolder for diagnostics and verification scripts.
 - `run.sh`: Unified startup script. Development mode uses a targeted `uvicorn` reloader that excludes large directories (like `.venv`) to minimize file system scanning and CPU usage.
 
