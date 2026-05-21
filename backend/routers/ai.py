@@ -5,7 +5,6 @@ import httpx
 import json
 import asyncio
 import os
-import shutil
 import logging
 import html
 import re
