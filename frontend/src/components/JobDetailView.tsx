@@ -12,7 +12,7 @@ import { DocumentPreview } from './DocumentPreview';
 import { ProcessingOverlay } from './ProcessingOverlay';
 import { AutoSaveIndicator } from './AutoSaveIndicator';
 import { Portal } from './Portal';
-import { parseContact } from '@/lib/utils';
+import { parseContact, normalizeContactEmail } from '@/lib/utils';
 
 import { useView } from '@/lib/ViewContext';
 import { useSettings } from '@/lib/SettingsContext';
@@ -468,6 +468,11 @@ export const JobDetailView: React.FC<JobDetailViewProps> = ({ job, onClose, onJo
       const cleanData = Object.fromEntries(
         Object.entries(editFormData).map(([k, v]) => [k, v === '' ? null : v])
       );
+
+      // Normalize contact emails to ensure proper quoting of display names
+      cleanData.hr_email = normalizeContactEmail(cleanData.hr_email as string | null);
+      cleanData.hiring_manager_email = normalizeContactEmail(cleanData.hiring_manager_email as string | null);
+      cleanData.headhunter_email = normalizeContactEmail(cleanData.headhunter_email as string | null);
 
       // Anchor bare date strings (YYYY-MM-DD) to noon UTC to prevent timezone shift.
       // The backend UTCDateTime validator would otherwise coerce them to midnight UTC,

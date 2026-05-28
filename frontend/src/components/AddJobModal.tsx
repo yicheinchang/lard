@@ -6,6 +6,7 @@ import { ConfirmDialog } from '@/components/ConfirmDialog';
 import { ProcessingOverlay } from './ProcessingOverlay';
 import { Portal } from './Portal';
 import { Ticker } from './Ticker';
+import { normalizeContactEmail } from '@/lib/utils';
 
 interface AddJobModalProps {
   isOpen: boolean;
@@ -406,6 +407,11 @@ export const AddJobModal: React.FC<AddJobModalProps> = ({ isOpen, onClose, onAdd
       const jobData = Object.fromEntries(
         Object.entries(formData).map(([k, v]) => [k, v === '' ? null : v])
       );
+
+      // Normalize contact emails to ensure proper quoting of display names
+      jobData.hr_email = normalizeContactEmail(jobData.hr_email as string | null);
+      jobData.hiring_manager_email = normalizeContactEmail(jobData.hiring_manager_email as string | null);
+      jobData.headhunter_email = normalizeContactEmail(jobData.headhunter_email as string | null);
 
       // Anchor bare date strings (YYYY-MM-DD) to noon UTC to prevent timezone shift.
       const DATE_ONLY_FIELDS = ['applied_date', 'decision_date', 'closed_date', 'job_posted_date', 'application_deadline'];

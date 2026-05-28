@@ -1,5 +1,5 @@
-# 🗺️ Lard - Lazy AI-Powered Resume Database (v0.86.3)
-Last Updated: 2026-05-21T19:52:00Z
+# 🗺️ Lard - Lazy AI-Powered Resume Database (v0.86.4)
+Last Updated: 2026-05-28T15:31:00Z
 
 This document provides a summary of the project's architecture, tech stack, and key logic to give AI coding agents instant context.
 
@@ -100,7 +100,8 @@ This document provides a summary of the project's architecture, tech stack, and 
       *   **Additive Guidance**: Field-specific instruction tabs for fine-tuning extraction.
       *   **Base System Prompts**: Independent sub-section for modifying core backend prompts (Extraction, JSON-LD, QA Validator) and granular field-level prompts for Multi-Agent mode (Text and JSON) with a dedicated reset handler. Features a nested tabbed UI for efficient management of 18 total base prompts. **Selective Filtering**: Prompts are filtered based on the active **Extraction Strategy** (Single vs. Multi-Agent). **Active Selection Sync**: Automatically synchronizes the active prompt tab when switching strategies or tabs to ensure only visible prompts are selected. Supports **Granular Resets** for each specific prompt to factory defaults. Enhanced readability with `rows={12}` text areas. Includes **Focus Persistence Fixes** and **Persistence Support** in the backend for reliable prompt engineering.
   - `src/lib/`:
-  - `api.ts`: Centralized API client using Axios (configured with `/api/proxy` baseURL) and Server-Sent Events (SSE) for streaming. Proxies all calls to the backend.
+    - `utils.ts`: General helper utilities, including RFC-compliant contact parsing and `normalizeContactEmail` to ensure display names are properly quoted.
+    - `api.ts`: Centralized API client using Axios (configured with `/api/proxy` baseURL) and Server-Sent Events (SSE) for streaming. Proxies all calls to the backend.
   - `actions.ts`: Secure [Server Actions] for all non-streaming mutations (Jobs, Steps, Settings).
   - `ViewContext.tsx`: Global UI state including **Navigation Guards** for unsaved changes and sidebar state.
   - `SettingsContext.tsx`: Reactive theme and AI status.

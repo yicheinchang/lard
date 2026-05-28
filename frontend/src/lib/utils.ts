@@ -28,3 +28,24 @@ export function parseContact(contact: string | null): { name: string | null; ema
 
   return { name: contact.trim(), email: null };
 }
+
+/**
+ * Normalizes contact emails to ensure the display name is properly quoted.
+ * Wrapping display names in double quotes ensures full RFC 5322 compliance
+ * for all special characters (commas, semicolons, dots, etc.).
+ * e.g., Doe, John <john.doe@example.com> -> "Doe, John" <john.doe@example.com>
+ */
+export function normalizeContactEmail(emailStr: string | null): string | null {
+  if (!emailStr || !emailStr.trim()) return null;
+  const parsed = parseContact(emailStr);
+  if (parsed.email) {
+    if (parsed.name) {
+      // Escape any existing double quotes in the name
+      const escapedName = parsed.name.replace(/"/g, '\\"');
+      return `"${escapedName}" <${parsed.email}>`;
+    }
+    return parsed.email;
+  }
+  return emailStr.trim();
+}
+
