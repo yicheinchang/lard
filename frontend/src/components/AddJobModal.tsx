@@ -385,8 +385,11 @@ export const AddJobModal: React.FC<AddJobModalProps> = ({ isOpen, onClose, onAdd
         });
 
         if (check.status === 'exact_match') {
-          const dateLabel = check.job.status === 'Wishlist' ? 'Added' : 'Applied';
-          setError(`This role already exists! Found matching ${check.match_type} for ${check.job.company} - ${check.job.role} (${dateLabel} on ${new Date(check.job.applied_date).toLocaleDateString('en-US', { timeZone: 'UTC' })}).`);
+          const isWishlist = check.job.status === 'Wishlist';
+          const dateLabel = isWishlist ? 'Added' : 'Applied';
+          const displayDate = isWishlist ? check.job.created_at : (check.job.applied_date || check.job.created_at);
+          const formattedDate = displayDate ? new Date(displayDate).toLocaleDateString('en-US', { timeZone: 'UTC' }) : 'Unknown Date';
+          setError(`This role already exists! Found matching ${check.match_type} for ${check.job.company} - ${check.job.role} (${dateLabel} on ${formattedDate}).`);
           setIsSubmitting(false);
           return;
         }

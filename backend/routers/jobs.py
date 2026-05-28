@@ -572,7 +572,23 @@ class DuplicateCheck(BaseModel):
     url: Optional[str] = None
     company_job_id: Optional[str] = None
 
-@router.post("/jobs/check-duplicate")
+class DuplicateCheckJob(BaseModel):
+    id: Optional[int] = None
+    company: str
+    role: str
+    status: str
+    applied_date: Optional[UTCDateTime] = None
+    created_at: Optional[UTCDateTime] = None
+    job_posted_date: Optional[UTCDateTime] = None
+    model_config = ConfigDict(from_attributes=True)
+
+class DuplicateCheckResponse(BaseModel):
+    status: str
+    match_type: Optional[str] = None
+    job: Optional[DuplicateCheckJob] = None
+    model_config = ConfigDict(from_attributes=True)
+
+@router.post("/jobs/check-duplicate", response_model=DuplicateCheckResponse)
 def check_duplicate(check: DuplicateCheck, db: Session = Depends(get_db)):
     # 1. Check for URL match (Case 3 - Exact Match)
     if check.url:
@@ -581,13 +597,7 @@ def check_duplicate(check: DuplicateCheck, db: Session = Depends(get_db)):
             return {
                 "status": "exact_match", 
                 "match_type": "URL", 
-                "job": {
-                    "company": existing_url.company, 
-                    "role": existing_url.role, 
-                    "status": existing_url.status,
-                    "applied_date": existing_url.applied_date.isoformat() if existing_url.applied_date else None,
-                    "job_posted_date": existing_url.job_posted_date.isoformat() if existing_url.job_posted_date else None
-                }
+                "job": existing_url
             }
 
     # 2. Check for Exact Match (Company + Role + JobID)
@@ -604,13 +614,7 @@ def check_duplicate(check: DuplicateCheck, db: Session = Depends(get_db)):
                 return {
                     "status": "exact_match", 
                     "match_type": "Company Job ID", 
-                    "job": {
-                        "company": existing_exact.company, 
-                        "role": existing_exact.role, 
-                        "status": existing_exact.status,
-                        "applied_date": existing_exact.applied_date.isoformat() if existing_exact.applied_date else None,
-                        "job_posted_date": existing_exact.job_posted_date.isoformat() if existing_exact.job_posted_date else None
-                    }
+                    "job": existing_exact
                 }
         
         # 3. Check for Similar Match (Company + Role)
@@ -621,14 +625,7 @@ def check_duplicate(check: DuplicateCheck, db: Session = Depends(get_db)):
         if existing_similar:
             return {
                 "status": "similar_match", 
-                "job": {
-                    "id": existing_similar.id,
-                    "company": existing_similar.company, 
-                    "role": existing_similar.role,
-                    "status": existing_similar.status,
-                    "applied_date": existing_similar.applied_date.isoformat() if existing_similar.applied_date else None,
-                    "job_posted_date": existing_similar.job_posted_date.isoformat() if existing_similar.job_posted_date else None
-                }
+                "job": existing_similar
             }
 
     return {"status": "unique"}
