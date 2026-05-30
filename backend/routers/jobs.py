@@ -209,7 +209,7 @@ class JobUpdate(BaseModel):
 
 class JobResponse(JobBase):
     id: int
-    last_updated: datetime
+    last_updated: UTCDateTime
     steps: List[InterviewStepResponse] = []
     documents: List[DocumentMetaResponse] = []
     
