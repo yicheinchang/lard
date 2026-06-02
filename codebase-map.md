@@ -77,7 +77,7 @@ This document provides a summary of the project's architecture, tech stack, and 
 - `src/app/`: Next.js routes (Layouts and Pages).
 - `src/components/`: Reusable UI components:
   - `AppShell.tsx`: Main layout wrapper featuring a **Binary Snap Sidebar** (Fixed 160px expanded / 64px collapsed). Includes **Mobile Responsive Header** and **Hamburger Menu Drawer**.
-  - `KanbanBoard.tsx`: Responsive drag-and-drop pipeline visualization. Features **Min-Width enforcement** (250px) for desktop with horizontal scrolling and a **Tabbed Mobile UI** (below 1024px) for focused single-column tracking. Supports independent vertical scrolling and dynamic counts.
+  - `KanbanBoard.tsx`: Responsive stage-based pipeline visualization with quick action controls. Features **Min-Width enforcement** (250px) for desktop with horizontal scrolling and a **Tabbed Mobile UI** (below 1024px) for focused single-column tracking. Supports independent vertical scrolling and dynamic counts.
   - `TableView.tsx`: Density-rich list view of applications. Includes **Portal-based Tooltips** for company and role cells to prevent truncation and container clipping.
   - `JobCard.tsx`: Individual job item in the Kanban board. Features **Portal-based Tooltips** and **Status text protection** (nowrap) for clean readability at any width. **Mobile Responsive**: Action buttons (Advance, Mark as...) are always visible on touch devices/small screens while remaining hover-only on desktop.
   - `Portal.tsx`: [NEW] Hydration-safe React Portal implementation for mounting overlays to `#portal-root`.
@@ -129,9 +129,13 @@ The system enforces strict status integrity in `JobDetailView.tsx` and `page.tsx
 - **Applied Guard**: Automatically advanced when `applied_date` is set and no steps exist. Blocks "Applied" if interview steps exist.
 - **Interviewing Guard**: Automatically advanced when an interview step is added. Blocks moving to "Interviewing" if zero steps exist.
 - **Wishlist Movement**: Wishlist items (no date) can only move to "Closed" or "Discontinued" without providing a date.
+- **Timezone Shift Prevention**: Automatically appends `T12:00:00.000Z` (noon UTC) to all date-only input fields (e.g., `applied_date`, `decision_date`) to anchor them and prevent client-side timezone offset offset shifts.
+- **Contractor Validation**: Enforces that Contractor roles must have a filled `agency` field before saving.
 
 ### 4. Contextual AI Integration
 The `ChatAssistant` is a global component accessible from any page. It maintains its own state and can be toggled via a floating action button or keyboard shortcuts.
+- **KaTeX Normalization**: Normalizes LLM quirks (e.g., replaces narrow no-break space `\u202F` and non-breaking space `\u00A0` with standard space; replaces non-breaking hyphen `\u2011` with a standard hyphen; and normalizes delimiters `\( ... \)` and `\[ ... \]` to standard KaTeX blocks) to prevent math formula rendering breaks.
+- **Persistent Resizing**: Features a draggable width handle that persists the custom drawer width in `localStorage` under `chat_assistant_width`.
 
 ### 5. Universal Theme Architecture
 The UI implements a **Universal Theme Consistency** model using Tailwind CSS 4 and `globals.css`. 
@@ -339,6 +343,7 @@ The system uses a multi-stage pipeline to extract job details from URLs, PDFs, a
 - **Optimized JSON-LD Multi-Agent Routing**: If JSON-LD is found and multi-agent mode is enabled, the system bypasses massive payload overhead by slicing the JSON and distributing specific fragments (e.g., `baseSalary`) only to the relevant agents. Missing fragments bypass the LLM completely, optimizing speed and reducing token limits. **Internal Name Wrapping**: Fragments are wrapped in contextual dictionaries using internal field names (e.g., `{"job_posted_date": "..."}`) to ensure reliable AI identification and prevent ambiguity rejections.
 - **Streaming & Progress UI**: Extraction tasks use Server-Sent Events (SSE). The frontend `Ticker.tsx` displays real-time status updates (e.g., "Extracting Salary Range...", "Finalizing Description..."). Implements a **15s SSE heartbeat mechanism** (comments) and increased Next.js proxy timeouts to ensure stability during long LLM processing on hardware-limited systems.
 - **Prompt Infrastructure**: Centralized prompt management in `prompts.py` with structural instruction separators (`--- ADDITIONAL USER INSTRUCTIONS ---`, `--- SELF-CORRECTION / FEEDBACK ---`) and data isolation via triple-quote (`"""`) delimitation. This ensures consistent behavioral enforcement and prevents data/instruction confusion.
+- **AI Location Prioritization**: System prompts (`prompts.py`) prioritize Massachusetts (MA) locations geographically by default (MA > Remote > Geographically closest to MA). This is prompt-driven and fully customizable by the user in the Settings UI.
 - **Fail-Safe UI Warnings**: If validation still fails after 3 retries, the system preserves the output but sets `hallucination_detected: True` and `hallucination_reasons` (using the final QA block), which triggers an amber warning banner. **Context-Aware Flagging**: If the active data source (JSON or Text) was truncated during the centralized pre-processing, the system sets `context_limit_reached: True`, triggering a violet Zap warning banner in the frontend `AddJobModal.tsx` to inform the user of limited validation completeness.
 - **Cancellation & Safety**: Explicit support for `AbortController`. If a user cancels in the UI, the backend immediately terminates the background AI processing.
 - **Selective Pass Logic**: Skips structured JSON extraction for the description field, using a direct verbatim retrieval prompt for speed and reliability, and defaults to generous 600s timeouts on hardware-limited setups. **Strict Verbatim Enforcement**: All extraction and QA prompts use a "Strict Verbatim Text Extractor" persona that explicitly forbids the injection of bold labels, headers, or metadata not found in the raw source.

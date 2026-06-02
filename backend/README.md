@@ -77,6 +77,9 @@ The system automatically routes tasks based on the **Extraction Strategy** (conf
 #### 🧠 AI Logic & Fidelity
 - **Prompt Infrastructure**: Centralized prompt management in `prompts.py` with structural instruction separators (`--- ADDITIONAL USER INSTRUCTIONS ---`, `--- SELF-CORRECTION / FEEDBACK ---`) and data isolation via triple-quote (`"""`) delimitation. This ensures consistent behavioral enforcement and prevents instruction bleeding.
 - **UI-Controlled Prompts**: All fidelity logic is governed by system prompts editable in the UI, removing hidden Pydantic field constraints.
+- **Geographical Prioritization**: System prompts (`prompts.py`) prioritize Massachusetts (MA) locations by default (MA > Remote > Geographically closest to MA). This is prompt-driven and fully customizable by the user via the Settings UI.
+- **Context-Aware Dynamic Truncation**: Dynamically checks and truncates raw input text or JSON-LD descriptions in `check_job_post_node` based on `num_ctx * 3` (defaulting to `24,576` characters) to prevent model token overflow. If triggered, sets `context_limit_reached` to flag frontend warning banners.
+- **Sequential Fallback Strategy**: Employs a two-phase extraction flow. Phase 1 targets JSON-LD structure first. If core metadata fields are missing, Phase 2 (Full Text Mode) triggers, merging Phase 1 successes with the text results to avoid information loss.
 
 | Strategy | Input: JSON-LD (URL) | Input: Text (URL, PDF, Markdown) |
 | :--- | :--- | :--- |

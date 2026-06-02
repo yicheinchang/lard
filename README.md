@@ -26,23 +26,21 @@ An AI-powered, high-performance job application tracking system with automated d
 ## 🚀 Key Features
 
 ### 🤖 Intelligent AI Extraction
-- **JSON-LD First**: Prioritizes structured Schema.org data for 100% extraction accuracy.
-- **Modern Extraction**: Uses **Docling** for high-fidelity extraction of `.docx` and `.html` files with automated preloading for sub-10s cold starts.
-- **Agentic Pipeline**: Supports both high-speed Single-Agent mode and high-fidelity Multi-Agent mode.
-- **Strict Validation**: Implements RFC-compliant `NameEmail` and `HttpUrl` validation with automated name extraction via Pydantic v2 `model_validators`.
-- **Field-Level Feedback**: Global error handling provides specific, human-readable feedback (e.g., `[hr_email]: invalid format`) directly to the frontend.
-- **Dynamic Prompt Sync**: Centralized prompt engineering in the backend ensures the UI and AI logic remain perfectly synchronized.
+- **Structured Metadata Parsing**: Prioritizes structured Schema.org data for pristine extraction accuracy.
+- **Multi-Format Processing**: Full high-fidelity parsing of job posts, resumes, and documents in PDF, DOCX, HTML, and plain text formats.
+- **Agentic Workflows**: Automatically transitions between high-speed single-agent and comprehensive multi-agent pipelines depending on active settings.
+- **Real-Time Feedback**: On-the-fly input verification with clean, immediate visual warning flags for structural fields.
 
 ### 📊 Powerful Visualization
-- **Dynamic Kanban**: Drag-and-drop pipeline with a specialized **Tabbed Mobile UI** for focused single-column tracking on small screens.
-- **Data Table**: High-fidelity list view with advanced sorting, filtering, and density-rich tooltips.
-- **Interview Tracking**: Manage every step with full CRUD, inline editing, and lifecycle guards (Applied/Interviewing status synchronization).
+- **Dynamic Kanban Board**: Fluid stage-based column tracking with smart column grouping and quick status actions.
+- **Responsive Mobile Layout**: Fully optimized, single-column tabbed interface that keeps all tracking details readable on small screens.
+- **Interactive Interview Timeline**: Unified pipeline event tracker featuring smart status synchronization and auto-advancing guards.
 
-### ⚡ Extreme Performance
-- **Extreme Frontend Performance**: Utilizes **Next.js 16 `after()` hooks** for non-blocking audit logging and background tasks.
-- **Instant Backend Startup**: Cold start in **< 5 seconds** via background eager loading and `app_factory` patterns.
-- **Local Embedded Models**: Uses `all-MiniLM-L6-v2` with a persistent local model cache.
-- **Dynamic Settings**: Change LLM providers, models, or themes in real-time with **Deep Merge** settings persistence.
+### ⚡ Premium Performance & Controls
+- **High Concurrency Architecture**: Features decoupled API proxying and non-blocking background queue queues for sub-millisecond client reactivity.
+- **Instant Backend Cold Starts**: Background eager preloading warms up heavy dependencies without blocking system access.
+- **Model Agnostic Integration**: Connects dynamically to local models (Ollama) or leading cloud endpoints (OpenAI, Anthropic).
+- **Zero-Restart Configurations**: Instantly customize themes, active LLM strategies, and custom prompt guidelines on-the-fly.
 
 ---
 

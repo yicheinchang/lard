@@ -27,23 +27,29 @@ Features a dual-layout strategy:
 - **Desktop**: High-density horizontal grid with min-width enforcement to prevent content squishing.
 - **Mobile (< 1024px)**: Automatically switches to a **Tabbed UI (Segmented Control)**, allowing users to focus on one stage at a time with real-time job counts.
 
-### 3. Navigation Guards
-Managed via the `ViewContext.tsx`, the application protects against accidental data loss. If a user attempts to navigate away from an unsaved edit, a centralized interceptor prompts for confirmation.
+### 3. Navigation & Validation Guards
+Managed via the `ViewContext.tsx` and `JobDetailView.tsx`, the application enforces deep data integrity:
+- **Navigation Interception**: Tracks unsaved changes across form fields and step additions, intercepting transitions to show a centralized confirmation dialog.
+- **Timezone Shift Prevention**: Date inputs dynamically append `T12:00:00.000Z` to prevent local browser timezone offsets from causing date-shifting calendar errors.
+- **Contractor Field Enforcement**: Enforces that the `agency` string field is populated whenever the role type is set to "Contractor".
+- **Strict Lifecycle Stage Guards**: 
+  - *Wishlist Guard*: Prevents transitioning to Wishlist if `applied_date` is present.
+  - *Applied Guard*: Auto-advances to Applied upon date entry only if no steps exist, blocking Applied if interview steps are recorded.
+  - *Interviewing Guard*: Auto-advances to Interviewing when steps are added, blocking Interviewing if steps are deleted back to zero.
 
 ### 4. Stateful AI Assistant
 The global `ChatAssistant.tsx` features:
 - **Session History**: A dedicated drawer for navigating past conversations.
-- **Normalization Layer**: Bridge the gap between LLM quirks and strict rendering. Fixes narrow no-break spaces (U+202F), cleans negative thin spaces (`\!`), and normalizes LaTeX delimiters into standard math tokens for KaTeX.
-- **Persistence**: Remembers the active `session_id` using `localStorage`.
-- **High-Fidelity Rendering**: Supports full Markdown and LaTeX math.
-- **Adjustable Layout**: Persistent resizable width handle.
+- **Normalization Layer**: Replaces narrow no-break space (`\u202F`) and non-breaking space (`\u00A0`) with standard space, replaces non-breaking hyphen (`\u2011`) with standard hyphen, and cleans mathematical LaTeX blocks to prevent KaTeX rendering breaks.
+- **Persistence**: Persists the active `session_id` as well as a resizable width handle in `localStorage` (`chat_assistant_width`).
+- **High-Fidelity Rendering**: Full dynamic Markdown and LaTeX math parsing.
 
 ### 5. Advanced Prompt Engineering UI
-The Settings page includes a sophisticated sub-section for AI prompt management:
-- **Granular Baseline Resets**: Restore any of the 18+ system prompts to factory defaults individually.
+The Settings page (`SettingsPage.tsx`) contains:
+- **Granular Baseline Resets**: Restore any of the 18+ base system prompts to factory defaults individually.
 - **Sync Guard**: Automatically pulls backend factory defaults via `/api/settings/defaults` to ensure logic consistency.
 - **Validation Feedback**: Displays granular, field-level error messages (e.g., `[hiring_manager_email]: invalid format`) directly in the `AddJobModal` based on strict Pydantic v2 validation.
-- **Modern File Support**: Synchronized support for **DOCX** and **HTML** files in both the `AddJobModal` (Auto-fill) and `JobDetailView` (Attachments).
+- **Modern File Support**: Ingests and previews **DOCX** and **HTML** files in addition to standard PDFs and text.
 
 ---
 
