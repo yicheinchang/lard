@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { X, Calendar, Clock, SlidersHorizontal, Trash2, CheckCircle2, Star, StarOff } from 'lucide-react';
+import { X, Calendar, Clock, SlidersHorizontal, Trash2, CheckCircle2, Star, StarOff, Archive } from 'lucide-react';
 import { Portal } from './Portal';
 
 export interface FilterCriteria {
@@ -14,6 +14,7 @@ export interface FilterCriteria {
   statuses: string[];
   employmentTypes: string[];
   starStatus?: 'all' | 'starred' | 'unstarred';
+  archiveFilterMode?: 'active' | 'archived' | 'all';
 }
 
 interface FilterPopoverProps {
@@ -291,6 +292,46 @@ export const FilterPopover: React.FC<FilterPopoverProps> = ({
                 >
                   <StarOff className="w-3.5 h-3.5" />
                   Unstarred
+                </button>
+              </div>
+            </div>
+
+            {/* Archive View Toggle Chips */}
+            <div className="space-y-3">
+              <label className="flex items-center gap-2 text-xs font-semibold text-[var(--fg-muted)] uppercase tracking-wider">
+                <Archive className="w-4 h-4 text-violet-400" />
+                Archive View
+              </label>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    const currentMode = localCriteria.archiveFilterMode || 'active';
+                    const nextMode = currentMode === 'archived' ? 'active' : 'archived';
+                    handleUpdate({ archiveFilterMode: nextMode });
+                  }}
+                  className={`flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-xl text-[11px] font-semibold transition-all border ${
+                    localCriteria.archiveFilterMode === 'archived'
+                      ? 'bg-violet-500 text-white border-violet-500 shadow-lg shadow-violet-500/20'
+                      : 'bg-[var(--surface-hover)] border-[var(--border-color)] text-[var(--fg-muted)] hover:bg-[var(--surface)]'
+                  }`}
+                >
+                  Archived Only
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const currentMode = localCriteria.archiveFilterMode || 'active';
+                    const nextMode = currentMode === 'all' ? 'active' : 'all';
+                    handleUpdate({ archiveFilterMode: nextMode });
+                  }}
+                  className={`flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-xl text-[11px] font-semibold transition-all border ${
+                    localCriteria.archiveFilterMode === 'all'
+                      ? 'bg-violet-500 text-white border-violet-500 shadow-lg shadow-violet-500/20'
+                      : 'bg-[var(--surface-hover)] border-[var(--border-color)] text-[var(--fg-muted)] hover:bg-[var(--surface)]'
+                  }`}
+                >
+                  Include Archived
                 </button>
               </div>
             </div>

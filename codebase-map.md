@@ -1,5 +1,5 @@
-# 🗺️ Lard - Lazy AI-Powered Resume Database (v0.86.5)
-Last Updated: 2026-05-30T03:35:00Z
+# 🗺️ Lard - Lazy AI-Powered Resume Database (v0.87.0)
+Last Updated: 2026-06-02T15:32:00Z
 
 This document provides a summary of the project's architecture, tech stack, and key logic to give AI coding agents instant context.
 
@@ -78,8 +78,8 @@ This document provides a summary of the project's architecture, tech stack, and 
 - `src/components/`: Reusable UI components:
   - `AppShell.tsx`: Main layout wrapper featuring a **Binary Snap Sidebar** (Fixed 160px expanded / 64px collapsed). Includes **Mobile Responsive Header** and **Hamburger Menu Drawer**.
   - `KanbanBoard.tsx`: Responsive stage-based pipeline visualization with quick action controls. Features **Min-Width enforcement** (250px) for desktop with horizontal scrolling and a **Tabbed Mobile UI** (below 1024px) for focused single-column tracking. Supports independent vertical scrolling and dynamic counts.
-  - `TableView.tsx`: Density-rich list view of applications. Includes **Portal-based Tooltips** for company and role cells to prevent truncation and container clipping.
-  - `JobCard.tsx`: Individual job item in the Kanban board. Features **Portal-based Tooltips** and **Status text protection** (nowrap) for clean readability at any width. **Mobile Responsive**: Action buttons (Advance, Mark as...) are always visible on touch devices/small screens while remaining hover-only on desktop.
+  - `TableView.tsx`: Density-rich list view of applications. Includes **Portal-based Tooltips** for company and role cells to prevent truncation and container clipping. Supports **multi-select checkboxes** and a sliding bottom action panel for batch actions (Archive, Restore, Delete) with local state refreshment.
+  - `JobCard.tsx`: Individual job item in the Kanban board. Features **Portal-based Tooltips** and **Status text protection** (nowrap) for clean readability. Includes a dynamic left-side `Globe` link (only shown when a URL is present) with aligned role indentation, and a right-side Archive/Star button tray layout. Styled with premium opacity Saturation/Dashed border traits when archived.
   - `Portal.tsx`: [NEW] Hydration-safe React Portal implementation for mounting overlays to `#portal-root`.
   - `Tooltip.tsx`: [NEW] Reusable Portal-based tooltip with viewport-aware positioning and horizontal overflow correction.
 
@@ -159,6 +159,8 @@ The central entity representing a job application.
 - `agency`: Optional agency name for contractors.
 - `status`: Lifecycle stage (Wishlist ... Discontinued).
 - `is_starred`: Boolean toggle for marking jobs as important.
+- `is_archived`: Boolean flag indicating whether the job is archived (hidden from default view).
+- `closed_date`: Optional date when the job listing was closed.
 - `steps`: Array of `InterviewStep` objects.
 - `documents`: Array of `DocumentMeta` objects (Job Post, Resume, etc.).
 - `description`: Markdown job description (Vectorized).
@@ -203,6 +205,7 @@ Global configuration persisted on the server (`app_settings.json`).
   - `closed_date`: Optional date when the job listing was closed.
   - `last_operation`: Friendly string for detailed user-action audit logs. Automatically captures exact status transitions, step modifications (with name), document uploads/deletions, stars, description, and notes edits.
 - `status`: Lifecycle stage (Wishlist, Applied, Interviewing, Offered, Rejected, Closed, Discontinued).
+- `is_archived`: (Boolean, default=False, nullable=False) Flag indicating if the application is archived.
 - `last_updated`: Refreshed on successful, meaningful application-related changes.
 - `url`: (String) Application web link.
 - `job_posted_date`, `application_deadline`: (DateTime)
@@ -255,6 +258,7 @@ Global configuration persisted on the server (`app_settings.json`).
 - `POST /jobs`: Create a new application with auto-linkage to a `Company`.
 - `POST /api/jobs/stream`: Streamed job info update.
 - `PUT /api/jobs/{id}`: Standard (atomic) job info update.
+- `PUT /api/jobs/batch`: [NEW] Transaction-safe bulk update endpoint for batch status, star, archive, and delete operations.
 - `DELETE /jobs/{id}`: Remove a job application and all associated data.
 - `POST /jobs/check-duplicate`: Performs URL, JobID, and Role-based similarity checks.
 - `GET /companies`: Returns a list of all known companies for autocomplete.

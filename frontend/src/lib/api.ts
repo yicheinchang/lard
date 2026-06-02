@@ -13,7 +13,8 @@ import {
   deleteStepAction,
   deleteDocumentAction,
   extractUrlAction,
-  extractTextAction
+  extractTextAction,
+  batchUpdateJobsAction
 } from './actions';
 
 const api = axios.create({
@@ -72,6 +73,7 @@ export interface Job {
   last_updated?: string;
   last_operation?: string;
   is_starred?: boolean;
+  is_archived?: boolean;
   steps?: InterviewStep[];
   documents?: DocumentMeta[];
 }
@@ -296,6 +298,10 @@ export const updateJob = async (id: number, jobUpdate: Partial<Job>) => {
 
 export const deleteJob = async (id: number) => {
   return deleteJobAction(id);
+};
+
+export const batchUpdateJobs = async (ids: number[], updates: { is_archived?: boolean; is_starred?: boolean; status?: string; action?: string }) => {
+  return batchUpdateJobsAction(ids, updates);
 };
 
 export const getStepTypes = async () => {

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useMemo } from 'react';
-import { Plus, Briefcase, Search, X, ArrowDownAZ, ArrowUpAZ, ChevronDown, SlidersHorizontal } from 'lucide-react';
+import { Plus, Briefcase, Search, X, ArrowDownAZ, ArrowUpAZ, ChevronDown, SlidersHorizontal, Archive } from 'lucide-react';
 import { KanbanBoard } from '@/components/KanbanBoard';
 import { TableView } from '@/components/TableView';
 import { AddJobModal } from '@/components/AddJobModal';
@@ -9,7 +9,7 @@ import { JobDetailView } from '@/components/JobDetailView';
 import { SettingsPage } from '@/components/SettingsPage';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
 import { FilterPopover, FilterCriteria } from '@/components/FilterPopover';
-import { Job, getJobs, createJobStream, updateJobStream, uploadJobDocumentStream, addInterviewStep, updateJob } from '@/lib/api';
+import { Job, getJobs, createJobStream, updateJobStream, uploadJobDocumentStream, addInterviewStep, updateJob, batchUpdateJobs } from '@/lib/api';
 import { useView } from '@/lib/ViewContext';
 import { ProcessingOverlay } from '@/components/ProcessingOverlay';
 
@@ -37,6 +37,7 @@ export default function Home() {
     statuses: [],
     employmentTypes: [],
     starStatus: 'all',
+    archiveFilterMode: 'active',
   };
   const [filterCriteria, setFilterCriteria] = useState<FilterCriteria>(initialFilterCriteria);
 
@@ -48,7 +49,8 @@ export default function Home() {
       filterCriteria.showOnlyStale === true ||
       filterCriteria.statuses.length > 0 ||
       filterCriteria.employmentTypes.length > 0 ||
-      (filterCriteria.starStatus !== undefined && filterCriteria.starStatus !== 'all')
+      (filterCriteria.starStatus !== undefined && filterCriteria.starStatus !== 'all') ||
+      (filterCriteria.archiveFilterMode !== undefined && filterCriteria.archiveFilterMode !== 'active')
     );
   }, [filterCriteria]);
 
@@ -67,8 +69,35 @@ export default function Home() {
     { id: 'finalize', label: 'Finalizing...', status: 'waiting' as any },
   ]);
 
+  // Batch actions state
+  const [showBatchConfirm, setShowBatchConfirm] = useState(false);
+  const [batchActionType, setBatchActionType] = useState<'archive' | 'restore' | 'delete'>('archive');
+  const [batchTargetIds, setBatchTargetIds] = useState<number[]>([]);
+
+  const handleExecuteBatchAction = async () => {
+    try {
+      if (batchActionType === 'archive') {
+        await batchUpdateJobs(batchTargetIds, { is_archived: true });
+      } else if (batchActionType === 'restore') {
+        await batchUpdateJobs(batchTargetIds, { is_archived: false });
+      } else if (batchActionType === 'delete') {
+        await batchUpdateJobs(batchTargetIds, { action: 'delete' });
+      }
+      await fetchJobs();
+    } catch (error) {
+      console.error("Batch action failed", error);
+    } finally {
+      setShowBatchConfirm(false);
+    }
+  };
+
   const filteredAndSortedJobs = useMemo(() => {
     let result = jobs.filter(job => {
+      // 0. Archive Filter
+      const archiveMode = filterCriteria.archiveFilterMode || 'active';
+      if (archiveMode === 'active' && job.is_archived) return false;
+      if (archiveMode === 'archived' && !job.is_archived) return false;
+
       // 1. Text Search
       if (searchQuery) {
         const q = searchQuery.toLowerCase();
@@ -194,6 +223,9 @@ export default function Home() {
     return Array.from(new Set([...defaultStatuses, ...foundStatuses])).sort();
   }, [jobs]);
 
+  const activeJobsCount = useMemo(() => jobs.filter(j => !j.is_archived).length, [jobs]);
+  const archivedJobsCount = useMemo(() => jobs.filter(j => j.is_archived).length, [jobs]);
+
   const [availableEmploymentTypes, setAvailableEmploymentTypes] = useState<string[]>([]);
   const fetchEmploymentTypes = async () => {
     try {
@@ -244,6 +276,20 @@ export default function Home() {
       await updateJob(job.id!, { is_starred: !job.is_starred });
     } catch (error) {
       console.error('Failed to toggle star', error);
+      fetchJobs(); // Revert on failure
+    }
+  };
+
+  const handleToggleArchive = async (job: Job) => {
+    try {
+      // Optimistic update
+      setJobs(prev => prev.map(j => j.id === job.id ? { ...j, is_archived: !j.is_archived } : j));
+      if (selectedJob?.id === job.id) {
+         setSelectedJob(prev => prev ? { ...prev, is_archived: !prev.is_archived } : null);
+      }
+      await updateJob(job.id!, { is_archived: !job.is_archived });
+    } catch (error) {
+      console.error('Failed to toggle archive', error);
       fetchJobs(); // Revert on failure
     }
   };
@@ -447,10 +493,16 @@ export default function Home() {
             {activeView === 'kanban' ? 'Application Tracking' : 'All Applications'}
           </h1>
           <p className="text-sm mt-1" style={{ color: 'var(--fg-muted)' }}>
-            {activeView === 'kanban'
-              ? 'Monitor your job applications and hiring progress effortlessly'
-              : `${jobs.length} total applications`
-            }
+            {activeJobsCount} active applications • {' '}
+            <button
+              onClick={() => setFilterCriteria(prev => ({ ...prev, archiveFilterMode: prev.archiveFilterMode === 'archived' ? 'active' : 'archived' }))}
+              className={`hover:text-violet-400 hover:underline inline-flex items-center gap-1 font-medium transition-colors cursor-pointer ${
+                filterCriteria.archiveFilterMode === 'archived' ? 'text-violet-400 underline font-bold' : ''
+              }`}
+              title="Click to toggle archived applications"
+            >
+              {archivedJobsCount} archived
+            </button>
           </p>
         </div>
 
@@ -474,6 +526,27 @@ export default function Home() {
               </button>
             )}
           </div>
+
+          {/* Contextual Bulk Action Button */}
+          {(hasActiveFilters || searchQuery) && filteredAndSortedJobs.length > 0 && filterCriteria.archiveFilterMode !== 'all' && (
+            <button
+              onClick={() => {
+                const targetIds = filteredAndSortedJobs.map(j => j.id!);
+                setBatchTargetIds(targetIds);
+                setBatchActionType(filterCriteria.archiveFilterMode === 'archived' ? 'restore' : 'archive');
+                setShowBatchConfirm(true);
+              }}
+              className={`flex items-center gap-2 bg-violet-600/10 hover:bg-violet-600/20 border border-violet-500/30 px-3 py-2 rounded-xl text-sm font-semibold transition-all shadow-sm text-violet-400 animate-fade-in hover:scale-105 active:scale-95 cursor-pointer`}
+            >
+              <Archive className="w-3.5 h-3.5" />
+              <span>
+                {filterCriteria.archiveFilterMode === 'archived'
+                  ? `Restore ${filteredAndSortedJobs.length} Shown`
+                  : `Archive ${filteredAndSortedJobs.length} Shown`
+                }
+              </span>
+            </button>
+          )}
 
           <div className="relative">
             <button
@@ -558,13 +631,15 @@ export default function Home() {
             <Briefcase className="w-12 h-12 animate-pulse" />
           </div>
         ) : activeView === 'kanban' ? (
-          <KanbanBoard jobs={filteredAndSortedJobs} onUpdateStatus={handleUpdateStatus} onJobClick={handleJobClick} onAddInterviewStep={handleAddInterviewStep} onToggleStar={handleToggleStar} />
+          <KanbanBoard jobs={filteredAndSortedJobs} onUpdateStatus={handleUpdateStatus} onJobClick={handleJobClick} onAddInterviewStep={handleAddInterviewStep} onToggleStar={handleToggleStar} onToggleArchive={handleToggleArchive} />
         ) : (
           <TableView 
             jobs={filteredAndSortedJobs} 
             onUpdateStatus={handleUpdateStatus} 
             onJobClick={handleJobClick} 
             onToggleStar={handleToggleStar}
+            onToggleArchive={handleToggleArchive}
+            onJobUpdated={fetchJobs}
             globalSortKey={sortKey}
             globalSortDir={sortDir}
             onGlobalSortChange={(key) => {
@@ -605,6 +680,16 @@ export default function Home() {
         fileUploadLabel="Attach Resume / CV (Optional)"
         accept=".pdf,.md"
         variant="default"
+      />
+
+      <ConfirmDialog
+        isOpen={showBatchConfirm}
+        title={batchActionType === 'archive' ? 'Archive Applications' : batchActionType === 'restore' ? 'Restore Applications' : 'Delete Applications'}
+        message={`Are you sure you want to ${batchActionType === 'archive' ? 'archive' : batchActionType === 'restore' ? 'restore' : 'permanently delete'} these ${batchTargetIds.length} job applications?`}
+        onConfirm={handleExecuteBatchAction}
+        onCancel={() => setShowBatchConfirm(false)}
+        confirmLabel={batchActionType === 'archive' ? 'Archive' : batchActionType === 'restore' ? 'Restore' : 'Delete'}
+        variant={batchActionType === 'delete' ? 'danger' : 'default'}
       />
 
       <ProcessingOverlay

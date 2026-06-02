@@ -76,6 +76,12 @@ export async function deleteJobAction(id: number) {
   return result;
 }
 
+export async function batchUpdateJobsAction(ids: number[], data: any) {
+  const result = await callBackend('jobs/batch', 'PUT', { ids, ...data });
+  revalidatePath('/');
+  return result;
+}
+
 export async function checkDuplicateAction(data: any) {
   return callBackend('jobs/check-duplicate', 'POST', data);
 }

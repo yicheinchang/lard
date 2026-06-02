@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from 'react';
-import { Briefcase, Building2, CheckCircle2, Clock, XCircle, Globe, ChevronRight, ThumbsUp, ThumbsDown, Lock, Ban, Star } from 'lucide-react';
+import { Briefcase, Building2, CheckCircle2, Clock, XCircle, Globe, ChevronRight, ThumbsUp, ThumbsDown, Lock, Ban, Star, Archive } from 'lucide-react';
 import { Job, getStepTypes, StepType } from '../lib/api';
 import { ConfirmDialog } from './ConfirmDialog';
 import { Tooltip } from './Tooltip';
@@ -13,6 +13,7 @@ interface JobCardProps {
   columnKey?: string;
   onAddInterviewStep?: (id: number, stepName: string, date?: string) => void;
   onToggleStar?: (job: Job) => void;
+  onToggleArchive?: (job: Job) => void;
 }
 
 const statusColors: Record<string, string> = {
@@ -42,7 +43,7 @@ const decisionBorders: Record<string, string> = {
   Discontinued: 'border-slate-500/30 hover:border-slate-500/40',
 };
 
-export const JobCard: React.FC<JobCardProps> = ({ job, onUpdateStatus, onClick, columnKey, onAddInterviewStep, onToggleStar }) => {
+export const JobCard: React.FC<JobCardProps> = ({ job, onUpdateStatus, onClick, columnKey, onAddInterviewStep, onToggleStar, onToggleArchive }) => {
   const [confirmState, setConfirmState] = useState<{
     isOpen: boolean;
     nextStatus: string;
@@ -107,7 +108,11 @@ export const JobCard: React.FC<JobCardProps> = ({ job, onUpdateStatus, onClick, 
   return (
     <>
       <div 
-        className={`relative glass p-2.5 rounded-xl flex flex-col gap-2 group cursor-pointer transition-all hover:-translate-y-0.5 hover:z-30 ${borderClass}`}
+        className={`relative glass p-2.5 rounded-xl flex flex-col gap-2 group cursor-pointer transition-all hover:-translate-y-0.5 hover:z-30 ${borderClass} ${
+          job.is_archived 
+            ? 'opacity-60 saturate-50 border-dashed border-[var(--border-color)] bg-[var(--surface-alt)]/25 hover:opacity-100 hover:saturate-100' 
+            : ''
+        }`}
         onClick={onClick}
       >
         <div className="flex justify-between items-start gap-2">
@@ -123,17 +128,37 @@ export const JobCard: React.FC<JobCardProps> = ({ job, onUpdateStatus, onClick, 
           <div className="flex flex-col min-w-0 flex-1">
             <Tooltip content={job.company} className="w-full">
               <h3 className="text-sm font-semibold text-[var(--fg)] flex items-center gap-1.5 truncate">
-                <Building2 className="w-3.5 h-3.5 text-violet-400 shrink-0" />
+                {job.url ? (
+                  <a
+                    href={job.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    onClick={(e) => e.stopPropagation()}
+                    className="text-violet-400 hover:text-violet-300 transition-colors shrink-0"
+                    title="View Job Posting"
+                  >
+                    <Globe className="w-3.5 h-3.5" />
+                  </a>
+                ) : null}
                 <span className="truncate">{job.company}</span>
               </h3>
             </Tooltip>
 
-            <Tooltip content={job.role} className="mt-0.5 ml-5 w-full">
+            <Tooltip content={job.role} className={`mt-0.5 ${job.url ? 'ml-5' : 'ml-0'} w-full`}>
               <p className="text-[11px] text-[var(--fg-muted)] truncate">{job.role}</p>
             </Tooltip>
           </div>
           
           <div className="flex items-center gap-1 shrink-0">
+            {onToggleArchive && (
+              <button
+                onClick={(e) => { e.stopPropagation(); onToggleArchive(job); }}
+                className={`p-1.5 rounded-full hover:bg-[var(--surface-hover)] transition-colors ${job.is_archived ? 'text-violet-400' : 'text-[var(--fg-subtle)] hover:text-violet-400/50'}`}
+                title={job.is_archived ? "Restore Application" : "Archive Application"}
+              >
+                <Archive className={`w-3.5 h-3.5 ${job.is_archived ? 'fill-current' : ''}`} />
+              </button>
+            )}
             {onToggleStar && (
               <button 
                 onClick={(e) => { e.stopPropagation(); onToggleStar(job); }}
@@ -142,18 +167,6 @@ export const JobCard: React.FC<JobCardProps> = ({ job, onUpdateStatus, onClick, 
               >
                 <Star className={`w-3.5 h-3.5 ${job.is_starred ? 'fill-current' : ''}`} />
               </button>
-            )}
-            {job.url && (
-              <a
-                href={job.url}
-                target="_blank"
-                rel="noopener noreferrer"
-                onClick={(e) => e.stopPropagation()}
-                className="p-1.5 rounded-full hover:bg-[var(--surface-hover)] text-[var(--fg-subtle)] hover:text-[var(--fg)] transition-colors"
-                title="View Job Posting"
-              >
-                <Globe className="w-3.5 h-3.5" />
-              </a>
             )}
           </div>
         </div>

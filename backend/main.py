@@ -53,6 +53,13 @@ async def lifespan(app: FastAPI):
                 print("INFO:     Added missing column 'agency'")
             except Exception:
                 pass # Already exists
+            
+            try:
+                conn.execute(text("ALTER TABLE job_applications ADD COLUMN is_archived BOOLEAN DEFAULT 0"))
+                conn.commit()
+                print("INFO:     Added missing column 'is_archived'")
+            except Exception:
+                pass # Already exists
 
             # 2. Normalize NULL -> FTE
             conn.execute(text("UPDATE job_applications SET employment_type = 'FTE' WHERE employment_type IS NULL"))

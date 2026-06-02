@@ -48,6 +48,7 @@ class JobApplication(Base):
     status = Column(String, default="Applied") 
     url = Column(String, nullable=True)
     is_starred = Column(Boolean, default=False)
+    is_archived = Column(Boolean, default=False, nullable=False)
     
     # New detail fields
     employment_type = Column(SQLEnum(EmploymentType), default=EmploymentType.FTE, nullable=True)

@@ -144,6 +144,7 @@ class JobBase(BaseModel):
     closed_date: Optional[UTCDateTime] = None
     last_operation: Optional[str] = None
     is_starred: Optional[bool] = False
+    is_archived: Optional[bool] = False
 
     @model_validator(mode="after")
     def extract_names_from_emails(self) -> "JobBase":
@@ -192,6 +193,7 @@ class JobUpdate(BaseModel):
     closed_date: Optional[UTCDateTime] = None
     last_operation: Optional[str] = None
     is_starred: Optional[bool] = None
+    is_archived: Optional[bool] = None
 
     @model_validator(mode="after")
     def extract_names_from_emails(self) -> "JobUpdate":
@@ -419,6 +421,68 @@ async def create_job_stream(
 
     return StreamingResponse(generate(), media_type="text/event-stream")
 
+class BatchUpdate(BaseModel):
+    ids: List[int]
+    is_archived: Optional[bool] = None
+    is_starred: Optional[bool] = None
+    status: Optional[str] = None
+    action: Optional[str] = None # 'delete' or standard update
+
+@router.put("/jobs/batch")
+def batch_update_jobs(update: BatchUpdate, db: Session = Depends(get_db)):
+    if not update.ids:
+        return {"status": "success", "count": 0}
+        
+    query = db.query(JobApplication).filter(JobApplication.id.in_(update.ids))
+    jobs = query.all()
+    
+    if update.action == 'delete':
+        count = len(jobs)
+        for job in jobs:
+            db.delete(job)
+        db.commit()
+        return {"status": "deleted", "count": count}
+        
+    count = 0
+    for job in jobs:
+        original_status = job.status
+        is_actually_different = False
+        star_changed = False
+        new_star_value = None
+        archive_changed = False
+        new_archive_value = None
+        
+        if update.is_archived is not None and job.is_archived != update.is_archived:
+            job.is_archived = update.is_archived
+            archive_changed = True
+            new_archive_value = update.is_archived
+            is_actually_different = True
+            
+        if update.is_starred is not None and job.is_starred != update.is_starred:
+            job.is_starred = update.is_starred
+            star_changed = True
+            new_star_value = update.is_starred
+            is_actually_different = True
+            
+        if update.status is not None and job.status != update.status:
+            job.status = update.status
+            is_actually_different = True
+            
+        if is_actually_different:
+            count += 1
+            operation = None
+            if star_changed:
+                operation = "Starred Application" if new_star_value else "Unstarred Application"
+            elif archive_changed:
+                operation = "Archived Application" if new_archive_value else "Unarchived Application"
+            else:
+                operation = "Updated Job Details"
+            
+            update_job_status(job, db, original_status=original_status, operation=operation)
+            
+    db.commit()
+    return {"status": "success", "count": count}
+
 @router.put("/jobs/{job_id}", response_model=JobResponse)
 def update_job(job_id: int, job_update: JobUpdate, db: Session = Depends(get_db)):
     """Standard non-streaming update for instant operations like toggling star."""
@@ -432,6 +496,8 @@ def update_job(job_id: int, job_update: JobUpdate, db: Session = Depends(get_db)
     is_actually_different = False
     star_changed = False
     new_star_value = None
+    archive_changed = False
+    new_archive_value = None
     
     for key, value in update_data.items():
         if hasattr(db_job, key):
@@ -443,6 +509,9 @@ def update_job(job_id: int, job_update: JobUpdate, db: Session = Depends(get_db)
                     if key == "is_starred":
                         star_changed = True
                         new_star_value = value
+                    elif key == "is_archived":
+                        archive_changed = True
+                        new_archive_value = value
             else:
                 if (current_val or "") != (value or ""):
                     is_actually_different = True
@@ -458,6 +527,8 @@ def update_job(job_id: int, job_update: JobUpdate, db: Session = Depends(get_db)
         if not operation:
             if star_changed:
                 operation = "Starred Application" if new_star_value else "Unstarred Application"
+            elif archive_changed:
+                operation = "Archived Application" if new_archive_value else "Unarchived Application"
             elif "description" in update_data:
                 operation = "Updated Job Description"
             elif "notes" in update_data:
@@ -520,7 +591,9 @@ async def update_job_stream(job_id: int, job_update: JobUpdate, db: Session = De
             # Formulate friendly operation
             operation = update_data.get("last_operation")
             if not operation:
-                if description_changed:
+                if "is_archived" in update_data:
+                    operation = "Archived Application" if update_data["is_archived"] else "Unarchived Application"
+                elif description_changed:
                     operation = "Updated Job Description"
                 elif notes_changed:
                     operation = "Updated Application Notes"

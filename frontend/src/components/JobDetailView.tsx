@@ -6,7 +6,7 @@ import MdEditor from 'react-markdown-editor-lite';
 import MarkdownIt from 'markdown-it';
 import 'react-markdown-editor-lite/lib/index.css';
 import { Job, getStepTypes, StepType, addInterviewStep, updateInterviewStep, deleteInterviewStep, updateJobStream, updateJob, deleteJobDocument, getCompanies, InterviewStep, uploadJobDocumentStream } from '../lib/api';
-import { X, Calendar, User, Mail, Plus, Circle, FileText, Edit2, Save, Paperclip, Trash2, ExternalLink, Link as LinkIcon, StickyNote, Send, AlertTriangle, CircleDollarSign, Star, Maximize2, Minimize2, ZoomIn, ZoomOut, RotateCcw, Sun, Moon } from 'lucide-react';
+import { X, Calendar, User, Mail, Plus, Circle, FileText, Edit2, Save, Paperclip, Trash2, ExternalLink, Link as LinkIcon, StickyNote, Send, AlertTriangle, CircleDollarSign, Star, Maximize2, Minimize2, ZoomIn, ZoomOut, RotateCcw, Sun, Moon, Archive } from 'lucide-react';
 import { ConfirmDialog } from './ConfirmDialog';
 import { DocumentPreview } from './DocumentPreview';
 import { ProcessingOverlay } from './ProcessingOverlay';
@@ -655,6 +655,14 @@ export const JobDetailView: React.FC<JobDetailViewProps> = ({ job, onClose, onJo
             </p>
           </div>
           <div className="flex items-center gap-2">
+            <button 
+              onClick={() => updateJob(job.id!, { is_archived: !job.is_archived }).then(() => onJobUpdated())}
+              className={`p-2 hover:bg-[var(--surface-hover)] rounded-full transition flex items-center gap-1.5 ${job.is_archived ? 'text-violet-400' : 'text-[var(--fg-subtle)] hover:text-violet-400'}`}
+              title={job.is_archived ? "Restore Application" : "Archive Application"}
+            >
+              <Archive className={`w-5 h-5 ${job.is_archived ? 'fill-current' : ''}`} />
+              <span className="text-xs font-medium hidden sm:inline">{job.is_archived ? "Restore" : "Archive"}</span>
+            </button>
             <button 
               onClick={() => window.open(`/api/proxy/jobs/${job.id}/pdf`, '_blank')}
               className="p-2 hover:bg-[var(--surface-hover)] rounded-full text-[var(--fg-subtle)] hover:text-[var(--fg)] transition flex items-center gap-1.5"
@@ -1324,10 +1332,17 @@ export const JobDetailView: React.FC<JobDetailViewProps> = ({ job, onClose, onJo
                       </div>
                     )}
 
-                    <div className="mt-auto pt-8 pb-4">
+                    <div className="mt-auto pt-8 pb-4 flex flex-col gap-2">
+                      <button
+                        onClick={() => updateJob(job.id!, { is_archived: !job.is_archived }).then(() => onJobUpdated())}
+                        className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-violet-400 hover:text-violet-300 hover:bg-violet-500/10 border border-violet-500/20 hover:border-violet-500/40 transition-all text-xs font-medium cursor-pointer"
+                      >
+                        <Archive className="w-3.5 h-3.5" />
+                        {job.is_archived ? "Restore Application" : "Archive Application"}
+                      </button>
                       <button
                         onClick={() => setShowDeleteConfirm(true)}
-                        className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-red-500 hover:text-red-400 hover:bg-red-500/10 border border-red-500/20 hover:border-red-500/40 transition-all text-xs font-medium"
+                        className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-red-500 hover:text-red-400 hover:bg-red-500/10 border border-red-500/20 hover:border-red-500/40 transition-all text-xs font-medium cursor-pointer"
                       >
                         <Trash2 className="w-3.5 h-3.5" /> Remove Application
                       </button>
