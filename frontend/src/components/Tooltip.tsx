@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { Portal } from './Portal';
 
 interface TooltipProps {
@@ -18,6 +18,7 @@ export const Tooltip: React.FC<TooltipProps> = ({
 }) => {
   const [isVisible, setIsVisible] = useState(false);
   const [coords, setCoords] = useState({ top: 0, left: 0 });
+  const [tooltipWidth, setTooltipWidth] = useState<number>(0);
   const triggerRef = useRef<HTMLDivElement>(null);
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -50,6 +51,23 @@ export const Tooltip: React.FC<TooltipProps> = ({
     };
   }, []);
 
+  // Reset tooltip width when hidden
+  useEffect(() => {
+    if (!isVisible) {
+      setTooltipWidth(0);
+    }
+  }, [isVisible]);
+
+  // Callback ref to measure node width when it is dynamically mounted to the DOM by Portal
+  const tooltipCallbackRef = useCallback((node: HTMLDivElement | null) => {
+    if (node) {
+      const rect = node.getBoundingClientRect();
+      if (rect.width > 0 && rect.width !== tooltipWidth) {
+        setTooltipWidth(rect.width);
+      }
+    }
+  }, [tooltipWidth]);
+
   // Viewport-aware horizontal adjustment
   const getTooltipStyle = () => {
     const style: React.CSSProperties = {
@@ -57,14 +75,19 @@ export const Tooltip: React.FC<TooltipProps> = ({
       top: `${coords.top + 6}px`,
       left: `${coords.left}px`,
       zIndex: 9999,
+      visibility: tooltipWidth > 0 ? 'visible' : 'hidden',
     };
 
     // Ensure it doesn't overflow the right edge of the viewport
     if (typeof window !== 'undefined') {
-      const maxWidth = 280;
-      if (coords.left + maxWidth > window.innerWidth - 20) {
-        style.left = undefined;
-        style.right = '20px';
+      const widthToUse = tooltipWidth || 280;
+      const rightEdge = coords.left + widthToUse;
+      const viewportRightEdge = window.scrollX + window.innerWidth;
+      
+      if (rightEdge > viewportRightEdge - 20) {
+        const adjustedLeft = viewportRightEdge - widthToUse - 20;
+        // Don't shift it past the left edge of the viewport plus a 10px buffer
+        style.left = `${Math.max(window.scrollX + 10, adjustedLeft)}px`;
       }
     }
 
@@ -82,6 +105,7 @@ export const Tooltip: React.FC<TooltipProps> = ({
       {isVisible && content && (
         <Portal>
           <div 
+            ref={tooltipCallbackRef}
             style={getTooltipStyle()}
             className="animate-fade-in pointer-events-none"
           >

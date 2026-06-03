@@ -164,4 +164,4 @@ This project is licensed under the **MIT License**. See the [LICENSE](LICENSE) f
 
 ---
 Built with ❤️ by Antigravity.
-Final version synchronized with v0.88.0.
+Final version synchronized with v0.88.1.
