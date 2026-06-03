@@ -6,7 +6,7 @@ import MdEditor from 'react-markdown-editor-lite';
 import MarkdownIt from 'markdown-it';
 import 'react-markdown-editor-lite/lib/index.css';
 import { Job, getStepTypes, StepType, addInterviewStep, updateInterviewStep, deleteInterviewStep, updateJobStream, updateJob, deleteJobDocument, getCompanies, InterviewStep, uploadJobDocumentStream } from '../lib/api';
-import { X, Calendar, User, Mail, Plus, Circle, FileText, Edit2, Save, Paperclip, Trash2, ExternalLink, Link as LinkIcon, StickyNote, Send, AlertTriangle, CircleDollarSign, Star, Maximize2, Minimize2, ZoomIn, ZoomOut, RotateCcw, Sun, Moon, Archive } from 'lucide-react';
+import { X, Calendar, User, Mail, Plus, Circle, FileText, Edit2, Save, Paperclip, Trash2, ExternalLink, Link as LinkIcon, StickyNote, Send, AlertTriangle, CircleDollarSign, Star, Maximize2, Minimize2, ZoomIn, ZoomOut, RotateCcw, Sun, Moon, Archive, ThumbsUp, ThumbsDown, ChevronRight, XCircle, Ban, Lock } from 'lucide-react';
 import { ConfirmDialog } from './ConfirmDialog';
 import { DocumentPreview } from './DocumentPreview';
 import { ProcessingOverlay } from './ProcessingOverlay';
@@ -72,6 +72,14 @@ export const JobDetailView: React.FC<JobDetailViewProps> = ({ job, onClose, onJo
   const [jobNotes, setJobNotes] = useState<string>(job?.notes || '');
   const [isSavingNotes, setIsSavingNotes] = useState(false);
   const [isEditingJobNotes, setIsEditingJobNotes] = useState(false);
+
+  // Quick status advance state
+  const [quickConfirmState, setQuickConfirmState] = useState<{
+    isOpen: boolean;
+    nextStatus: string;
+    variant: 'default' | 'danger' | 'success';
+  }>({ isOpen: false, nextStatus: '', variant: 'default' });
+  const [quickStepTypes, setQuickStepTypes] = useState<string[]>([]);
 
   const isDirty = useMemo(() => {
     // 1. Check Job Info
@@ -441,6 +449,100 @@ export const JobDetailView: React.FC<JobDetailViewProps> = ({ job, onClose, onJo
     setEditFormData(prev => ({ ...prev, [field]: value }));
   };
 
+  const allStatuses = ['Wishlist', 'Applied', 'Interviewing', 'Offered', 'Rejected'];
+  const isTerminal = ['Offered', 'Rejected', 'Closed', 'Discontinued'].includes(job.status);
+  const isInterviewing = job.status === 'Interviewing';
+  const hasActions = isInterviewing || !isTerminal || job.status === 'Applied' || job.status === 'Wishlist';
+
+  const openQuickConfirm = (nextStatus: string) => {
+    if (nextStatus === 'Interviewing') {
+      getStepTypes().then(types => setQuickStepTypes(types.map((t: StepType) => t.name))).catch(console.error);
+    }
+    setQuickConfirmState({
+      isOpen: true,
+      nextStatus,
+      variant: nextStatus === 'Rejected' || nextStatus === 'Discontinued' ? 'danger' : nextStatus === 'Offered' ? 'success' : 'default',
+    });
+  };
+
+  const handleQuickAdvance = () => {
+    const currentIndex = allStatuses.indexOf(job.status);
+    if (currentIndex >= 0 && currentIndex < allStatuses.length - 1) {
+      const nextStatus = allStatuses[currentIndex + 1];
+      openQuickConfirm(nextStatus);
+    }
+  };
+
+  const handleQuickConfirm = async (date?: string, file?: File | null, text?: string) => {
+    try {
+      if (quickConfirmState.nextStatus === 'Interviewing') {
+        await addInterviewStep(job.id!, text || 'Initial Interview', date ? date + 'T12:00:00.000Z' : undefined, 'Scheduled');
+        onJobUpdated();
+      } else {
+        const updateData: any = { status: quickConfirmState.nextStatus };
+        if (date) {
+          if (['Offered', 'Rejected', 'Discontinued'].includes(quickConfirmState.nextStatus)) {
+            updateData.decision_date = date + 'T12:00:00.000Z';
+          } else if (quickConfirmState.nextStatus === 'Applied') {
+            updateData.applied_date = date + 'T12:00:00.000Z';
+          } else if (quickConfirmState.nextStatus === 'Closed') {
+            updateData.closed_date = date + 'T12:00:00.000Z';
+          }
+        }
+
+        setIsUploadingDoc(true);
+        setUploadError(null);
+        setUploadTasks(prev => prev.map(t => ({ ...t, status: 'waiting' })));
+
+        await updateJobStream(job.id!, updateData, (event, msg) => {
+          if (event === 'progress') {
+            setUploadTasks(prev => {
+              const currentTasks = [...prev];
+              if (msg.includes('Applying')) currentTasks[0].status = 'loading';
+              else if (msg.includes('Vectorizing')) {
+                 currentTasks[0].status = 'completed';
+                 currentTasks[3].status = 'loading';
+              }
+              return currentTasks;
+            });
+          } else if (event === 'completed') {
+            if (!file) {
+              setUploadTasks(prev => prev.map(t => ({ ...t, status: 'completed' })));
+              onJobUpdated();
+            }
+          } else if (event === 'error') {
+            setUploadError(msg);
+          }
+        });
+
+        if (file && quickConfirmState.nextStatus === 'Applied') {
+          const combinedOp = `Advanced to Applied + Attached CV: ${file.name}`;
+          await uploadJobDocumentStream(job.id!, file, 'submitted_resume', (event, msg) => {
+            if (event === 'progress') {
+              setUploadTasks(prev => {
+                const currentTasks = [...prev];
+                if (msg.includes('Initializing') || msg.includes('Saving')) currentTasks[0].status = 'loading';
+                else if (msg.includes('Registering')) { currentTasks[0].status = 'completed'; currentTasks[1].status = 'loading'; }
+                else if (msg.includes('Extracting')) currentTasks[1].status = 'loading';
+                else if (msg.includes('vectorizing')) { currentTasks[1].status = 'completed'; currentTasks[2].status = 'loading'; }
+                else if (msg.includes('Finalizing')) { currentTasks[2].status = 'completed'; currentTasks[3].status = 'loading'; }
+                return currentTasks;
+              });
+            } else if (event === 'completed') {
+              setUploadTasks(prev => prev.map(t => ({ ...t, status: 'completed' })));
+              onJobUpdated();
+            } else if (event === 'error') {
+              setUploadError(msg);
+            }
+          }, combinedOp);
+        }
+      }
+      setQuickConfirmState({ isOpen: false, nextStatus: '', variant: 'default' });
+    } catch (err) {
+      console.error('Failed to quick update status', err);
+    }
+  };
+
   const handleSaveInfo = async () => {
     // Validation: Contractor must have an agency
     if (editFormData.employment_type === 'Contractor' && (!editFormData.agency || editFormData.agency.trim() === '')) {
@@ -656,14 +758,6 @@ export const JobDetailView: React.FC<JobDetailViewProps> = ({ job, onClose, onJo
           </div>
           <div className="flex items-center gap-2">
             <button 
-              onClick={() => updateJob(job.id!, { is_archived: !job.is_archived }).then(() => onJobUpdated())}
-              className={`p-2 hover:bg-[var(--surface-hover)] rounded-full transition flex items-center gap-1.5 ${job.is_archived ? 'text-violet-400' : 'text-[var(--fg-subtle)] hover:text-violet-400'}`}
-              title={job.is_archived ? "Restore Application" : "Archive Application"}
-            >
-              <Archive className={`w-5 h-5 ${job.is_archived ? 'fill-current' : ''}`} />
-              <span className="text-xs font-medium hidden sm:inline">{job.is_archived ? "Restore" : "Archive"}</span>
-            </button>
-            <button 
               onClick={() => window.open(`/api/proxy/jobs/${job.id}/pdf`, '_blank')}
               className="p-2 hover:bg-[var(--surface-hover)] rounded-full text-[var(--fg-subtle)] hover:text-[var(--fg)] transition flex items-center gap-1.5"
               title="Download Job Details PDF"
@@ -685,19 +779,106 @@ export const JobDetailView: React.FC<JobDetailViewProps> = ({ job, onClose, onJo
         </div>
 
         {/* Tabs */}
-        <div className="flex px-4 md:px-8 border-b border-[var(--border-color)] shrink-0">
-          <button
-            className={`py-3 px-4 text-sm font-medium border-b-2 transition-colors ${activeTab === 'process' ? 'border-violet-500 text-violet-500' : 'border-transparent text-[var(--fg-muted)] hover:text-[var(--fg)]'}`}
-            onClick={() => setActiveTab('process')}
-          >
-            Interview Process
-          </button>
-          <button
-            className={`py-3 px-4 text-sm font-medium border-b-2 transition-colors ${activeTab === 'info' ? 'border-violet-500 text-violet-500' : 'border-transparent text-[var(--fg-muted)] hover:text-[var(--fg)]'}`}
-            onClick={() => setActiveTab('info')}
-          >
-            Job Details
-          </button>
+        <div className="flex justify-between items-center px-4 md:px-8 border-b border-[var(--border-color)] shrink-0">
+          <div className="flex">
+            <button
+              className={`py-3 px-4 text-sm font-medium border-b-2 transition-colors ${activeTab === 'process' ? 'border-violet-500 text-violet-500' : 'border-transparent text-[var(--fg-muted)] hover:text-[var(--fg)]'}`}
+              onClick={() => setActiveTab('process')}
+            >
+              Interview Process
+            </button>
+            <button
+              className={`py-3 px-4 text-sm font-medium border-b-2 transition-colors ${activeTab === 'info' ? 'border-violet-500 text-violet-500' : 'border-transparent text-[var(--fg-muted)] hover:text-[var(--fg)]'}`}
+              onClick={() => setActiveTab('info')}
+            >
+              Job Details
+            </button>
+          </div>
+
+          {/* Quick Actions & Archive Tray */}
+          <div className="flex items-center gap-2 py-1.5">
+            {hasActions && (
+              <div className="flex items-center gap-1.5">
+                {isInterviewing ? (
+                  <>
+                    <button 
+                      onClick={() => openQuickConfirm('Offered')} 
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-emerald-600/10 dark:bg-emerald-400/10 text-emerald-600 dark:text-emerald-400 border border-emerald-600/20 dark:border-emerald-400/20 hover:bg-emerald-600/20 dark:hover:bg-emerald-400/20 transition-all active:scale-95 cursor-pointer" 
+                      title="Mark as Offered"
+                    >
+                      <ThumbsUp className="w-3.5 h-3.5" />
+                      <span>Offer</span>
+                    </button>
+                    <button 
+                      onClick={() => openQuickConfirm('Rejected')} 
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-red-600/10 dark:bg-red-400/10 text-red-600 dark:text-red-400 border border-red-600/20 dark:border-red-400/20 hover:bg-red-600/20 dark:hover:bg-red-400/20 transition-all active:scale-95 cursor-pointer" 
+                      title="Mark as Rejected"
+                    >
+                      <ThumbsDown className="w-3.5 h-3.5" />
+                      <span>Reject</span>
+                    </button>
+                  </>
+                ) : !isTerminal ? (
+                  <>
+                    <button 
+                      onClick={handleQuickAdvance} 
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-violet-600/10 dark:bg-violet-400/10 text-violet-600 dark:text-violet-400 border border-violet-600/20 dark:border-violet-400/20 hover:bg-violet-600/20 dark:hover:bg-violet-400/20 transition-all active:scale-95 cursor-pointer" 
+                      title="Advance to Next Stage"
+                    >
+                      <ChevronRight className="w-3.5 h-3.5" />
+                      <span>Advance</span>
+                    </button>
+                    {job.status === 'Applied' && (
+                      <button 
+                        onClick={() => openQuickConfirm('Rejected')} 
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-red-600/10 dark:bg-red-400/10 text-red-600 dark:text-red-400 border border-red-600/20 dark:border-red-400/20 hover:bg-red-600/20 dark:hover:bg-red-400/20 transition-all active:scale-95 cursor-pointer" 
+                        title="Mark as Rejected"
+                      >
+                        <XCircle className="w-3.5 h-3.5" />
+                        <span>Reject</span>
+                      </button>
+                    )}
+                  </>
+                ) : null}
+
+                {(job.status === 'Applied' || job.status === 'Interviewing') && (
+                  <button 
+                    onClick={() => openQuickConfirm('Discontinued')} 
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-600/10 dark:bg-slate-400/10 text-slate-600 dark:text-slate-400 border border-slate-600/20 dark:border-slate-400/20 hover:bg-slate-600/20 dark:hover:bg-slate-400/20 transition-all active:scale-95 cursor-pointer" 
+                    title="Mark as Discontinued"
+                  >
+                    <Ban className="w-3.5 h-3.5" />
+                    <span>Discontinue</span>
+                  </button>
+                )}
+
+                {job.status === 'Wishlist' && (
+                  <button 
+                    onClick={() => openQuickConfirm('Closed')} 
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-orange-600/10 dark:bg-orange-400/10 text-orange-600 dark:text-orange-400 border border-orange-600/20 dark:border-orange-400/20 hover:bg-orange-600/20 dark:hover:bg-orange-400/20 transition-all active:scale-95 cursor-pointer" 
+                    title="Mark as Closed"
+                  >
+                    <Lock className="w-3.5 h-3.5" />
+                    <span>Close</span>
+                  </button>
+                )}
+              </div>
+            )}
+
+            {/* Archive / Restore Action */}
+            <button 
+              onClick={() => updateJob(job.id!, { is_archived: !job.is_archived }).then(() => onJobUpdated())}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all active:scale-95 cursor-pointer ${
+                job.is_archived 
+                  ? 'bg-violet-600/15 text-violet-500 dark:text-violet-400 border border-violet-500/30' 
+                  : 'bg-slate-600/5 dark:bg-slate-400/5 text-[var(--fg-muted)] border border-[var(--border-color)] hover:bg-[var(--surface-hover)]'
+              }`}
+              title={job.is_archived ? "Restore Application" : "Archive Application"}
+            >
+              <Archive className={`w-3.5 h-3.5 ${job.is_archived ? 'fill-current text-violet-500 dark:text-violet-400' : 'text-[var(--fg-subtle)]'}`} />
+              <span>{job.is_archived ? 'Restore' : 'Archive'}</span>
+            </button>
+          </div>
         </div>
 
         {/* Content Area */}
@@ -1443,6 +1624,25 @@ export const JobDetailView: React.FC<JobDetailViewProps> = ({ job, onClose, onJo
         onCancel={() => setConfirmDialog(prev => ({ ...prev, isOpen: false }))}
         confirmLabel="Confirm"
         variant={confirmDialog.variant || 'default'}
+      />
+
+      <ConfirmDialog
+        isOpen={quickConfirmState.isOpen}
+        title={`Move to ${quickConfirmState.nextStatus}`}
+        message={`Are you sure you want to advance "${job.company} — ${job.role}" to ${quickConfirmState.nextStatus}?`}
+        onConfirm={handleQuickConfirm}
+        onCancel={() => setQuickConfirmState({ isOpen: false, nextStatus: '', variant: 'default' })}
+        confirmLabel={quickConfirmState.nextStatus === 'Interviewing' ? 'Add Interview & Move to Interviewing' : `Move to ${quickConfirmState.nextStatus}`}
+        variant={quickConfirmState.variant}
+        showTextInput={quickConfirmState.nextStatus === 'Interviewing'}
+        textLabel="Interview Step Name (e.g. Phone Screen)"
+        initialText=""
+        textOptions={quickStepTypes}
+        showDateInput={['Applied', 'Interviewing', 'Offered', 'Rejected', 'Closed', 'Discontinued'].includes(quickConfirmState.nextStatus)}
+        dateLabel={quickConfirmState.nextStatus === 'Applied' ? 'Actually applied date' : quickConfirmState.nextStatus === 'Offered' ? 'Offer received date' : quickConfirmState.nextStatus === 'Interviewing' ? 'Interview Date (Optional)' : 'Status change date'}
+        showFileUpload={quickConfirmState.nextStatus === 'Applied'}
+        fileUploadLabel="Attach Resume / CV (Optional)"
+        accept=".pdf,.md"
       />
 
       <ProcessingOverlay

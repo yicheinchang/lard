@@ -35,6 +35,7 @@ An AI-powered, high-performance job application tracking system with automated d
 - **Dynamic Kanban Board**: Fluid stage-based column tracking with smart column grouping and quick status actions.
 - **Responsive Mobile Layout**: Fully optimized, single-column tabbed interface that keeps all tracking details readable on small screens.
 - **Interactive Interview Timeline**: Unified pipeline event tracker featuring smart status synchronization and auto-advancing guards.
+- **Quick Status Actions**: Easily advance stages and transition statuses directly inside the JobDetailView header tabs bar.
 
 ### ⚡ Premium Performance & Controls
 - **High Concurrency Architecture**: Features decoupled API proxying and non-blocking background queue queues for sub-millisecond client reactivity.
@@ -163,4 +164,4 @@ This project is licensed under the **MIT License**. See the [LICENSE](LICENSE) f
 
 ---
 Built with ❤️ by Antigravity.
-Final version synchronized with v0.87.0.
+Final version synchronized with v0.88.0.
