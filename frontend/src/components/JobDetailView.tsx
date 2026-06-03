@@ -9,6 +9,7 @@ import { Job, getStepTypes, StepType, addInterviewStep, updateInterviewStep, del
 import { X, Calendar, User, Mail, Plus, Circle, FileText, Edit2, Save, Paperclip, Trash2, ExternalLink, Link as LinkIcon, StickyNote, Send, AlertTriangle, CircleDollarSign, Star, Maximize2, Minimize2, ZoomIn, ZoomOut, RotateCcw, Sun, Moon, Archive, ThumbsUp, ThumbsDown, ChevronRight, XCircle, Ban, Lock } from 'lucide-react';
 import { ConfirmDialog } from './ConfirmDialog';
 import { DocumentPreview } from './DocumentPreview';
+import { DocumentViewer } from './DocumentViewer';
 import { ProcessingOverlay } from './ProcessingOverlay';
 import { AutoSaveIndicator } from './AutoSaveIndicator';
 import { Portal } from './Portal';
@@ -45,7 +46,7 @@ export const JobDetailView: React.FC<JobDetailViewProps> = ({ job, onClose, onJo
 
   // Remove resizing logic for modal transition
 
-  const [activeTab, setActiveTab] = useState<'info' | 'process' | 'notes'>(() => {
+  const [activeTab, setActiveTab] = useState<'info' | 'process' | 'notes' | 'resume'>(() => {
     if (job?.status === 'Wishlist' || job?.status === 'Applied') return 'info';
     return 'process';
   });
@@ -80,6 +81,32 @@ export const JobDetailView: React.FC<JobDetailViewProps> = ({ job, onClose, onJo
     variant: 'default' | 'danger' | 'success';
   }>({ isOpen: false, nextStatus: '', variant: 'default' });
   const [quickStepTypes, setQuickStepTypes] = useState<string[]>([]);
+
+  // Resumes list filtering
+  const resumes = useMemo(() => {
+    return job?.documents?.filter(doc => doc.doc_type === 'submitted_resume') || [];
+  }, [job?.documents]);
+
+  const showResumeTab = resumes.length > 0;
+  const [selectedResumeId, setSelectedResumeId] = useState<number | null>(null);
+
+  // Default first resume if none selected
+  useEffect(() => {
+    if (resumes.length > 0) {
+      if (selectedResumeId === null || !resumes.some(r => r.id === selectedResumeId)) {
+        setSelectedResumeId(resumes[0].id);
+      }
+    } else {
+      setSelectedResumeId(null);
+    }
+  }, [resumes, selectedResumeId]);
+
+  // Reset activeTab if it is 'resume' and all resumes were deleted
+  useEffect(() => {
+    if (activeTab === 'resume' && !showResumeTab) {
+      setActiveTab('info');
+    }
+  }, [showResumeTab, activeTab]);
 
   const isDirty = useMemo(() => {
     // 1. Check Job Info
@@ -793,6 +820,14 @@ export const JobDetailView: React.FC<JobDetailViewProps> = ({ job, onClose, onJo
             >
               Job Details
             </button>
+            {showResumeTab && (
+              <button
+                className={`py-3 px-4 text-sm font-medium border-b-2 transition-colors ${activeTab === 'resume' ? 'border-violet-500 text-violet-500' : 'border-transparent text-[var(--fg-muted)] hover:text-[var(--fg)]'}`}
+                onClick={() => setActiveTab('resume')}
+              >
+                Resume
+              </button>
+            )}
           </div>
 
           {/* Quick Actions & Archive Tray */}
@@ -882,7 +917,7 @@ export const JobDetailView: React.FC<JobDetailViewProps> = ({ job, onClose, onJo
         </div>
 
         {/* Content Area */}
-        <div className="flex-1 overflow-y-auto p-4 md:p-8 custom-scrollbar">
+        <div className={`flex-1 flex flex-col ${activeTab === 'resume' ? 'overflow-hidden p-0' : 'overflow-y-auto p-4 md:p-8 custom-scrollbar'}`}>
           {activeTab === 'process' && (
             <div className="max-w-3xl">
               <div className="flex items-center justify-between mb-6">
@@ -1560,6 +1595,52 @@ export const JobDetailView: React.FC<JobDetailViewProps> = ({ job, onClose, onJo
                   view={{ menu: true, md: true, html: false }}
                   canView={{ menu: true, md: true, html: true, both: true, fullScreen: true, hideMenu: true }}
                 />
+              </div>
+            </div>
+          )}
+
+          {activeTab === 'resume' && (
+            <div className="flex-grow flex flex-col h-full overflow-hidden bg-[var(--input-bg)]">
+              {/* Secondary sub-tabs (pills) if there are multiple resumes */}
+              {resumes.length > 1 && (
+                <div className="flex items-center gap-2 p-3 border-b border-[var(--border-color)] bg-[var(--surface)] overflow-x-auto shrink-0 custom-scrollbar">
+                  <span className="text-xs font-semibold text-[var(--fg-muted)] uppercase tracking-wider px-2">Versions:</span>
+                  {resumes.map((doc) => (
+                    <button
+                      key={doc.id}
+                      onClick={() => setSelectedResumeId(doc.id)}
+                      className={`text-xs px-3 py-1.5 rounded-lg border transition-all truncate max-w-[200px] cursor-pointer ${
+                        selectedResumeId === doc.id
+                          ? 'bg-violet-600/10 border-violet-500 text-violet-500 font-semibold'
+                          : 'border-[var(--border-color)] text-[var(--fg-muted)] hover:bg-[var(--surface-hover)]'
+                      }`}
+                      title={doc.title}
+                    >
+                      {doc.title}
+                    </button>
+                  ))}
+                </div>
+              )}
+
+              {/* Document Display Area */}
+              <div className="flex-1 min-h-0 relative bg-[var(--input-bg)]">
+                {(() => {
+                  const activeResume = resumes.find(r => r.id === selectedResumeId);
+                  if (!activeResume) {
+                    return (
+                      <div className="flex items-center justify-center h-full text-[var(--fg-subtle)]">
+                        No active resume selected.
+                      </div>
+                    );
+                  }
+                  return (
+                    <DocumentViewer
+                      fileUrl={activeResume.file_path}
+                      title={activeResume.title}
+                      theme={effectiveTheme}
+                    />
+                  );
+                })()}
               </div>
             </div>
           )}

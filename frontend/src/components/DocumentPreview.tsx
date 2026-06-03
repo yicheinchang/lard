@@ -1,9 +1,9 @@
 "use client";
 
-import React, { useEffect, useState } from 'react';
-import ReactMarkdown from 'react-markdown';
-import { X, Loader2, Download } from 'lucide-react';
+import React from 'react';
+import { X, Download } from 'lucide-react';
 import { Portal } from './Portal';
+import { DocumentViewer } from './DocumentViewer';
 
 interface DocumentPreviewProps {
   isOpen: boolean;
@@ -20,31 +20,8 @@ export const DocumentPreview: React.FC<DocumentPreviewProps> = ({
   fileUrl,
   theme,
 }) => {
-  const [markdownContent, setMarkdownContent] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
-
-  useEffect(() => {
-    if (isOpen && (fileUrl?.endsWith('.md') || fileUrl?.endsWith('.txt'))) {
-      setLoading(true);
-      fetch(`/api/proxy${fileUrl}`)
-        .then(res => res.text())
-        .then(text => {
-          setMarkdownContent(text);
-          setLoading(false);
-        })
-        .catch(err => {
-          console.error(err);
-          setMarkdownContent('Failed to load content.');
-          setLoading(false);
-        });
-    } else {
-      setMarkdownContent(null);
-    }
-  }, [isOpen, fileUrl]);
-
   if (!isOpen || !fileUrl) return null;
 
-  const isPdf = fileUrl.toLowerCase().endsWith('.pdf');
   const fullUrl = `/api/proxy${fileUrl}`;
 
   return (
@@ -77,32 +54,7 @@ export const DocumentPreview: React.FC<DocumentPreviewProps> = ({
           </div>
 
           <div className="flex-1 min-h-0 bg-[var(--input-bg)] overflow-hidden relative">
-            {loading ? (
-              <div className="absolute inset-0 flex items-center justify-center">
-                <Loader2 className="w-8 h-8 text-violet-500 animate-spin" />
-              </div>
-            ) : isPdf ? (
-              <object
-                data={fullUrl}
-                type="application/pdf"
-                className="w-full h-full border-none"
-              >
-                <div className="p-8 text-center text-[var(--fg-muted)]">
-                  <p>Your browser does not support inline PDF viewing.</p>
-                  <a href={fullUrl} target="_blank" className="text-violet-400 hover:underline mt-2 inline-block">Download the PDF instead</a>
-                </div>
-              </object>
-            ) : markdownContent !== null ? (
-              <div className="w-full h-full overflow-y-auto p-6 md:p-10 custom-scrollbar">
-                <div className={`prose ${theme === 'dark' ? 'prose-invert' : ''} prose-violet max-w-4xl mx-auto break-words`}>
-                  <ReactMarkdown>{markdownContent}</ReactMarkdown>
-                </div>
-              </div>
-            ) : (
-              <div className="flex items-center justify-center h-full text-[var(--fg-subtle)]">
-                Unsupported file type preview.
-              </div>
-            )}
+            <DocumentViewer fileUrl={fileUrl} title={title} theme={theme} />
           </div>
         </div>
       </div>

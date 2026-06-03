@@ -1,4 +1,4 @@
-# 🗺️ Lard - Lazy AI-Powered Resume Database (v0.88.1)
+# 🗺️ Lard - Lazy AI-Powered Resume Database (v0.89.0)
 Last Updated: 2026-06-03T09:03:00Z
 
 This document provides a summary of the project's architecture, tech stack, and key logic to give AI coding agents instant context.
@@ -83,11 +83,13 @@ This document provides a summary of the project's architecture, tech stack, and 
   - `Portal.tsx`: [NEW] Hydration-safe React Portal implementation for mounting overlays to `#portal-root`.
   - `Tooltip.tsx`: [NEW] Reusable Portal-based tooltip with viewport-aware positioning and horizontal overflow correction.
 
-  - `JobDetailView.tsx`: Core component for job application management. Rendered via **React Portal** for global stacking. Features a **Centered Floating Modal** with a backdrop-blur overlay and a **Full-Screen Toggle**. Includes a **Quick Actions / Advance Tray** on the tabs bar to easily update status/advance applications directly without using the details edit form. Supports **Dynamic Default Tab Selection**: Defaults to "Job Details" for Wishlist/Applied status, and "Interview Process" for all other active stages. Consists of three tabs:
+  - `JobDetailView.tsx`: Core component for job application management. Rendered via **React Portal** for global stacking. Features a **Centered Floating Modal** with a backdrop-blur overlay and a **Full-Screen Toggle**. Includes a **Quick Actions / Advance Tray** on the tabs bar to easily update status/advance applications directly without using the details edit form. Supports **Dynamic Default Tab Selection**: Defaults to "Job Details" for Wishlist/Applied status, and "Interview Process" for all other active stages. Consists of four tabs:
       *   **Interview Pipeline** (Default): Timeline events with full CRUD and inline editing.
-      *   **Job Details**: Metadata management and document attachments. Features a **Zoomable Description** with levels from `prose-sm` to `prose-2xl` and a quick-reset toggle. Includes a **Temporary Theme Toggle** next to zoom controls for switching between light and dark modes locally. Supports theme-consistent **Markdown Editing** and high-fidelity **Document Previews**. **Contact Metadata**: Implements smart display logic for Hiring Manager, HR/Recruiter, and Headhunter, supporting `Name <email>` formats with automatic name extraction fallback. **Conditional Rendering**: Automatically hides empty metadata fields (contacts, dates, salary, job IDs) to minimize UI clutter.
+      *   **Job Details**: Metadata management and document attachments. Features a **Zoomable Description** with levels from `prose-sm` to `prose-2xl` and a quick-reset toggle. Includes a **Temporary Theme Toggle** next to zoom controls for switching between light and dark modes locally. Supports theme-consistent **Markdown Editing** and high-fidelity **Document Previews**. **Contact Metadata**: Implements smart display logic for Hiring Manager, HR/Recruiter, and Headhunter, supporting `Name <email>` formats with automatic name extraction fallback. **Contact Fields Filtering**: Automatically hides empty contact/recruiter info to prevent cluttered views.
       *   **Application Notes**: Dedicated Markdown editor (`MdEditor`) for research and interview prep.
-  - `DocumentPreview.tsx`: **Portal-based overlay** for high-fidelity viewing of PDF, Markdown, and plain text documents.
+      *   **Resume**: Dynamic tab displayed conditionally when resumes are attached. Supports versioned sub-tabs and inline rendering.
+  - `DocumentViewer.tsx`: [NEW] Reusable document viewing component for PDF, HTML, Markdown, and text previews, with a clean download fallback for Word (DOCX) files.
+  - `DocumentPreview.tsx`: **Portal-based overlay** wrapping `DocumentViewer` for high-fidelity modal previews of PDF, Markdown, HTML, and other attachments.
   - `Ticker.tsx`: News-ticker style progress bar for real-time AI extraction status.
   - `FilterPopover.tsx`: Advanced filtering UI for dashboard header. Features a **Portal-based Centered Modal** (constrained width) with a unified scrollable body containing both filters and action buttons to ensure visibility and reachability on all screen heights.
   - `ProcessingOverlay.tsx`: **Portal-based full-screen overlay** for tracking long-running AI tasks with SSE updates. Feature: **Auto-closes 1.5s after success** and theme-aware styling.

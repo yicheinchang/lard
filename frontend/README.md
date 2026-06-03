@@ -1,4 +1,4 @@
-# 🐱 Lard - Frontend (v0.88.1)
+# 🐱 Lard - Frontend (v0.89.0)
 
 Next.js-based high-performance frontend for the **Lard** (Lazy AI-powered Resume Database) application.
 
@@ -51,6 +51,10 @@ The Settings page (`SettingsPage.tsx`) contains:
 - **Validation Feedback**: Displays granular, field-level error messages (e.g., `[hiring_manager_email]: invalid format`) directly in the `AddJobModal` based on strict Pydantic v2 validation.
 - **Modern File Support**: Ingests and previews **DOCX** and **HTML** files in addition to standard PDFs and text.
 
+### 6. Document Ingestion & Viewing
+- **DocumentViewer**: Extracted reusable component that handles inline document viewing. Supports PDF embeds with iframe fallback, HTML files inside isolated style sandboxes, Markdown/text using parsed markdown prose, and placeholder rendering for binary Word (`.docx`) files with instant download prompts.
+- **Resume Tab**: Conditionally rendered tab in `JobDetailView.tsx` shown only when a candidate has uploaded resumes. Features tabbed pill controls for switching between multiple resume versions and displays resume documents inline.
+
 ---
 
 ## 🧪 Development & Verification
@@ -71,7 +75,7 @@ As the AI assistant cannot access a browser, the following must be manually veri
 
 ---
 Built with ❤️ by Antigravity.
-Final version synchronized with v0.88.1.
+Final version synchronized with v0.89.0.
 
 ---
 
