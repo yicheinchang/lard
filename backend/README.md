@@ -1,4 +1,4 @@
-# 🐱 Lard - Backend (v0.89.0)
+# 🐱 Lard - Backend (v0.89.1)
 
 FastAPI-based backend for the **Lard** (Lazy AI-powered Resume Database) application.
 Designed for **Infrastructure Isolation**; this backend is kept private and is only accessible via the Next.js API Proxy.
@@ -72,7 +72,7 @@ uv run python -m test.test_ai_extraction  # Example
 **Lard** features a sophisticated AI extraction pipeline that adapts to both the model's capability and the source material's structure.
 
 ### 📊 Strategy vs. Input
-The system automatically routes tasks based on the **Extraction Strategy** (configured in Settings) and the **Input Type** detected by the parser. 
+The system executes the workflow matching the user-configured **Extraction Strategy** (Single-Agent vs. Multi-Agent) and the **Input Type** detected by the parser. 
 
 #### 🧠 AI Logic & Fidelity
 - **Prompt Infrastructure**: Centralized prompt management in `prompts.py` with structural instruction separators (`--- ADDITIONAL USER INSTRUCTIONS ---`, `--- SELF-CORRECTION / FEEDBACK ---`) and data isolation via triple-quote (`"""`) delimitation. This ensures consistent behavioral enforcement and prevents instruction bleeding.
@@ -94,26 +94,25 @@ Ideal for frontier models (GPT-4o, Claude 3).
 - **Embedded Verification**: In Text mode, the prompt includes an internal verification block to confirm "is_job_post" and "detected_category" without a separate node call.
 - **Strict Mapping**: Directly converts structured JSON-LD into the application's schema.
 
-#### Single-Agent Pipeline (Flowchart)
+#### AI Extraction Pipeline (LangGraph Workflow)
 ```mermaid
 graph TD
-    Source["Job Source Content"] --> Mode{"Initial Path?"}
+    Source["Job Source Content"] --> Check["check_job_post_node"]
+    Check --> RouteCheck{"Is Job Post?"}
+    RouteCheck -- No --> END_FAIL([END: Fail Identification])
+    RouteCheck -- Yes --> Extract["extract_node"]
     
+    Extract --> RouteVal{"Active Source?"}
+    RouteVal -- "JSON-LD" --> JSONVal["json_validator_node"]
+    RouteVal -- "TEXT" --> TextVal["text_validator_node"]
     
+    JSONVal -- Pass --> END_SUCCESS([END: Save Details])
+    JSONVal -- "Fail (Fallback to Text)" --> Fallback["Set Fallback = True"] --> Extract
+    JSONVal -- "Fail (Retry)" --> Extract
     
-    Extract[Extract Node] --> Mode{Source?}
-    Mode -- JSON-LD --> JSONVal[JSON-Fidelity Validator]
-    Mode -- Text --> TextVal[Text-Source Validator]
-    
-    JSONVal -- Pass --> END
-    JSONVal -- Fail Metadata --> TextExt[Text Extraction Phase] --> TextVal
-    JSONVal -- Fail QA --> Extract
-    
-    TextVal -- Pass --> END
-    TextVal -- Fail QA --> Extract
-    TextVal -- Max Retries --> WARN[End with Warning]
-    
-    END[Finalize & Save]
+    TextVal -- Pass --> END_SUCCESS
+    TextVal -- "Fail (Retry)" --> Extract
+    TextVal -- "Max Retries (Warning)" --> END_WARN([END: Save with Warnings])
 ```
 
 ### 🎭 Strategy 2: Multi-Agent (Small-Model/Parallel)

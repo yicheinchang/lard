@@ -1,5 +1,5 @@
-# 🗺️ Lard - Lazy AI-Powered Resume Database (v0.89.0)
-Last Updated: 2026-06-03T09:03:00Z
+# 🗺️ Lard - Lazy AI-Powered Resume Database (v0.89.1)
+Last Updated: 2026-06-04T09:59:00Z
 
 This document provides a summary of the project's architecture, tech stack, and key logic to give AI coding agents instant context.
 
@@ -83,11 +83,12 @@ This document provides a summary of the project's architecture, tech stack, and 
   - `Portal.tsx`: [NEW] Hydration-safe React Portal implementation for mounting overlays to `#portal-root`.
   - `Tooltip.tsx`: [NEW] Reusable Portal-based tooltip with viewport-aware positioning and horizontal overflow correction.
 
-  - `JobDetailView.tsx`: Core component for job application management. Rendered via **React Portal** for global stacking. Features a **Centered Floating Modal** with a backdrop-blur overlay and a **Full-Screen Toggle**. Includes a **Quick Actions / Advance Tray** on the tabs bar to easily update status/advance applications directly without using the details edit form. Supports **Dynamic Default Tab Selection**: Defaults to "Job Details" for Wishlist/Applied status, and "Interview Process" for all other active stages. Consists of four tabs:
-      *   **Interview Pipeline** (Default): Timeline events with full CRUD and inline editing.
-      *   **Job Details**: Metadata management and document attachments. Features a **Zoomable Description** with levels from `prose-sm` to `prose-2xl` and a quick-reset toggle. Includes a **Temporary Theme Toggle** next to zoom controls for switching between light and dark modes locally. Supports theme-consistent **Markdown Editing** and high-fidelity **Document Previews**. **Contact Metadata**: Implements smart display logic for Hiring Manager, HR/Recruiter, and Headhunter, supporting `Name <email>` formats with automatic name extraction fallback. **Contact Fields Filtering**: Automatically hides empty contact/recruiter info to prevent cluttered views.
-      *   **Application Notes**: Dedicated Markdown editor (`MdEditor`) for research and interview prep.
-      *   **Resume**: Dynamic tab displayed conditionally when resumes are attached. Supports versioned sub-tabs and inline rendering.
+  - `JobDetailView.tsx`: Core component for job application management. Rendered via **React Portal** for global stacking. Features a **Centered Floating Modal** with a backdrop-blur overlay and a **Full-Screen Toggle**. Includes a **Quick Actions / Advance Tray** on the tabs bar to easily update status/advance applications directly without using the details edit form. Supports **Dynamic Default Tab Selection**: Defaults to "Job Details" for Wishlist/Applied status, and "Interview Process" for all other active stages. Consists of:
+      *   **Interview Process** Tab: Timeline events with full CRUD, inline editing, and lifecycle guards.
+      *   **Job Details** Tab: Contains two main columns:
+          *   *Main Column*: Markdown description viewer with zoom levels (`prose-sm` to `prose-2xl`) and temporary theme toggler, uploaded document attachments list, and an expandable **Additional Notes** Markdown editor (`MdEditor`) with debounced auto-saving.
+          *   *Right Sidebar*: Metadata fields for editing/viewing (Company, Role, Salary, Status, Dates, HM/HR Contacts) and record archive/deletion controls.
+      *   **Resume** Tab (Conditional): Rendered dynamically when resumes are uploaded, allowing inline viewing of different resume versions.
   - `DocumentViewer.tsx`: [NEW] Reusable document viewing component for PDF, HTML, Markdown, and text previews, with a clean download fallback for Word (DOCX) files.
   - `DocumentPreview.tsx`: **Portal-based overlay** wrapping `DocumentViewer` for high-fidelity modal previews of PDF, Markdown, HTML, and other attachments.
   - `Ticker.tsx`: News-ticker style progress bar for real-time AI extraction status.
@@ -104,9 +105,9 @@ This document provides a summary of the project's architecture, tech stack, and 
   - `src/lib/`:
     - `utils.ts`: General helper utilities, including RFC-compliant contact parsing and `normalizeContactEmail` to ensure display names are properly quoted.
     - `api.ts`: Centralized API client using Axios (configured with `/api/proxy` baseURL) and Server-Sent Events (SSE) for streaming. Proxies all calls to the backend.
-  - `actions.ts`: Secure [Server Actions] for all non-streaming mutations (Jobs, Steps, Settings).
-  - `ViewContext.tsx`: Global UI state including **Navigation Guards** for unsaved changes and sidebar state.
-  - `SettingsContext.tsx`: Reactive theme and AI status.
+    - `actions.ts`: Secure [Server Actions] for all non-streaming mutations (Jobs, Steps, Settings).
+    - `ViewContext.tsx`: Global UI state including **Navigation Guards** for unsaved changes and sidebar state.
+    - `SettingsContext.tsx`: Reactive theme and AI status.
 
 ---
 

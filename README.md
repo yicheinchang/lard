@@ -28,7 +28,7 @@ An AI-powered, high-performance job application tracking system with automated d
 ### 🤖 Intelligent AI Extraction
 - **Structured Metadata Parsing**: Prioritizes structured Schema.org data for pristine extraction accuracy.
 - **Multi-Format Processing**: Full high-fidelity parsing of job posts, resumes, and documents in PDF, DOCX, HTML, and plain text formats.
-- **Agentic Workflows**: Automatically transitions between high-speed single-agent and comprehensive multi-agent pipelines depending on active settings.
+- **Agentic Workflows**: Supports both high-speed single-agent and comprehensive multi-agent pipelines, honoring the active strategy selected by the user in the Settings configuration.
 - **Real-Time Feedback**: On-the-fly input verification with clean, immediate visual warning flags for structural fields.
 
 ### 📊 Powerful Visualization
@@ -38,7 +38,7 @@ An AI-powered, high-performance job application tracking system with automated d
 - **Quick Status Actions**: Easily advance stages and transition statuses directly inside the JobDetailView header tabs bar.
 
 ### ⚡ Premium Performance & Controls
-- **High Concurrency Architecture**: Features decoupled API proxying and non-blocking background queue queues for sub-millisecond client reactivity.
+- **High Concurrency Architecture**: Features decoupled API proxying and non-blocking background tasks for sub-millisecond client reactivity.
 - **Instant Backend Cold Starts**: Background eager preloading warms up heavy dependencies without blocking system access.
 - **Model Agnostic Integration**: Connects dynamically to local models (Ollama) or leading cloud endpoints (OpenAI, Anthropic).
 - **Zero-Restart Configurations**: Instantly customize themes, active LLM strategies, and custom prompt guidelines on-the-fly.
@@ -83,9 +83,6 @@ npm run dev
 cd backend
 ./run.sh prod
 ```
-
-```
-
 ---
 
 ## 🐳 Docker Deployment (Recommended)
@@ -164,4 +161,4 @@ This project is licensed under the **MIT License**. See the [LICENSE](LICENSE) f
 
 ---
 Built with ❤️ by Antigravity.
-Final version synchronized with v0.89.0.
+Final version synchronized with v0.89.1.
