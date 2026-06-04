@@ -293,17 +293,27 @@ export const JobDetailView: React.FC<JobDetailViewProps> = ({ job, onClose, onJo
     });
   };
 
+  // Load metadata only once when component mounts or list counts change
   useEffect(() => {
     if (job) {
-      // Async metadata loading
       if (stepTypes.length === 0) getStepTypes().then(setStepTypes).catch(console.error);
       if (companies.length === 0) getCompanies().then(setCompanies).catch(console.error);
-      
-      // Initialize state for editing
-      setJobNotes(job.notes || '');
-      if (!isEditingInfo) setEditFormData(job);
     }
-  }, [job?.id, stepTypes.length, companies.length, job?.notes, isEditingInfo]);
+  }, [job, stepTypes.length, companies.length]);
+
+  // Sync edit form data if not actively editing
+  useEffect(() => {
+    if (job && !isEditingInfo) {
+      setEditFormData(job);
+    }
+  }, [job, isEditingInfo]);
+
+  // Sync notes when job ID changes (loading a different job)
+  useEffect(() => {
+    if (job) {
+      setJobNotes(job.notes || '');
+    }
+  }, [job?.id]);
 
   // Debounced notes auto-save
   useEffect(() => {
