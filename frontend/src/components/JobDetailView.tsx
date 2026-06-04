@@ -782,11 +782,24 @@ export const JobDetailView: React.FC<JobDetailViewProps> = ({ job, onClose, onJo
                 )}
               </div>
             </div>
-            <p className="text-[var(--fg-muted)] truncate">
-              {job.role}
-              {job.location && <span className="text-[var(--fg-subtle)]"> • {job.location}</span>}
+            <p className="text-[var(--fg-muted)] truncate flex items-center gap-1.5">
+              {job.url ? (
+                <a
+                  href={job.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="hover:text-violet-500 transition-colors inline-flex items-center gap-1 hover:underline decoration-violet-500/30"
+                  title="Open Application Page"
+                >
+                  <span className="truncate">{job.role}</span>
+                  <ExternalLink className="w-3.5 h-3.5 text-[var(--fg-subtle)] transition-colors shrink-0" />
+                </a>
+              ) : (
+                <span className="truncate">{job.role}</span>
+              )}
+              {job.location && <span className="text-[var(--fg-subtle)] shrink-0"> • {job.location}</span>}
               {job.salary_range && (
-                <span className="text-green-500/80 font-medium ml-2 inline-flex items-center gap-1">
+                <span className="text-green-500/80 font-medium inline-flex items-center gap-1 shrink-0">
                   <CircleDollarSign className="w-3.5 h-3.5" />
                   {job.salary_range}
                 </span>

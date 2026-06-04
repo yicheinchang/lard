@@ -1,4 +1,4 @@
-# 🐱 Lard - Frontend (v0.89.2)
+# 🐱 Lard - Frontend (v0.89.3)
 
 Next.js-based high-performance frontend for the **Lard** (Lazy AI-powered Resume Database) application.
 
@@ -20,7 +20,7 @@ The frontend is built with a modern, high-isolation architecture designed for se
 ## 📊 Key UI Components & Logic
 
 ### 1. Master-Detail Orchestration
-The UI uses a **Centered Modal pattern** (`JobDetailView.tsx`) rather than separate page routes. This ensures a blazingly fast SPA feel while maintaining deep contextual data management. It consists of two primary tabs (**Interview Process** and **Job Details**) and a conditional **Resume** tab. An expandable **Additional Notes** Markdown editor section is nested directly inside the Job Details tab alongside a **Quick Actions / Status Advance Tray** on the tabs header.
+The UI uses a **Centered Modal pattern** (`JobDetailView.tsx`) rather than separate page routes. This ensures a blazingly fast SPA feel while maintaining deep contextual data management. It consists of two primary tabs (**Interview Process** and **Job Details**) and a conditional **Resume** tab. Turns the role name in the modal header into a direct hyperlink to the application page (when a URL is present) for easy accessibility. An expandable **Additional Notes** Markdown editor section is nested directly inside the Job Details tab alongside a **Quick Actions / Status Advance Tray** on the tabs header.
 
 ### 2. Responsive Kanban Board
 Features a dual-layout strategy:
@@ -75,7 +75,7 @@ As the AI assistant cannot access a browser, the following must be manually veri
 
 ---
 Built with ❤️ by Antigravity.
-Final version synchronized with v0.89.2.
+Final version synchronized with v0.89.3.
 
 ---
 
