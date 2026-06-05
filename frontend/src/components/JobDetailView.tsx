@@ -752,21 +752,23 @@ export const JobDetailView: React.FC<JobDetailViewProps> = ({ job, onClose, onJo
         {/* Header */}
         <div className="flex justify-between items-center p-4 md:px-8 border-b border-[var(--border-color)] bg-[var(--surface)] backdrop-blur-md shrink-0">
           <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-3 mb-0.5">
-              <button 
-                onClick={() => updateJob(job.id!, { is_starred: !job.is_starred }).then(() => onJobUpdated())}
-                className={`p-1.5 -ml-1.5 rounded-full hover:bg-[var(--surface-hover)] transition-colors ${job.is_starred ? 'text-yellow-400' : 'text-[var(--fg-subtle)] hover:text-yellow-400/50'}`}
-                title={job.is_starred ? "Unstar Job" : "Star Job"}
-              >
-                <Star className={`w-6 h-6 ${job.is_starred ? 'fill-current' : ''}`} />
-              </button>
-              <h2 className="text-2xl font-bold text-[var(--fg)] truncate">
-                {job.company}
-              </h2>
-              <div className="flex items-center gap-2 shrink-0">
-                <span className="text-sm px-2.5 py-1 bg-[var(--surface-hover)] rounded-full font-medium" style={{ color: 'var(--fg-muted)' }}>{job.status}</span>
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 mb-1.5 min-w-0">
+              <div className="flex items-center gap-2 min-w-0">
+                <button 
+                  onClick={() => updateJob(job.id!, { is_starred: !job.is_starred }).then(() => onJobUpdated())}
+                  className={`p-1.5 -ml-1.5 rounded-full hover:bg-[var(--surface-hover)] transition-colors ${job.is_starred ? 'text-yellow-400' : 'text-[var(--fg-subtle)] hover:text-yellow-400/50'}`}
+                  title={job.is_starred ? "Unstar Job" : "Star Job"}
+                >
+                  <Star className={`w-6 h-6 ${job.is_starred ? 'fill-current' : ''}`} />
+                </button>
+                <h2 className="text-2xl font-bold text-[var(--fg)] truncate" title={job.company}>
+                  {job.company}
+                </h2>
+              </div>
+              <div className="flex flex-wrap items-center gap-2 min-w-0">
+                <span className="text-sm px-2.5 py-1 bg-[var(--surface-hover)] rounded-full font-medium shrink-0" style={{ color: 'var(--fg-muted)' }}>{job.status}</span>
                 {job.employment_type && job.employment_type !== 'FTE' && (
-                  <span className={`text-[10px] px-2 py-1 border rounded-md font-bold uppercase tracking-wider ${
+                  <span className={`text-[10px] px-2 py-1 border rounded-md font-bold uppercase tracking-wider shrink-0 ${
                     job.employment_type === 'Contractor' 
                       ? 'border-amber-500/30 bg-amber-500/10 text-amber-500' 
                       : 'border-blue-500/30 bg-blue-500/10 text-blue-500'
@@ -775,36 +777,48 @@ export const JobDetailView: React.FC<JobDetailViewProps> = ({ job, onClose, onJo
                   </span>
                 )}
                 {job.last_operation && (
-                  <span className="text-[10px] px-2 py-1 bg-violet-500/10 text-violet-400 border border-violet-500/10 rounded-md font-medium flex items-center gap-1.5 whitespace-nowrap">
-                    <span className="w-1 h-1 bg-violet-400 rounded-full animate-pulse"></span>
-                    {job.last_operation} • {getRelativeTimeString(job.last_updated)}
+                  <span 
+                    className="text-[10px] px-2 py-1 bg-violet-500/10 text-violet-400 border border-violet-500/10 rounded-md font-medium flex items-center gap-1.5 max-w-[280px] sm:max-w-[400px] md:max-w-md lg:max-w-xl"
+                    title={`${job.last_operation} • ${getRelativeTimeString(job.last_updated)}`}
+                  >
+                    <span className="w-1.5 h-1.5 bg-violet-400 rounded-full animate-pulse shrink-0"></span>
+                    <span className="truncate">
+                      {job.last_operation} • {getRelativeTimeString(job.last_updated)}
+                    </span>
                   </span>
                 )}
               </div>
             </div>
-            <p className="text-[var(--fg-muted)] truncate flex items-center gap-1.5">
+            <div className="text-[var(--fg-muted)] text-sm flex flex-wrap items-center gap-x-2 gap-y-1 min-w-0">
               {job.url ? (
                 <a
                   href={job.url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="hover:text-violet-500 transition-colors inline-flex items-center gap-1 hover:underline decoration-violet-500/30"
-                  title="Open Application Page"
+                  className="hover:text-violet-500 transition-colors inline-flex items-center gap-1 hover:underline decoration-violet-500/30 min-w-0 max-w-full sm:max-w-[450px]"
+                  title={`Open Application Page: ${job.role}`}
                 >
-                  <span className="truncate">{job.role}</span>
+                  <span className="truncate font-medium">{job.role}</span>
                   <ExternalLink className="w-3.5 h-3.5 text-[var(--fg-subtle)] transition-colors shrink-0" />
                 </a>
               ) : (
-                <span className="truncate">{job.role}</span>
+                <span className="truncate font-medium min-w-0 max-w-full sm:max-w-[450px]" title={job.role}>
+                  {job.role}
+                </span>
               )}
-              {job.location && <span className="text-[var(--fg-subtle)] shrink-0"> • {job.location}</span>}
+              {job.location && (
+                <span className="text-[var(--fg-subtle)] flex items-center gap-1 shrink-0">
+                  <span className="hidden sm:inline text-[var(--fg-subtle)]/40">•</span>
+                  <span>{job.location}</span>
+                </span>
+              )}
               {job.salary_range && (
                 <span className="text-green-500/80 font-medium inline-flex items-center gap-1 shrink-0">
                   <CircleDollarSign className="w-3.5 h-3.5" />
                   {job.salary_range}
                 </span>
               )}
-            </p>
+            </div>
           </div>
           <div className="flex items-center gap-2">
             <button 

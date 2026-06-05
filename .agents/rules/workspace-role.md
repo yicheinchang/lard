@@ -42,7 +42,7 @@ This role defines the operational behavior for Antigravity (the AI assistant) in
   - (Note: Major version bumps require explicit user confirmation).
 
 ### 7. Version Synchronization
-- **Action**: Always update both `backend/pyproject.toml` and `frontend/package.json` simultaneously.
+- **Action**: Always update both `backend/pyproject.toml`, `frontend/package.json`, and `README.md` files simultaneously.
 - **Sync Rule**: The version numbers in both files must remain identical.
 
 ### 8. Git Tagging
@@ -69,8 +69,8 @@ For every stable, verified functional change:
 1.  **Stage Files**: `git add <modified_files>`
 2.  **Map Synchronization**: Update `codebase-map.md` to reflect latest changes.
 3.  **Versioning**: Determine if this is a `feat:` or `fix:`.
-4.  **Bump Version**: Update `version` in `backend/pyproject.toml` and `frontend/package.json`.
-5.  **Stage Version Files**: `git add backend/pyproject.toml frontend/package.json codebase-map.md .agents/rules/workspace-role.md`
+4.  **Bump Version**: Update `version` in `backend/pyproject.toml`, `README.md`, `backend/README.md`, `frontend/README.md`, and `frontend/package.json`.
+5.  **Stage Version Files**: `git add backend/pyproject.toml frontend/package.json codebase-map.md README.md backend/README.md frontend/README.md`
 6.  **Commit**: `git commit -m "<type>(<scope>): <description>"`
 7.  **Tag**: `git tag v<NEW_VERSION>`
 8.  **Push** (Optional/Manual): Push to remote if configured.
