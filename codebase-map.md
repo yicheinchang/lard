@@ -1,5 +1,5 @@
-# 🗺️ Lard - Lazy AI-Powered Resume Database (v0.89.4)
-Last Updated: 2026-06-05T01:00:00Z
+# 🗺️ Lard - Lazy AI-Powered Resume Database (v0.89.5)
+Last Updated: 2026-06-08T16:04:00Z
 
 This document provides a summary of the project's architecture, tech stack, and key logic to give AI coding agents instant context.
 
@@ -77,7 +77,7 @@ This document provides a summary of the project's architecture, tech stack, and 
 - `src/app/`: Next.js routes (Layouts and Pages).
 - `src/components/`: Reusable UI components:
   - `AppShell.tsx`: Main layout wrapper featuring a **Binary Snap Sidebar** (Fixed 160px expanded / 64px collapsed). Includes **Mobile Responsive Header** and **Hamburger Menu Drawer**.
-  - `KanbanBoard.tsx`: Responsive stage-based pipeline visualization with quick action controls. Features **Min-Width enforcement** (250px) for desktop with horizontal scrolling and a **Tabbed Mobile UI** (below 1024px) for focused single-column tracking. Supports independent vertical scrolling and dynamic counts.
+  - `KanbanBoard.tsx`: Responsive stage-based pipeline visualization with quick action controls. Features **Min-Width enforcement** (250px) for desktop with horizontal scrolling and a **Tabbed Mobile UI** (below 1024px) for focused single-column tracking. Supports independent vertical scrolling and dynamic counts. Features a "Show Closed Jobs" toggle with state synchronized globally to support accurate batch action counts.
   - `TableView.tsx`: Density-rich list view of applications. Includes **Portal-based Tooltips** for company and role cells to prevent truncation and container clipping. Supports **multi-select checkboxes** and a sliding bottom action panel for batch actions (Archive, Restore, Delete) with local state refreshment.
   - `JobCard.tsx`: Individual job item in the Kanban board. Features **Portal-based Tooltips** and **Status text protection** (nowrap) for clean readability. Includes a dynamic left-side `Globe` link (only shown when a URL is present) with aligned role indentation, and a right-side Archive/Star button tray layout. Styled with premium opacity Saturation/Dashed border traits when archived.
   - `Portal.tsx`: [NEW] Hydration-safe React Portal implementation for mounting overlays to `#portal-root`.

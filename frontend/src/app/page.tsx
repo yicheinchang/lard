@@ -40,6 +40,7 @@ export default function Home() {
     archiveFilterMode: 'active',
   };
   const [filterCriteria, setFilterCriteria] = useState<FilterCriteria>(initialFilterCriteria);
+  const [showClosed, setShowClosed] = useState(false);
 
   const hasActiveFilters = useMemo(() => {
     return (
@@ -217,6 +218,14 @@ export default function Home() {
 
     return result;
   }, [jobs, searchQuery, sortKey, sortDir, filterCriteria]);
+
+  const visibleJobs = useMemo(() => {
+    if (activeView === 'kanban' && !showClosed) {
+      return filteredAndSortedJobs.filter(j => j.status !== 'Closed');
+    }
+    return filteredAndSortedJobs;
+  }, [filteredAndSortedJobs, activeView, showClosed]);
+
   const availableStatuses = useMemo(() => {
     const defaultStatuses = ["Wishlist", "Applied", "Interviewing", "Offered", "Rejected", "Closed", "Discontinued"];
     const foundStatuses = Array.from(new Set(jobs.map(j => j.status)));
@@ -528,10 +537,10 @@ export default function Home() {
           </div>
 
           {/* Contextual Bulk Action Button */}
-          {(hasActiveFilters || searchQuery) && filteredAndSortedJobs.length > 0 && filterCriteria.archiveFilterMode !== 'all' && (
+          {(hasActiveFilters || searchQuery) && visibleJobs.length > 0 && filterCriteria.archiveFilterMode !== 'all' && (
             <button
               onClick={() => {
-                const targetIds = filteredAndSortedJobs.map(j => j.id!);
+                const targetIds = visibleJobs.map(j => j.id!);
                 setBatchTargetIds(targetIds);
                 setBatchActionType(filterCriteria.archiveFilterMode === 'archived' ? 'restore' : 'archive');
                 setShowBatchConfirm(true);
@@ -541,8 +550,8 @@ export default function Home() {
               <Archive className="w-3.5 h-3.5" />
               <span>
                 {filterCriteria.archiveFilterMode === 'archived'
-                  ? `Restore ${filteredAndSortedJobs.length} Shown`
-                  : `Archive ${filteredAndSortedJobs.length} Shown`
+                  ? `Restore ${visibleJobs.length} Shown`
+                  : `Archive ${visibleJobs.length} Shown`
                 }
               </span>
             </button>
@@ -631,7 +640,16 @@ export default function Home() {
             <Briefcase className="w-12 h-12 animate-pulse" />
           </div>
         ) : activeView === 'kanban' ? (
-          <KanbanBoard jobs={filteredAndSortedJobs} onUpdateStatus={handleUpdateStatus} onJobClick={handleJobClick} onAddInterviewStep={handleAddInterviewStep} onToggleStar={handleToggleStar} onToggleArchive={handleToggleArchive} />
+          <KanbanBoard 
+            jobs={filteredAndSortedJobs} 
+            onUpdateStatus={handleUpdateStatus} 
+            onJobClick={handleJobClick} 
+            onAddInterviewStep={handleAddInterviewStep} 
+            onToggleStar={handleToggleStar} 
+            onToggleArchive={handleToggleArchive}
+            showClosed={showClosed}
+            onToggleShowClosed={() => setShowClosed(prev => !prev)}
+          />
         ) : (
           <TableView 
             jobs={filteredAndSortedJobs} 

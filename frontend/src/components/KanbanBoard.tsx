@@ -10,6 +10,8 @@ interface KanbanBoardProps {
   onAddInterviewStep?: (id: number, stepName: string, date?: string) => void;
   onToggleStar?: (job: Job) => void;
   onToggleArchive?: (job: Job) => void;
+  showClosed: boolean;
+  onToggleShowClosed: () => void;
 }
 
 // Visual columns — "Decision" merges Offered + Rejected + Discontinued
@@ -27,8 +29,16 @@ const columnAccents: Record<string, string> = {
   Decision: 'bg-violet-500/5 border-violet-500/10',
 };
 
-export const KanbanBoard: React.FC<KanbanBoardProps> = ({ jobs, onUpdateStatus, onJobClick, onAddInterviewStep, onToggleStar, onToggleArchive }) => {
-  const [showClosed, setShowClosed] = useState(false);
+export const KanbanBoard: React.FC<KanbanBoardProps> = ({ 
+  jobs, 
+  onUpdateStatus, 
+  onJobClick, 
+  onAddInterviewStep, 
+  onToggleStar, 
+  onToggleArchive,
+  showClosed,
+  onToggleShowClosed
+}) => {
   const [activeColumn, setActiveColumn] = useState('Interviewing');
 
   // Set initial active column based on priority if not already set
@@ -90,7 +100,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({ jobs, onUpdateStatus, 
                   <h2 className="text-sm font-bold text-[var(--fg)] opacity-90 uppercase tracking-widest">{column.label}</h2>
                   {column.key === 'Wishlist' && (
                     <button 
-                      onClick={() => setShowClosed(!showClosed)}
+                      onClick={onToggleShowClosed}
                       className={`p-1.5 rounded-lg transition-colors ${showClosed ? 'text-violet-500 bg-violet-500/10' : 'text-[var(--fg-subtle)] hover:text-[var(--fg)] bg-[var(--surface-hover)]'}`}
                       title={showClosed ? "Hide Closed Jobs" : "Show Closed Jobs"}
                     >
