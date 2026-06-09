@@ -638,6 +638,93 @@ async def delete_chat_session(session_id: str):
     finally:
         conn.close()
 
+class RenameSessionRequest(BaseModel):
+    title: str
+
+@router.put("/chat/{session_id}/title")
+async def rename_chat_session(session_id: str, req: RenameSessionRequest):
+    """Manually rename a chat session's title."""
+    _check_ai_enabled()
+    import sqlite3
+    from ai.assistant import HISTORY_DB_PATH
+    conn = sqlite3.connect(HISTORY_DB_PATH)
+    cursor = conn.cursor()
+    try:
+        # Check if session exists
+        cursor.execute("SELECT id FROM chat_sessions WHERE id = ?", (session_id,))
+        exists = cursor.fetchone()
+        if not exists:
+            raise HTTPException(status_code=404, detail="Chat session not found.")
+            
+        cursor.execute(
+            "UPDATE chat_sessions SET title = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?",
+            (req.title.strip(), session_id)
+        )
+        conn.commit()
+        return {"status": "success", "message": "Session renamed successfully.", "title": req.title.strip()}
+    except HTTPException:
+        raise
+    except Exception as e:
+        conn.rollback()
+        logger.error(f"Failed to rename session {session_id}: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        conn.close()
+
+async def _update_session_title_async(session_id: str, messages: list):
+    """Periodically re-generates and updates the chat session title based on conversation history."""
+    try:
+        # Count human messages
+        human_messages = [msg for msg in messages if msg.type in ["human", "user"]]
+        human_count = len(human_messages)
+        
+        # Check if the message count matches the update interval (5th message, then every 10 messages)
+        if human_count >= 5 and (human_count == 5 or (human_count - 5) % 10 == 0):
+            from ai.llm_factory import get_llm
+            llm = get_llm()
+            
+            # Use last 10 messages for context
+            recent_turns = []
+            for msg in messages[-10:]:
+                if msg.type in ["human", "ai", "user", "assistant"]:
+                    role = "User" if msg.type in ["human", "user"] else "Assistant"
+                    # Handle message content string vs list block formats
+                    content = ""
+                    if isinstance(msg.content, str):
+                        content = msg.content
+                    elif isinstance(msg.content, list):
+                        for block in msg.content:
+                            if isinstance(block, str):
+                                content += block
+                            elif isinstance(block, dict) and block.get("type") == "text":
+                                content += block.get("text", "")
+                    if content.strip():
+                        recent_turns.append(f"{role}: {content.strip()}")
+            
+            chat_context = "\n".join(recent_turns)
+            title_prompt = (
+                f"Generate a very short (max 5 words) descriptive title that summarizes the current topic of the conversation below. "
+                f"RULES: 1. PLAIN TEXT ONLY. 2. No Markdown formatting (no bold, no italics, no headers). 3. No quotes around the title.\n\n"
+                f"Conversation:\n{chat_context}"
+            )
+            
+            title_res = await llm.ainvoke(title_prompt)
+            title = title_res.content.strip().strip('*#_ "`')
+            if title:
+                import sqlite3
+                from ai.assistant import HISTORY_DB_PATH
+                conn = sqlite3.connect(HISTORY_DB_PATH)
+                cursor = conn.cursor()
+                cursor.execute(
+                    "UPDATE chat_sessions SET title = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?",
+                    (title, session_id)
+                )
+                conn.commit()
+                conn.close()
+                agnt_log("Router", task="Update Title", result=f"Updated session {session_id} title to: {title}")
+    except Exception as e:
+        logger.error(f"Failed to dynamically update session title for {session_id}: {e}")
+
 @router.post("/chat")
 async def chat_with_assistant(req: ChatRequest):
     _check_ai_enabled()
@@ -730,6 +817,9 @@ async def chat_with_assistant(req: ChatRequest):
                             # Handle both common block keys
                             reasoning += block.get("thinking", "") or block.get("reasoning", "")
             
+            # Trigger background title update if necessary
+            asyncio.create_task(_update_session_title_async(req.session_id, result["messages"]))
+
             return {
                 "reply": content, 
                 "reasoning": reasoning if reasoning else None,

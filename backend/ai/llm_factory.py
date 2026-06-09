@@ -36,7 +36,8 @@ def get_llm(provider: str = None, cfg: dict = None, num_ctx: int = None) -> Base
         "base_url": cfg.get("ollama_base_url", "http://host.docker.internal:11434"),
         "model": cfg.get("ollama_model", "gemma3:4b-it-qat"),
         "temperature": 0.0,
-        "callbacks": callbacks
+        "callbacks": callbacks,
+        "keep_alive": "8h"
     }
     
     # Priority: explicit arg > config > default (none/ollama default)

@@ -1,5 +1,5 @@
-# 🗺️ Lard - Lazy AI-Powered Resume Database (v0.89.5)
-Last Updated: 2026-06-08T16:04:00Z
+# 🗺️ Lard - Lazy AI-Powered Resume Database (v0.90.0)
+Last Updated: 2026-06-09T14:50:00Z
 
 This document provides a summary of the project's architecture, tech stack, and key logic to give AI coding agents instant context.
 
@@ -52,7 +52,7 @@ This document provides a summary of the project's architecture, tech stack, and 
     *   `Company`: Represents a company/organization. Ensures consistency.
     *   `JobApplication`: Tracks job details, status, and linked documents/steps. Linked to `Company`. Includes robust contact validation for Hiring Manager, HR, and Headhunter using `pydantic.networks.NameEmail`. Features automated name extraction from email strings (`Name <email@address.com>`) when dedicated name fields are empty.
     *   `InterviewStep`: Individual process steps (e.g., "Phone Screen").
-  - `ai.py`: AI Assistant chat, history, and data extraction endpoints. Includes SSE streaming, session persistence, **automated filtering of empty tool-calling messages** with structured reasoning extraction, and a transaction-safe delete endpoint to purge chat sessions.
+  - `ai.py`: AI Assistant chat, history, and data extraction endpoints. Includes SSE streaming, session persistence, **automated filtering of empty tool-calling messages** with structured reasoning extraction, a transaction-safe delete endpoint to purge chat sessions, and manual rename and dynamic periodic title generation endpoints/logic.
   - `settings.py`: Application configuration endpoints.
 - `database/`:
   - `models.py`: SQLAlchemy relational models.
@@ -98,7 +98,7 @@ This document provides a summary of the project's architecture, tech stack, and 
   - `tooltip-box`: Theme-aware CSS utility in `globals.css` ensuring readable tooltips in both light and dark modes.
   - `AddJobModal.tsx`: Core form for new applications. Rendered via **React Portal**. Includes AI Auto-fill with support for **PDF, DOCX, HTML, and Text**, Potential Hallucination Warning System, **Context Limit Warning System**, and **validation guards for required fields** (Company/Role).
   - `ConfirmDialog.tsx`: Multi-functional modal replacing native prompts. Rendered via **React Portal**. Supports **Date Inputs**, **File Uploads**, and **Combobox Text Inputs** (with custom `<datalist>`). Includes variant-based styling (`danger`, `success`, `default`).
-  - `ChatAssistant.tsx`: Global **Portal-based side drawer** for the AI agent. Features high-fidelity **Markdown rendering**, **LaTeX math**, and a **resizable width**. Includes **collapsible reasoning/thinking blocks** for supported models and **Session History management** with a dedicated drawer for navigating and permanently deleting past conversations using `ConfirmDialog`.
+  - `ChatAssistant.tsx`: Global **Portal-based side drawer** for the AI agent. Features high-fidelity **Markdown rendering**, **LaTeX math**, and a **resizable width**. Includes **collapsible reasoning/thinking blocks** for supported models and **Session History management** with a dedicated drawer for navigating, inline renaming, and permanently deleting past conversations using `ConfirmDialog`.
   - `SettingsPage.tsx`: Integrated configuration for LLMs and themes. Features a collapsible **Advanced AI Prompt Settings** subsection with:
       *   **Additive Guidance**: Field-specific instruction tabs for fine-tuning extraction.
       *   **Base System Prompts**: Independent sub-section for modifying core backend prompts (Extraction, JSON-LD, QA Validator) and granular field-level prompts for Multi-Agent mode (Text and JSON) with a dedicated reset handler. Features a nested tabbed UI for efficient management of 18 total base prompts. **Selective Filtering**: Prompts are filtered based on the active **Extraction Strategy** (Single vs. Multi-Agent). **Active Selection Sync**: Automatically synchronizes the active prompt tab when switching strategies or tabs to ensure only visible prompts are selected. Supports **Granular Resets** for each specific prompt to factory defaults. Enhanced readability with `rows={12}` text areas. Includes **Focus Persistence Fixes** and **Persistence Support** in the backend for reliable prompt engineering.

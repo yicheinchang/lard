@@ -51,6 +51,8 @@ export const ChatAssistant: React.FC<{
   const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
   const [editInput, setEditInput] = useState('');
   const [deleteConfirmSessionId, setDeleteConfirmSessionId] = useState<string | null>(null);
+  const [editingSessionId, setEditingSessionId] = useState<string | null>(null);
+  const [renameInput, setRenameInput] = useState('');
 
   // Initialize Session ID
   useEffect(() => {
@@ -84,6 +86,18 @@ export const ChatAssistant: React.FC<{
       }
     } catch (err) {
       console.error("Failed to delete session:", err);
+    }
+  };
+
+  const handleRenameSession = async (id: string, newTitle: string) => {
+    if (!newTitle.trim()) return;
+    try {
+      await api.put(`/ai/chat/${id}/title`, { title: newTitle.trim() });
+      setEditingSessionId(null);
+      setRenameInput('');
+      await fetchSessions();
+    } catch (err) {
+      console.error("Failed to rename session:", err);
     }
   };
 
@@ -563,37 +577,92 @@ export const ChatAssistant: React.FC<{
                 {sessions.map(s => (
                   <div
                     key={s.id}
-                    onClick={() => loadSession(s.id)}
-                    className={`group/session-item relative w-full text-left p-3 pr-10 rounded-xl transition-all border flex justify-between items-center cursor-pointer ${
+                    onClick={() => {
+                      if (editingSessionId !== s.id) {
+                        loadSession(s.id);
+                      }
+                    }}
+                    className={`group/session-item relative w-full text-left p-3 pr-12 rounded-xl transition-all border flex justify-between items-center cursor-pointer ${
                       s.id === sessionId 
                         ? 'bg-violet-600/10 border-violet-500/30' 
                         : 'border-transparent hover:bg-[var(--surface-hover)]'
                     }`}
                   >
-                    <div className="flex-1 min-w-0 pr-2">
-                      <div className="flex justify-between items-start mb-1">
-                        <span className={`text-sm font-medium line-clamp-1 ${s.id === sessionId ? 'text-violet-400' : 'text-[var(--fg)]'}`}>
-                          {s.title || 'Untitled Session'}
-                        </span>
-                        <span className="text-[10px] text-[var(--fg-subtle)] shrink-0 ml-2">
-                          {new Date(s.updated_at + 'Z').toLocaleDateString()}
-                        </span>
+                    {editingSessionId === s.id ? (
+                      <div 
+                        className="flex-1 flex items-center gap-1 min-w-0"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <input
+                          type="text"
+                          value={renameInput}
+                          onChange={(e) => setRenameInput(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                              handleRenameSession(s.id, renameInput);
+                            } else if (e.key === 'Escape') {
+                              setEditingSessionId(null);
+                            }
+                          }}
+                          className="flex-1 bg-[var(--input-bg)] border border-violet-500/50 rounded-lg px-2 py-1 text-sm text-[var(--fg)] focus:outline-none focus:border-violet-500 min-w-0"
+                          autoFocus
+                        />
+                        <button
+                          onClick={() => handleRenameSession(s.id, renameInput)}
+                          className="p-1 rounded-md text-green-500 hover:bg-green-500/10 transition-colors shrink-0"
+                          title="Save"
+                        >
+                          <Check className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={() => setEditingSessionId(null)}
+                          className="p-1 rounded-md text-[var(--fg-subtle)] hover:bg-[var(--surface-hover)] transition-colors shrink-0"
+                          title="Cancel"
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
                       </div>
-                      <p className="text-[10px] text-[var(--fg-muted)] line-clamp-1 opacity-70">
-                        Last active: {new Date(s.updated_at + 'Z').toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                      </p>
-                    </div>
-                    {/* Delete button (visible on hover) */}
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setDeleteConfirmSessionId(s.id);
-                      }}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 p-2 rounded-lg bg-[var(--surface)] border border-[var(--border-color)] text-red-400 hover:text-red-500 hover:bg-red-500/10 opacity-0 group-hover/session-item:opacity-100 focus:opacity-100 transition-all shadow-sm shrink-0"
-                      title="Delete chat session"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
+                    ) : (
+                      <>
+                        <div className="flex-1 min-w-0 pr-6">
+                          <div className="flex justify-between items-start mb-1">
+                            <span className={`text-sm font-medium line-clamp-1 ${s.id === sessionId ? 'text-violet-400' : 'text-[var(--fg)]'}`}>
+                              {s.title || 'Untitled Session'}
+                            </span>
+                            <span className="text-[10px] text-[var(--fg-subtle)] shrink-0 ml-2">
+                              {new Date(s.updated_at + 'Z').toLocaleDateString()}
+                            </span>
+                          </div>
+                          <p className="text-[10px] text-[var(--fg-muted)] line-clamp-1 opacity-70">
+                            Last active: {new Date(s.updated_at + 'Z').toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                          </p>
+                        </div>
+                        {/* Action overlay (visible on hover) */}
+                        <div className="absolute right-2 top-1/2 -translate-y-1/2 opacity-0 group-hover/session-item:opacity-100 focus-within:opacity-100 transition-all flex gap-1 bg-[var(--surface)] p-1 rounded-lg border border-[var(--border-color)] shadow-sm z-10">
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setEditingSessionId(s.id);
+                              setRenameInput(s.title || '');
+                            }}
+                            className="p-1 rounded-md text-[var(--fg-subtle)] hover:text-violet-400 hover:bg-violet-500/10 transition-colors shrink-0"
+                            title="Rename chat session"
+                          >
+                            <Edit3 className="w-4 h-4" />
+                          </button>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setDeleteConfirmSessionId(s.id);
+                            }}
+                            className="p-1 rounded-md text-red-400 hover:text-red-500 hover:bg-red-500/10 transition-colors shrink-0"
+                            title="Delete chat session"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </>
+                    )}
                   </div>
                 ))}
               </div>
