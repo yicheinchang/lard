@@ -1,4 +1,4 @@
-# 🗺️ Lard - Lazy AI-Powered Resume Database (v0.90.0)
+# 🗺️ Lard - Lazy AI-Powered Resume Database (v0.90.1)
 Last Updated: 2026-06-09T14:50:00Z
 
 This document provides a summary of the project's architecture, tech stack, and key logic to give AI coding agents instant context.
@@ -71,7 +71,7 @@ This document provides a summary of the project's architecture, tech stack, and 
 - `utils/`:
   - `pdf_generator.py`: [NEW] Reusable PDF generation engine using ReportLab. Formats job details, metadata, and description with monochrome-optimized grids, custom footers, and timeline placement at the end behind a page break. **Newline-aware**: `\n` characters in Feedback & Notes are rendered as `<br/>` line breaks in the exported PDF.
 - `test/`: Structured test suite. Includes `experiments/` subfolder for diagnostics and verification scripts.
-- `run.sh`: Unified startup script. Development mode uses a targeted `uvicorn` reloader that excludes large directories (like `.venv`) to minimize file system scanning and CPU usage.
+- `run.sh`: Unified startup script. Development mode uses a targeted `uvicorn` reloader that excludes large directories (like `.venv`) and forces polling mode to minimize file system scanning, memory footprint, and CPU usage.
 
 ### Frontend (`/frontend`)
 - `src/app/`: Next.js routes (Layouts and Pages).
@@ -320,7 +320,7 @@ The workspace uses a formalized rule system in `.agents/rules/workspace-role.md`
     - **Synchronized Initialization**: Incoming AI requests (Extraction, Chat) automatically wait for the background loading to complete using a global `Threading.Event`, preventing 500 errors caused by partial library imports.
     - **Global Embedding Cache**: HuggingFace instances cached to prevent PyTorch reloads.
     - **Dynamic Prompt Synchronization**: Raw system prompts isolated in `backend/ai/prompts.py` to prevent library hangs during initial config. Served via `/api/settings/defaults` to ensure the frontend and backend remain synchronized without duplicate constants.
-    - **Targeted Reloader**: `uvicorn` watches only source directories, explicitly excluding `.venv` and `node_modules`.
+    - **Targeted Reloader**: `uvicorn` watches only source directories, explicitly excluding `.venv` and `node_modules`, and forces polling mode (`WATCHFILES_FORCE_POLLING=true`) in development to prevent native OS inotify resource/memory exhaustion.
     - **Deep Lazy Loading**: Heavy AI utilities imported strictly inside the call functions.
     - **Persistent Model Cache**: Models cached locally in `backend/chroma_db/models/` to bypass re-downloads.
     - **Production Ready**: Use `./run.sh prod` for optimized worker concurrency.

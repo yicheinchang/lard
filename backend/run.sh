@@ -7,7 +7,7 @@ MODE=${1:-dev}
 if [ "$MODE" = "prod" ]; then
     echo "🚀 Starting Lard Backend (Production Mode)..."
     # Production: Multi-worker, no reload, optimized logging
-    WATCHFILES_FORCE_POLLING=true uv run uvicorn main:app \
+    uv run uvicorn main:app \
       --host 0.0.0.0 \
       --port 8000 \
       --workers 4 \
@@ -16,7 +16,7 @@ if [ "$MODE" = "prod" ]; then
 else
     echo "🚀 Starting Lard Backend (Development Mode - Optimized)..."
     # Development: Targeted reloader to bypass large .venv scan, no-sync for speed
-    uv run --no-sync uvicorn main:app \
+    WATCHFILES_FORCE_POLLING=true uv run --no-sync uvicorn main:app \
       --host 0.0.0.0 \
       --port 8000 \
       --reload \
