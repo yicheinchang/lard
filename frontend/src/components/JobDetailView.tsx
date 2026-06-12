@@ -746,7 +746,7 @@ export const JobDetailView: React.FC<JobDetailViewProps> = ({ job, onClose, onJo
       >
         <div
           data-theme={effectiveTheme}
-          className={`bg-[var(--bg)] text-[var(--fg)] border border-[var(--border-color)] shadow-2xl flex flex-col overflow-hidden transition-all duration-300 ease-in-out ${isFullScreen ? 'w-full h-full rounded-none' : 'w-full max-w-6xl h-[90vh] rounded-2xl md:rounded-3xl'} ${!isAnimationFinished ? 'animate-slide-up' : ''}`}
+          className={`bg-[var(--bg)] text-[var(--fg)] border border-[var(--border-color)] shadow-2xl flex flex-col overflow-hidden transition-all duration-300 ease-in-out ${isFullScreen ? 'w-full h-full rounded-none' : 'w-full max-w-[95vw] md:max-w-[90vw] lg:max-w-[85vw] xl:max-w-[80vw] 2xl:max-w-[1400px] h-[90vh] rounded-2xl md:rounded-3xl'} ${!isAnimationFinished ? 'animate-slide-up' : ''}`}
           onAnimationEnd={() => setIsAnimationFinished(true)}
         >
         {/* Header */}

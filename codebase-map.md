@@ -1,5 +1,5 @@
-# 🗺️ Lard - Lazy AI-Powered Resume Database (v0.90.1)
-Last Updated: 2026-06-09T14:50:00Z
+# 🗺️ Lard - Lazy AI-Powered Resume Database (v0.90.2)
+Last Updated: 2026-06-12T19:05:00Z
 
 This document provides a summary of the project's architecture, tech stack, and key logic to give AI coding agents instant context.
 
@@ -83,7 +83,7 @@ This document provides a summary of the project's architecture, tech stack, and 
   - `Portal.tsx`: [NEW] Hydration-safe React Portal implementation for mounting overlays to `#portal-root`.
   - `Tooltip.tsx`: [NEW] Reusable Portal-based tooltip with viewport-aware positioning and horizontal overflow correction.
 
-  - `JobDetailView.tsx`: Core component for job application management. Rendered via **React Portal** for global stacking. Features a **Centered Floating Modal** with a backdrop-blur overlay and a **Full-Screen Toggle**. Includes a **Quick Actions / Advance Tray** on the tabs bar to easily update status/advance applications directly without using the details edit form. Turns the header's role name into a direct hyperlink to the application page (when a URL is present) for easy accessibility. Supports **Dynamic Default Tab Selection**: Defaults to "Job Details" for Wishlist/Applied status, and "Interview Process" for all other active stages. Consists of:
+  - `JobDetailView.tsx`: Core component for job application management. Rendered via **React Portal** for global stacking. Features a **Centered Floating Modal** with responsive viewport width scaling, a backdrop-blur overlay, and a **Full-Screen Toggle**. Includes a **Quick Actions / Advance Tray** on the tabs bar to easily update status/advance applications directly without using the details edit form. Turns the header's role name into a direct hyperlink to the application page (when a URL is present) for easy accessibility. Supports **Dynamic Default Tab Selection**: Defaults to "Job Details" for Wishlist/Applied status, and "Interview Process" for all other active stages. Consists of:
       *   **Interview Process** Tab: Timeline events with full CRUD, inline editing, and lifecycle guards.
       *   **Job Details** Tab: Contains two main columns:
           *   *Main Column*: Markdown description viewer with zoom levels (`prose-sm` to `prose-2xl`) and temporary theme toggler, uploaded document attachments list, and an expandable **Additional Notes** Markdown editor (`MdEditor`) with debounced auto-saving.
