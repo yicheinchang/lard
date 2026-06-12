@@ -795,14 +795,14 @@ export const JobDetailView: React.FC<JobDetailViewProps> = ({ job, onClose, onJo
                   href={job.url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="hover:text-violet-500 transition-colors inline-flex items-center gap-1 hover:underline decoration-violet-500/30 min-w-0 max-w-full sm:max-w-[450px]"
+                  className="hover:text-violet-500 transition-colors inline-flex items-center gap-1 hover:underline decoration-violet-500/30 min-w-0 max-w-[65%]"
                   title={`Open Application Page: ${job.role}`}
                 >
                   <span className="truncate font-medium">{job.role}</span>
                   <ExternalLink className="w-3.5 h-3.5 text-[var(--fg-subtle)] transition-colors shrink-0" />
                 </a>
               ) : (
-                <span className="truncate font-medium min-w-0 max-w-full sm:max-w-[450px]" title={job.role}>
+                <span className="truncate font-medium min-w-0 max-w-[65%]" title={job.role}>
                   {job.role}
                 </span>
               )}
