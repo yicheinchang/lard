@@ -106,6 +106,7 @@ class InterviewStepCreate(BaseModel):
     notes: Optional[str] = None
 
 class InterviewStepUpdate(BaseModel):
+    step_type_name: Optional[str] = None
     step_date: Optional[UTCDateTime] = None
     status: Optional[str] = None
     notes: Optional[str] = None
