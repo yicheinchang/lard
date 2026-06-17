@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Bot, Send, X, Loader2, Sparkles, User, History, Plus, ChevronLeft, Copy, Check, Edit3, RotateCw, Trash2 } from 'lucide-react';
+import { Bot, Send, X, Loader2, Sparkles, User, History, Plus, ChevronLeft, Copy, Check, Edit3, RotateCw, Trash2, Minus } from 'lucide-react';
 import api from '../lib/api';
 import { Portal } from './Portal';
 import { ConfirmDialog } from './ConfirmDialog';
@@ -21,7 +21,8 @@ export const ChatAssistant: React.FC<{
   isOpen: boolean;
   onClose: () => void;
   jobId?: number; // Optional context filter
-}> = ({ isOpen, onClose, jobId }) => {
+  sparklePosition?: { x: number; y: number } | null;
+}> = ({ isOpen, onClose, jobId, sparklePosition }) => {
   const { settings } = useSettings();
   
   const resolvedGlobalTheme = React.useMemo(() => {
@@ -43,7 +44,29 @@ export const ChatAssistant: React.FC<{
   const [isAiReady, setIsAiReady] = useState<boolean | null>(null);
   const [isInitializing, setIsInitializing] = useState(false);
   const [width, setWidth] = useState(400);
-  const isResizing = useRef(false);
+  const [height, setHeight] = useState(600);
+  const [position, setPosition] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
+  const [hasInitializedPosition, setHasInitializedPosition] = useState(false);
+  
+  const dragWindowRef = useRef<{
+    startX: number;
+    startY: number;
+    posX: number;
+    posY: number;
+    isDragging: boolean;
+  } | null>(null);
+
+  const resizeWindowRef = useRef<{
+    startX: number;
+    startY: number;
+    startWidth: number;
+    startHeight: number;
+    startPosX: number;
+    startPosY: number;
+    type: 'left' | 'right' | 'top' | 'bottom' | 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right';
+    isResizing: boolean;
+  } | null>(null);
+
   const scrollRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -151,36 +174,214 @@ export const ChatAssistant: React.FC<{
     if (savedWidth) setWidth(parseInt(savedWidth, 10));
   }, []);
 
-  // Resize logic
-  const startResizing = React.useCallback((e: React.MouseEvent) => {
+  // Initialize position and anchor to sparkles button
+  useEffect(() => {
+    if (isOpen && typeof window !== 'undefined') {
+      const isMobile = window.innerWidth < 640;
+      if (!isMobile) {
+        let sparkleX = window.innerWidth - 56 - 24;
+        let sparkleY = window.innerHeight - 56 - 24;
+        
+        if (sparklePosition) {
+          sparkleX = sparklePosition.x;
+          sparkleY = sparklePosition.y;
+        }
+
+        const isLeft = sparkleX < window.innerWidth / 2;
+        const isTop = sparkleY < window.innerHeight / 2;
+
+        let targetX = 0;
+        let targetY = 0;
+
+        if (isLeft && isTop) {
+          targetX = sparkleX;
+          targetY = sparkleY;
+        } else if (!isLeft && isTop) {
+          targetX = sparkleX + 56 - width;
+          targetY = sparkleY;
+        } else if (isLeft && !isTop) {
+          targetX = sparkleX;
+          targetY = sparkleY + 56 - height;
+        } else {
+          targetX = sparkleX + 56 - width;
+          targetY = sparkleY + 56 - height;
+        }
+
+        // Clamp to screen boundaries
+        targetX = Math.max(12, Math.min(targetX, window.innerWidth - width - 12));
+        targetY = Math.max(12, Math.min(targetY, window.innerHeight - height - 12));
+
+        setPosition({ x: targetX, y: targetY });
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen, sparklePosition]);
+
+  // Handle Window Resize Clamp
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const handleWindowResize = () => {
+      const isMobile = window.innerWidth < 640;
+      if (isMobile) return;
+      
+      const maxW = window.innerWidth - 24;
+      const maxH = window.innerHeight - 24;
+      
+      let newWidth = width;
+      let newHeight = height;
+      
+      if (newWidth > maxW) newWidth = maxW;
+      if (newHeight > maxH) newHeight = maxH;
+      
+      if (newWidth !== width) setWidth(newWidth);
+      if (newHeight !== height) setHeight(newHeight);
+      
+      setPosition(prev => {
+        const x = Math.max(12, Math.min(prev.x, window.innerWidth - newWidth - 12));
+        const y = Math.max(12, Math.min(prev.y, window.innerHeight - newHeight - 12));
+        return { x, y };
+      });
+    };
+    
+    window.addEventListener('resize', handleWindowResize);
+    return () => window.removeEventListener('resize', handleWindowResize);
+  }, [width, height]);
+
+  // Dragging Window Logic
+  const startDraggingWindow = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (typeof window !== 'undefined' && window.innerWidth < 640) return; // Disable on mobile
+    if ((e.target as HTMLElement).closest('button') || (e.target as HTMLElement).closest('a') || (e.target as HTMLElement).closest('input') || (e.target as HTMLElement).closest('textarea')) return;
+    if (e.button !== 0) return; // Only left click
+    
     e.preventDefault();
-    isResizing.current = true;
-    document.addEventListener('mousemove', handleMouseMove);
-    document.addEventListener('mouseup', stopResizing);
-    document.body.style.cursor = 'col-resize';
+    dragWindowRef.current = {
+      startX: e.clientX,
+      startY: e.clientY,
+      posX: position.x,
+      posY: position.y,
+      isDragging: true
+    };
+    
+    document.addEventListener('mousemove', handleWindowMouseMove);
+    document.addEventListener('mouseup', stopDraggingWindow);
+  };
+
+  const handleWindowMouseMove = React.useCallback((e: MouseEvent) => {
+    if (!dragWindowRef.current?.isDragging) return;
+    const drag = dragWindowRef.current;
+    const deltaX = e.clientX - drag.startX;
+    const deltaY = e.clientY - drag.startY;
+    
+    const maxW = window.innerWidth - width - 12;
+    const maxH = window.innerHeight - height - 12;
+    
+    const nextX = Math.max(12, Math.min(drag.posX + deltaX, maxW));
+    const nextY = Math.max(12, Math.min(drag.posY + deltaY, maxH));
+    
+    setPosition({ x: nextX, y: nextY });
+  }, [width, height]);
+
+  const stopDraggingWindow = React.useCallback(() => {
+    if (!dragWindowRef.current) return;
+    dragWindowRef.current.isDragging = false;
+    document.removeEventListener('mousemove', handleWindowMouseMove);
+    document.removeEventListener('mouseup', stopDraggingWindow);
+    dragWindowRef.current = null;
+  }, [handleWindowMouseMove]);
+
+  // Resizing Window Logic (8 Directions)
+  const startResizingWindow = (e: React.MouseEvent, type: 'left' | 'right' | 'top' | 'bottom' | 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right') => {
+    if (typeof window !== 'undefined' && window.innerWidth < 640) return; // Disable on mobile
+    
+    e.preventDefault();
+    e.stopPropagation();
+    
+    resizeWindowRef.current = {
+      startX: e.clientX,
+      startY: e.clientY,
+      startWidth: width,
+      startHeight: height,
+      startPosX: position.x,
+      startPosY: position.y,
+      type,
+      isResizing: true
+    };
+    
+    document.addEventListener('mousemove', handleWindowResizeMove);
+    document.addEventListener('mouseup', stopResizingWindow);
+    
+    let cursor = 'default';
+    if (type === 'left' || type === 'right') cursor = 'col-resize';
+    else if (type === 'top' || type === 'bottom') cursor = 'row-resize';
+    else if (type === 'top-left' || type === 'bottom-right') cursor = 'nwse-resize';
+    else if (type === 'top-right' || type === 'bottom-left') cursor = 'nesw-resize';
+    
+    document.body.style.cursor = cursor;
+  };
+
+  const handleWindowResizeMove = React.useCallback((e: MouseEvent) => {
+    if (!resizeWindowRef.current?.isResizing) return;
+    const resize = resizeWindowRef.current;
+    
+    const minW = 300;
+    const maxW = window.innerWidth - 24;
+    const minH = 200;
+    const maxH = window.innerHeight - 24;
+    
+    let newWidth = resize.startWidth;
+    let newHeight = resize.startHeight;
+    let newX = resize.startPosX;
+    let newY = resize.startPosY;
+    
+    // Horizontal Resizing
+    if (resize.type === 'left' || resize.type === 'top-left' || resize.type === 'bottom-left') {
+      const deltaX = resize.startX - e.clientX;
+      newWidth = Math.max(minW, Math.min(resize.startWidth + deltaX, maxW));
+      newX = resize.startPosX - (newWidth - resize.startWidth);
+    } else if (resize.type === 'right' || resize.type === 'top-right' || resize.type === 'bottom-right') {
+      const deltaX = e.clientX - resize.startX;
+      newWidth = Math.max(minW, Math.min(resize.startWidth + deltaX, maxW));
+    }
+    
+    // Vertical Resizing
+    if (resize.type === 'top' || resize.type === 'top-left' || resize.type === 'top-right') {
+      const deltaY = resize.startY - e.clientY;
+      newHeight = Math.max(minH, Math.min(resize.startHeight + deltaY, maxH));
+      newY = resize.startPosY - (newHeight - resize.startHeight);
+    } else if (resize.type === 'bottom' || resize.type === 'bottom-left' || resize.type === 'bottom-right') {
+      const deltaY = e.clientY - resize.startY;
+      newHeight = Math.max(minH, Math.min(resize.startHeight + deltaY, maxH));
+    }
+    
+    newX = Math.max(12, Math.min(newX, window.innerWidth - newWidth - 12));
+    newY = Math.max(12, Math.min(newY, window.innerHeight - newHeight - 12));
+    
+    setWidth(newWidth);
+    localStorage.setItem('chat_assistant_width', newWidth.toString());
+    setHeight(newHeight);
+    setPosition({ x: newX, y: newY });
   }, []);
 
-  const stopResizing = React.useCallback(() => {
-    isResizing.current = false;
-    document.removeEventListener('mousemove', handleMouseMove);
-    document.removeEventListener('mouseup', stopResizing);
+  const stopResizingWindow = React.useCallback(() => {
+    if (!resizeWindowRef.current) return;
+    resizeWindowRef.current.isResizing = false;
+    document.removeEventListener('mousemove', handleWindowResizeMove);
+    document.removeEventListener('mouseup', stopResizingWindow);
     document.body.style.cursor = 'default';
-  }, []);
+    resizeWindowRef.current = null;
+  }, [handleWindowResizeMove]);
 
-  const handleMouseMove = React.useCallback((e: MouseEvent) => {
-    if (!isResizing.current) return;
-    const newWidth = window.innerWidth - e.clientX;
-    if (newWidth >= 300 && newWidth <= window.innerWidth * 0.8) {
-      setWidth(newWidth);
-      localStorage.setItem('chat_assistant_width', newWidth.toString());
+  // Robust Auto-Scroll Logic
+  const scrollToBottom = React.useCallback(() => {
+    if (scrollRef.current) {
+      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
   }, []);
 
   useEffect(() => {
-    if (scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-    }
-  }, [messages, isTyping, isInitializing]);
+    const timer = setTimeout(scrollToBottom, 60);
+    return () => clearTimeout(timer);
+  }, [messages, isTyping, isInitializing, isOpen, view, scrollToBottom]);
 
   // Adjust input textarea height dynamically
   useEffect(() => {
@@ -326,17 +527,74 @@ export const ChatAssistant: React.FC<{
     <>
     <Portal>
       <div 
-        style={{ width: typeof window !== 'undefined' && window.innerWidth < 640 ? '100%' : `${width}px` }}
-        className="fixed right-0 top-0 bottom-0 bg-[var(--bg)] backdrop-blur-xl border-l border-[var(--border-color)] shadow-2xl z-50 flex flex-col pt-[72px] sm:pt-0 animate-slide-left"
+        style={typeof window !== 'undefined' && window.innerWidth < 640 ? {} : {
+          width: `${width}px`,
+          height: `${height}px`,
+          left: `${position.x}px`,
+          top: `${position.y}px`,
+          maxHeight: 'calc(100vh - 24px)',
+          maxWidth: 'calc(100vw - 24px)',
+        }}
+        className={`fixed bg-[var(--bg)]/85 backdrop-blur-xl border border-violet-500/20 shadow-2xl shadow-black/35 z-[60] flex flex-col transition-shadow ${
+          typeof window !== 'undefined' && window.innerWidth < 640
+            ? 'right-0 top-0 bottom-0 left-0 pt-[72px] sm:pt-0 animate-slide-left' 
+            : 'rounded-2xl overflow-hidden'
+        }`}
       >
-        {/* Resize Handle */}
-        <div 
-          onMouseDown={startResizing}
-          className="absolute left-0 top-0 bottom-0 w-1.5 cursor-col-resize hover:bg-violet-500/30 active:bg-violet-500/50 transition-colors z-[60] hidden sm:block"
-          title="Drag to resize"
-        />
+        {/* Resize Handles (Desktop Only) */}
+        {typeof window !== 'undefined' && window.innerWidth >= 640 && (
+          <>
+            {/* 4 Borders */}
+            <div 
+              onMouseDown={(e) => startResizingWindow(e, 'left')}
+              className="absolute left-0 top-0 bottom-0 w-1.5 cursor-col-resize hover:bg-violet-500/20 active:bg-violet-500/40 transition-colors z-[60]"
+              title="Drag left side to resize"
+            />
+            <div 
+              onMouseDown={(e) => startResizingWindow(e, 'right')}
+              className="absolute right-0 top-0 bottom-0 w-1.5 cursor-col-resize hover:bg-violet-500/20 active:bg-violet-500/40 transition-colors z-[60]"
+              title="Drag right side to resize"
+            />
+            <div 
+              onMouseDown={(e) => startResizingWindow(e, 'top')}
+              className="absolute top-0 left-0 right-0 h-1.5 cursor-row-resize hover:bg-violet-500/20 active:bg-violet-500/40 transition-colors z-[60]"
+              title="Drag top side to resize"
+            />
+            <div 
+              onMouseDown={(e) => startResizingWindow(e, 'bottom')}
+              className="absolute bottom-0 left-0 right-0 h-1.5 cursor-row-resize hover:bg-violet-500/20 active:bg-violet-500/40 transition-colors z-[60]"
+              title="Drag bottom side to resize"
+            />
+
+            {/* 4 Corners */}
+            <div 
+              onMouseDown={(e) => startResizingWindow(e, 'top-left')}
+              className="absolute top-0 left-0 w-3 h-3 cursor-nwse-resize hover:bg-violet-500/30 active:bg-violet-500/50 transition-colors z-[70]"
+              title="Drag corner to resize"
+            />
+            <div 
+              onMouseDown={(e) => startResizingWindow(e, 'top-right')}
+              className="absolute top-0 right-0 w-3 h-3 cursor-nesw-resize hover:bg-violet-500/30 active:bg-violet-500/50 transition-colors z-[70]"
+              title="Drag corner to resize"
+            />
+            <div 
+              onMouseDown={(e) => startResizingWindow(e, 'bottom-left')}
+              className="absolute bottom-0 left-0 w-3 h-3 cursor-nesw-resize hover:bg-violet-500/30 active:bg-violet-500/50 transition-colors z-[70]"
+              title="Drag corner to resize"
+            />
+            <div 
+              onMouseDown={(e) => startResizingWindow(e, 'bottom-right')}
+              className="absolute bottom-0 right-0 w-3 h-3 cursor-nwse-resize hover:bg-violet-500/30 active:bg-violet-500/50 transition-colors z-[70]"
+              title="Drag corner to resize"
+            />
+          </>
+        )}
+
         {/* Header */}
-        <div className="p-4 border-b border-[var(--border-color)] flex justify-between items-center bg-violet-600/10 shrink-0">
+        <div 
+          onMouseDown={startDraggingWindow}
+          className="p-4 border-b border-[var(--border-color)] flex justify-between items-center bg-violet-600/10 shrink-0 cursor-grab active:cursor-grabbing select-none"
+        >
           <div className="flex items-center gap-2">
             {view === 'history' ? (
               <button 
@@ -378,6 +636,7 @@ export const ChatAssistant: React.FC<{
                 </button>
               </>
             )}
+
             <button onClick={onClose} className="p-2 text-[var(--fg-subtle)] hover:text-[var(--fg)] hover:bg-[var(--surface-hover)] rounded-lg transition-colors">
               <X className="w-5 h-5" />
             </button>

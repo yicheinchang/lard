@@ -200,7 +200,7 @@ function MobileDrawer() {
   };
 
   return (
-    <div className="fixed inset-0 z-50 sm:hidden">
+    <div className="fixed inset-0 z-[70] sm:hidden">
       {/* Backdrop */}
       <div 
         className="absolute inset-0 bg-black/60 backdrop-blur-sm animate-fade-in" 
@@ -255,6 +255,131 @@ function MainContent({ children }: { children: React.ReactNode }) {
   const { aiEnabled } = useSettings();
   const { showDiscardDialog, dirtyMessage, confirmDiscard, cancelDiscard } = useView();
 
+  const [iconPosition, setIconPosition] = React.useState<{ x: number; y: number } | null>(null);
+  const dragStartRef = React.useRef<{
+    x: number;
+    y: number;
+    startX: number;
+    startY: number;
+    isDragging: boolean;
+    hasMoved: boolean;
+  } | null>(null);
+
+  React.useEffect(() => {
+    const handleResize = () => {
+      setIconPosition(prev => {
+        if (!prev) return null;
+        const newX = Math.max(12, Math.min(prev.x, window.innerWidth - 68));
+        const newY = Math.max(12, Math.min(prev.y, window.innerHeight - 68));
+        return { x: newX, y: newY };
+      });
+    };
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  const handleIconMouseDown = (e: React.MouseEvent<HTMLButtonElement>) => {
+    if (e.button !== 0) return; // Only left click
+    e.preventDefault();
+    
+    const rect = e.currentTarget.getBoundingClientRect();
+    dragStartRef.current = {
+      x: e.clientX,
+      y: e.clientY,
+      startX: rect.left,
+      startY: rect.top,
+      isDragging: true,
+      hasMoved: false
+    };
+    
+    document.addEventListener('mousemove', handleIconMouseMove);
+    document.addEventListener('mouseup', handleIconMouseUp);
+  };
+
+  const handleIconMouseMove = React.useCallback((e: MouseEvent) => {
+    if (!dragStartRef.current?.isDragging) return;
+    const drag = dragStartRef.current;
+    
+    const deltaX = e.clientX - drag.x;
+    const deltaY = e.clientY - drag.y;
+    
+    if (Math.abs(deltaX) > 4 || Math.abs(deltaY) > 4) {
+      drag.hasMoved = true;
+    }
+    
+    const nextX = Math.max(12, Math.min(drag.startX + deltaX, window.innerWidth - 68));
+    const nextY = Math.max(12, Math.min(drag.startY + deltaY, window.innerHeight - 68));
+    
+    setIconPosition({ x: nextX, y: nextY });
+  }, []);
+
+  const handleIconMouseUp = React.useCallback((e: MouseEvent) => {
+    if (!dragStartRef.current) return;
+    const drag = dragStartRef.current;
+    drag.isDragging = false;
+    
+    document.removeEventListener('mousemove', handleIconMouseMove);
+    document.removeEventListener('mouseup', handleIconMouseUp);
+    
+    if (!drag.hasMoved) {
+      setIsChatOpen(true);
+    }
+    dragStartRef.current = null;
+  }, [handleIconMouseMove]);
+
+  const handleIconTouchStart = (e: React.TouchEvent<HTMLButtonElement>) => {
+    const touch = e.touches[0];
+    const rect = e.currentTarget.getBoundingClientRect();
+    dragStartRef.current = {
+      x: touch.clientX,
+      y: touch.clientY,
+      startX: rect.left,
+      startY: rect.top,
+      isDragging: true,
+      hasMoved: false
+    };
+  };
+
+  React.useEffect(() => {
+    const handleTouchMove = (e: TouchEvent) => {
+      if (!dragStartRef.current?.isDragging) return;
+      e.preventDefault();
+      const drag = dragStartRef.current;
+      const touch = e.touches[0];
+      
+      const deltaX = touch.clientX - drag.x;
+      const deltaY = touch.clientY - drag.y;
+      
+      if (Math.abs(deltaX) > 4 || Math.abs(deltaY) > 4) {
+        drag.hasMoved = true;
+      }
+      
+      const nextX = Math.max(12, Math.min(drag.startX + deltaX, window.innerWidth - 68));
+      const nextY = Math.max(12, Math.min(drag.startY + deltaY, window.innerHeight - 68));
+      
+      setIconPosition({ x: nextX, y: nextY });
+    };
+
+    const handleTouchEnd = () => {
+      if (!dragStartRef.current) return;
+      const drag = dragStartRef.current;
+      drag.isDragging = false;
+      
+      if (!drag.hasMoved) {
+        setIsChatOpen(true);
+      }
+      dragStartRef.current = null;
+    };
+
+    window.addEventListener('touchmove', handleTouchMove, { passive: false });
+    window.addEventListener('touchend', handleTouchEnd);
+    
+    return () => {
+      window.removeEventListener('touchmove', handleTouchMove);
+      window.removeEventListener('touchend', handleTouchEnd);
+    };
+  }, []);
+
   return (
     <main className="flex-1 flex flex-col relative w-full h-screen overflow-hidden pb-0 min-w-0" style={{ background: `linear-gradient(to bottom, var(--bg), var(--bg))` }}>
       <MobileHeader />
@@ -265,8 +390,20 @@ function MainContent({ children }: { children: React.ReactNode }) {
       {/* Floating AI Button — hidden when AI is disabled */}
       {aiEnabled && (
         <button
-          onClick={() => setIsChatOpen(true)}
-          className={`fixed bottom-6 right-6 w-14 h-14 rounded-full bg-gradient-to-br from-violet-600 to-fuchsia-600 shadow-xl shadow-violet-600/20 flex items-center justify-center text-white hover:scale-105 transition-all z-40 ${isChatOpen ? 'opacity-0 scale-90 pointer-events-none' : 'opacity-100'}`}
+          onMouseDown={handleIconMouseDown}
+          onTouchStart={handleIconTouchStart}
+          title="Drag to move."
+          style={iconPosition ? {
+            left: `${iconPosition.x}px`,
+            top: `${iconPosition.y}px`,
+            bottom: 'auto',
+            right: 'auto',
+            position: 'fixed',
+            cursor: 'grab'
+          } : {
+            cursor: 'grab'
+          }}
+          className={`fixed bottom-6 right-6 w-14 h-14 rounded-full bg-gradient-to-br from-violet-600 to-fuchsia-600 shadow-xl shadow-violet-600/20 flex items-center justify-center text-white hover:scale-105 transition-transform z-40 ${isChatOpen ? 'opacity-0 scale-90 pointer-events-none' : 'opacity-100'}`}
         >
           <Sparkles className="w-6 h-6" />
         </button>
@@ -274,7 +411,7 @@ function MainContent({ children }: { children: React.ReactNode }) {
 
       {/* Global Chat Assistant — hidden when AI is disabled */}
       {aiEnabled && (
-        <ChatAssistant isOpen={isChatOpen} onClose={() => setIsChatOpen(false)} />
+        <ChatAssistant isOpen={isChatOpen} onClose={() => setIsChatOpen(false)} sparklePosition={iconPosition} />
       )}
 
       {/* Global Navigation Guard Dialog */}
