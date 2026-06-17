@@ -403,7 +403,7 @@ function MainContent({ children }: { children: React.ReactNode }) {
           } : {
             cursor: 'grab'
           }}
-          className={`fixed bottom-6 right-6 w-14 h-14 rounded-full bg-gradient-to-br from-violet-600 to-fuchsia-600 shadow-xl shadow-violet-600/20 flex items-center justify-center text-white hover:scale-105 transition-transform z-40 ${isChatOpen ? 'opacity-0 scale-90 pointer-events-none' : 'opacity-100'}`}
+          className={`fixed bottom-6 right-6 w-14 h-14 rounded-full bg-gradient-to-br from-violet-600 to-fuchsia-600 shadow-xl shadow-violet-600/20 flex items-center justify-center text-white hover:scale-105 transition-transform z-[60] ${isChatOpen ? 'opacity-0 scale-90 pointer-events-none' : 'opacity-100'}`}
         >
           <Sparkles className="w-6 h-6" />
         </button>
@@ -411,7 +411,73 @@ function MainContent({ children }: { children: React.ReactNode }) {
 
       {/* Global Chat Assistant — hidden when AI is disabled */}
       {aiEnabled && (
-        <ChatAssistant isOpen={isChatOpen} onClose={() => setIsChatOpen(false)} sparklePosition={iconPosition} />
+        <ChatAssistant 
+          isOpen={isChatOpen} 
+          onClose={(finalRect) => {
+            setIsChatOpen(false);
+            if (finalRect && typeof window !== 'undefined' && window.innerWidth >= 640) {
+              const prevX = iconPosition ? iconPosition.x : window.innerWidth - 56 - 24;
+              const prevY = iconPosition ? iconPosition.y : window.innerHeight - 56 - 24;
+              
+              const cx = window.innerWidth / 2;
+              const cy = window.innerHeight / 2;
+              
+              // Define the 4 candidate corners and their matching screen quadrants
+              const candidates = [
+                {
+                  // Top-Left
+                  x: finalRect.x,
+                  y: finalRect.y,
+                  isValid: finalRect.x < cx && finalRect.y < cy
+                },
+                {
+                  // Top-Right
+                  x: finalRect.x + finalRect.width - 56,
+                  y: finalRect.y,
+                  isValid: (finalRect.x + finalRect.width - 56) >= cx && finalRect.y < cy
+                },
+                {
+                  // Bottom-Left
+                  x: finalRect.x,
+                  y: finalRect.y + finalRect.height - 56,
+                  isValid: finalRect.x < cx && (finalRect.y + finalRect.height - 56) >= cy
+                },
+                {
+                  // Bottom-Right
+                  x: finalRect.x + finalRect.width - 56,
+                  y: finalRect.y + finalRect.height - 56,
+                  isValid: (finalRect.x + finalRect.width - 56) >= cx && (finalRect.y + finalRect.height - 56) >= cy
+                }
+              ];
+              
+              // Filter to candidates that lie in their correct quadrant so reopening anchors symmetrically
+              let validCandidates = candidates.filter(c => c.isValid);
+              if (validCandidates.length === 0) {
+                validCandidates = candidates;
+              }
+              
+              // Choose the quadrant-valid corner closest to the previous sparkles position
+              let bestCandidate = validCandidates[0];
+              let minDistSq = Infinity;
+              
+              for (const cand of validCandidates) {
+                const dx = cand.x - prevX;
+                const dy = cand.y - prevY;
+                const distSq = dx * dx + dy * dy;
+                if (distSq < minDistSq) {
+                  minDistSq = distSq;
+                  bestCandidate = cand;
+                }
+              }
+              
+              const newSparkleX = Math.max(12, Math.min(bestCandidate.x, window.innerWidth - 68));
+              const newSparkleY = Math.max(12, Math.min(bestCandidate.y, window.innerHeight - 68));
+              
+              setIconPosition({ x: newSparkleX, y: newSparkleY });
+            }
+          }} 
+          sparklePosition={iconPosition} 
+        />
       )}
 
       {/* Global Navigation Guard Dialog */}

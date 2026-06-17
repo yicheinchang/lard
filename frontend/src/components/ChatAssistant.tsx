@@ -19,7 +19,7 @@ interface Message {
 
 export const ChatAssistant: React.FC<{
   isOpen: boolean;
-  onClose: () => void;
+  onClose: (finalRect?: { x: number; y: number; width: number; height: number }) => void;
   jobId?: number; // Optional context filter
   sparklePosition?: { x: number; y: number } | null;
 }> = ({ isOpen, onClose, jobId, sparklePosition }) => {
@@ -637,7 +637,7 @@ export const ChatAssistant: React.FC<{
               </>
             )}
 
-            <button onClick={onClose} className="p-2 text-[var(--fg-subtle)] hover:text-[var(--fg)] hover:bg-[var(--surface-hover)] rounded-lg transition-colors">
+            <button onClick={() => onClose({ x: position.x, y: position.y, width, height })} className="p-2 text-[var(--fg-subtle)] hover:text-[var(--fg)] hover:bg-[var(--surface-hover)] rounded-lg transition-colors">
               <X className="w-5 h-5" />
             </button>
           </div>
