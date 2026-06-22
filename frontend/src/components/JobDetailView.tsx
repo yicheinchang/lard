@@ -1416,7 +1416,7 @@ export const JobDetailView: React.FC<JobDetailViewProps> = ({ job, onClose, onJo
                       </div>
                       <div className="flex flex-col gap-1">
                         <label className="text-xs text-[var(--fg-muted)]">Hiring Manager Email</label>
-                        <input className="bg-[var(--bg)] border border-[var(--border-color)] rounded-md px-2 py-1 text-sm text-[var(--fg)] focus:outline-none focus:border-violet-500" type="email" value={editFormData.hiring_manager_email || ''} onChange={e => handleEditChange('hiring_manager_email', e.target.value)} />
+                        <input className="bg-[var(--bg)] border border-[var(--border-color)] rounded-md px-2 py-1 text-sm text-[var(--fg)] focus:outline-none focus:border-violet-500" type="text" value={editFormData.hiring_manager_email || ''} onChange={e => handleEditChange('hiring_manager_email', e.target.value)} />
                       </div>
                       <div className="flex flex-col gap-1">
                         <label className="text-xs text-[var(--fg-muted)]">HR / Recruiter Email</label>
@@ -1428,7 +1428,7 @@ export const JobDetailView: React.FC<JobDetailViewProps> = ({ job, onClose, onJo
                       </div>
                       <div className="flex flex-col gap-1">
                         <label className="text-xs text-[var(--fg-muted)]">Headhunter Email</label>
-                        <input className="bg-[var(--bg)] border border-[var(--border-color)] rounded-md px-2 py-1 text-sm text-[var(--fg)] focus:outline-none focus:border-violet-500" type="email" value={editFormData.headhunter_email || ''} onChange={e => handleEditChange('headhunter_email', e.target.value)} placeholder="Name <email@address.com>" />
+                        <input className="bg-[var(--bg)] border border-[var(--border-color)] rounded-md px-2 py-1 text-sm text-[var(--fg)] focus:outline-none focus:border-violet-500" type="text" value={editFormData.headhunter_email || ''} onChange={e => handleEditChange('headhunter_email', e.target.value)} placeholder="Name <email@address.com>" />
                       </div>
                     </div>
 

@@ -1,4 +1,4 @@
-# 🐱 Lard - Backend (v0.91.1)
+# 🐱 Lard - Backend (v0.91.2)
 
 FastAPI-based backend for the **Lard** (Lazy AI-powered Resume Database) application.
 Designed for **Infrastructure Isolation**; this backend is kept private and is only accessible via the Next.js API Proxy.

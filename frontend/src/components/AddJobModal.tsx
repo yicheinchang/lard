@@ -741,11 +741,11 @@ export const AddJobModal: React.FC<AddJobModalProps> = ({ isOpen, onClose, onAdd
                 <InputField label="Company Job ID" field="company_job_id" value={formData.company_job_id || ''} onChange={(val) => handleChange('company_job_id', val)} />
                 <InputField label="Posted Date" field="job_posted_date" type="date" value={formData.job_posted_date || ''} onChange={(val) => handleChange('job_posted_date', val)} />
                 <InputField label="Application Deadline" field="application_deadline" type="date" value={formData.application_deadline || ''} onChange={(val) => handleChange('application_deadline', val)} />
-                <InputField label="HR / Recruiter Email" field="hr_email" type="email" value={formData.hr_email || ''} onChange={(val) => handleChange('hr_email', val)} />
+                <InputField label="HR / Recruiter Email" field="hr_email" type="text" value={formData.hr_email || ''} onChange={(val) => handleChange('hr_email', val)} />
                 <InputField label="Hiring Manager Name" field="hiring_manager_name" value={formData.hiring_manager_name || ''} onChange={(val) => handleChange('hiring_manager_name', val)} />
-                <InputField label="Hiring Manager Email" field="hiring_manager_email" type="email" value={formData.hiring_manager_email || ''} onChange={(val) => handleChange('hiring_manager_email', val)} />
+                <InputField label="Hiring Manager Email" field="hiring_manager_email" type="text" value={formData.hiring_manager_email || ''} onChange={(val) => handleChange('hiring_manager_email', val)} />
                 <InputField label="Headhunter Name" field="headhunter_name" value={formData.headhunter_name || ''} onChange={(val) => handleChange('headhunter_name', val)} />
-                <InputField label="Headhunter Email" field="headhunter_email" type="email" value={formData.headhunter_email || ''} onChange={(val) => handleChange('headhunter_email', val)} />
+                <InputField label="Headhunter Email" field="headhunter_email" type="text" value={formData.headhunter_email || ''} onChange={(val) => handleChange('headhunter_email', val)} />
                 <div className="md:col-span-2 space-y-2">
                   <div className="flex items-center justify-between gap-2 mb-1">
                     <label className="text-xs text-[var(--fg-subtle)] block px-0.5">Job Description (Markdown)</label>

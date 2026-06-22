@@ -1,4 +1,4 @@
-# 🗺️ Lard - Lazy AI-Powered Resume Database (v0.91.1)
+# 🗺️ Lard - Lazy AI-Powered Resume Database (v0.91.2)
 Last Updated: 2026-06-15T14:02:00Z
 
 This document provides a summary of the project's architecture, tech stack, and key logic to give AI coding agents instant context.
@@ -326,7 +326,7 @@ The workspace uses a formalized rule system in `.agents/rules/workspace-role.md`
     - **Production Ready**: Use `./run.sh prod` for optimized worker concurrency.
 - **Git Tagging**: Automated tagging for every version.
 - **Data Integrity & Security Standards**:
-    - **RFC-Compliant Emails**: Uses `pydantic.networks.NameEmail` for all contact fields with automated name extraction in `JobBase`. The `to_db_dict` helper serializes `NameEmail` objects to a canonical RFC-compliant quoted string (`"Name" <email>`) before writing to SQLite, preventing quote-stripping bugs that would cause `ResponseValidationError` on subsequent reads.
+    - **RFC-Compliant Emails**: Uses `pydantic.networks.NameEmail` for all contact fields with automated name extraction in `JobBase`. The `to_db_dict` helper serializes `NameEmail` objects to a canonical RFC-compliant quoted string (`"Name" <email>`) before writing to SQLite, preventing quote-stripping bugs that would cause `ResponseValidationError` on subsequent reads. Frontend contact email inputs use standard text inputs (`type="text"`) to avoid browser-native validation conflicts with RFC-compliant name-email combinations (e.g. `Name <email>`).
     - **UTC-Enforced Dates**: All timestamps are validated as `AwareDatetime` and forced to UTC via `BeforeValidator`.
     - **Normalized URLs**: `HttpUrl` validation with an `ensure_https` safety net.
     - **Secure Credentials**: API keys and sensitive tokens use `SecretStr` in `config.py` to prevent accidental leakage.
