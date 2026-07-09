@@ -24,6 +24,47 @@ interface JobDetailViewProps {
   onJobUpdated: () => void;
 }
 
+const getTerminalEventConfig = (name: string) => {
+  switch (name) {
+    case 'Offered':
+      return {
+        icon: ThumbsUp,
+        colorClass: 'text-emerald-500 fill-emerald-500/10',
+        borderBgClass: 'border-emerald-500/20 bg-emerald-500/5'
+      };
+    case 'Rejected':
+      return {
+        icon: ThumbsDown,
+        colorClass: 'text-red-500 fill-red-500/10',
+        borderBgClass: 'border-red-500/20 bg-red-500/5'
+      };
+    case 'Discontinued':
+      return {
+        icon: Ban,
+        colorClass: 'text-slate-500 fill-slate-500/10',
+        borderBgClass: 'border-slate-500/20 bg-slate-500/5'
+      };
+    case 'Withdrawn':
+      return {
+        icon: Undo2,
+        colorClass: 'text-amber-500 fill-amber-500/10',
+        borderBgClass: 'border-amber-500/20 bg-amber-500/5'
+      };
+    case 'Closed':
+      return {
+        icon: Lock,
+        colorClass: 'text-orange-500 fill-orange-500/10',
+        borderBgClass: 'border-orange-500/20 bg-orange-500/5'
+      };
+    default:
+      return {
+        icon: Circle,
+        colorClass: 'text-[var(--fg-subtle)]',
+        borderBgClass: 'border-[var(--border-color)]'
+      };
+  }
+};
+
 export const JobDetailView: React.FC<JobDetailViewProps> = ({ job, onClose, onJobUpdated }) => {
   const { setDirty } = useView();
   const { settings } = useSettings();
@@ -356,12 +397,36 @@ export const JobDetailView: React.FC<JobDetailViewProps> = ({ job, onClose, onJo
       } as any);
     }
 
+    // Inject terminal status event if the job has a terminal status + date
+    const terminalStatuses: Record<string, { date: string | null; note: string }> = {
+      Offered:      { date: job?.decision_date, note: 'Received an offer from the company.' },
+      Rejected:     { date: job?.decision_date, note: 'Application was rejected by the company.' },
+      Discontinued: { date: job?.decision_date, note: 'Application discontinued (no response / ghosted).' },
+      Withdrawn:    { date: job?.decision_date, note: 'Applicant withdrew the application.' },
+      Closed:       { date: job?.closed_date,   note: 'Position closed or no longer pursued.' },
+    };
+
+    if (job?.status && terminalStatuses[job.status]) {
+      const entry = terminalStatuses[job.status];
+      if (entry.date) {
+        steps.push({
+          id: -2, // Virtual ID for terminal events
+          step_type: { id: -2, name: job.status },
+          step_date: entry.date,
+          status: 'Completed',
+          notes: entry.note
+        } as any);
+      }
+    }
+
     return steps.sort((a, b) => {
+      if (a.id === -2) return -1;
+      if (b.id === -2) return 1;
       const dateA = a.step_date ? new Date(a.step_date).getTime() : Number.MAX_SAFE_INTEGER;
       const dateB = b.step_date ? new Date(b.step_date).getTime() : Number.MAX_SAFE_INTEGER;
       return dateB - dateA;
     });
-  }, [job?.steps, job?.applied_date]);
+  }, [job?.steps, job?.applied_date, job?.status, job?.decision_date, job?.closed_date]);
 
   if (!job) return null;
 
@@ -1021,11 +1086,23 @@ export const JobDetailView: React.FC<JobDetailViewProps> = ({ job, onClose, onJo
                     <div className="relative z-10 mt-1.5 bg-[var(--bg)] p-1 rounded-full outline-none">
                       {step.id === -1 ? (
                         <Send className="w-5 h-5 text-violet-500 fill-violet-500/10" />
-                      ) : (
+                      ) : step.id === -2 ? (() => {
+                        const config = getTerminalEventConfig(step.step_type.name);
+                        const IconComponent = config.icon;
+                        return <IconComponent className={`w-5 h-5 ${config.colorClass}`} />;
+                      })() : (
                         <Circle className={`w-5 h-5 ${step.status === 'Completed' || step.status === 'Passed' ? 'text-green-500 fill-green-500/20' : 'text-[var(--fg-subtle)]'}`} />
                       )}
                     </div>
-                    <div className={`flex flex-col glass p-4 rounded-xl w-full border ${step.status === 'Completed' || step.status === 'Passed' ? 'border-green-500/20 bg-green-500/5' : 'border-[var(--border-color)]'} hover:border-violet-500/30 transition`}>
+                    <div className={`flex flex-col glass p-4 rounded-xl w-full border ${
+                      step.id === -1 
+                        ? 'border-violet-500/20 bg-violet-500/5' 
+                        : step.id === -2 
+                          ? getTerminalEventConfig(step.step_type.name).borderBgClass 
+                          : step.status === 'Completed' || step.status === 'Passed' 
+                            ? 'border-green-500/20 bg-green-500/5' 
+                            : 'border-[var(--border-color)]'
+                    } hover:border-violet-500/30 transition`}>
                       <div className="flex justify-between items-center mb-1">
                         {editingStepId === step.id ? (
                           <input
@@ -1037,10 +1114,10 @@ export const JobDetailView: React.FC<JobDetailViewProps> = ({ job, onClose, onJo
                             autoFocus
                           />
                         ) : (
-                          <span className={`font-semibold ${step.status === 'Completed' || step.status === 'Passed' ? 'text-[var(--fg)]' : 'text-[var(--fg-muted)]'}`}>{step.step_type.name}</span>
+                          <span className={`font-semibold ${step.status === 'Completed' || step.status === 'Passed' || step.id < 0 ? 'text-[var(--fg)]' : 'text-[var(--fg-muted)]'}`}>{step.step_type.name}</span>
                         )}
 
-                        {step.id !== -1 && (
+                        {step.id > 0 && (
                           <select
                             className="text-xs font-medium px-2 py-1 rounded-md bg-[var(--input-bg)] text-[var(--fg-muted)] border border-[var(--border-color)] cursor-pointer focus:outline-none focus:border-violet-500 transition-colors dark:text-white"
                             value={editingStepId === step.id ? editStepForm.status : step.status}
@@ -1051,7 +1128,7 @@ export const JobDetailView: React.FC<JobDetailViewProps> = ({ job, onClose, onJo
                             ))}
                           </select>
                         )}
-                        {step.id === -1 && (
+                        {step.id < 0 && (
                           <span className="text-[10px] uppercase font-bold text-violet-500/60 tracking-wider">System Event</span>
                         )}
                       </div>
@@ -1097,10 +1174,10 @@ export const JobDetailView: React.FC<JobDetailViewProps> = ({ job, onClose, onJo
                               <div className="text-sm text-[var(--fg-muted)] whitespace-pre-wrap">{step.notes}</div>
                             ) : (
                               <div className="text-sm text-[var(--fg-subtle)] italic">
-                                {step.id === -1 ? 'System generated event.' : 'No notes added.'}
+                                {step.id < 0 ? 'System generated event.' : 'No notes added.'}
                               </div>
                             )}
-                            {step.id !== -1 && (
+                            {step.id > 0 && (
                               <div className="flex items-center gap-2 opacity-0 group-hover/step:opacity-100 transition-all">
                                 <button
                                   onClick={() => startEditingStep(step)}
