@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from 'react';
-import { Briefcase, Building2, CheckCircle2, Clock, XCircle, Globe, ChevronRight, ThumbsUp, ThumbsDown, Lock, Ban, Star, Archive } from 'lucide-react';
+import { Briefcase, Building2, CheckCircle2, Clock, XCircle, Globe, ChevronRight, ThumbsUp, ThumbsDown, Lock, Ban, Star, Archive, Undo2 } from 'lucide-react';
 import { Job, getStepTypes, StepType } from '../lib/api';
 import { ConfirmDialog } from './ConfirmDialog';
 import { Tooltip } from './Tooltip';
@@ -24,6 +24,7 @@ const statusColors: Record<string, string> = {
   Rejected: 'text-red-500 bg-red-500/10',
   Closed: 'text-orange-500 bg-orange-500/10',
   Discontinued: 'text-[var(--fg-subtle)] bg-[var(--surface-alt)]',
+  Withdrawn: 'text-amber-600 dark:text-amber-400 bg-amber-500/10',
 };
 
 const statusIcons: Record<string, React.ReactNode> = {
@@ -34,6 +35,7 @@ const statusIcons: Record<string, React.ReactNode> = {
   Rejected: <XCircle className="w-3.5 h-3.5" />,
   Closed: <Lock className="w-3.5 h-3.5" />,
   Discontinued: <Ban className="w-3.5 h-3.5" />,
+  Withdrawn: <Undo2 className="w-3.5 h-3.5" />,
 };
 
 // Card border accents for Decision column
@@ -41,6 +43,7 @@ const decisionBorders: Record<string, string> = {
   Offered: 'border-emerald-500/30 hover:border-emerald-500/50',
   Rejected: 'border-red-500/30 hover:border-red-500/40',
   Discontinued: 'border-slate-500/30 hover:border-slate-500/40',
+  Withdrawn: 'border-amber-500/20 hover:border-amber-500/30',
 };
 
 export const JobCard: React.FC<JobCardProps> = ({ job, onUpdateStatus, onClick, columnKey, onAddInterviewStep, onToggleStar, onToggleArchive }) => {
@@ -52,7 +55,7 @@ export const JobCard: React.FC<JobCardProps> = ({ job, onUpdateStatus, onClick, 
   const [stepTypes, setStepTypes] = useState<string[]>([]);
 
   const allStatuses = ['Wishlist', 'Applied', 'Interviewing', 'Offered', 'Rejected'];
-  const isTerminal = ['Offered', 'Rejected', 'Closed', 'Discontinued'].includes(job.status);
+  const isTerminal = ['Offered', 'Rejected', 'Closed', 'Discontinued', 'Withdrawn'].includes(job.status);
   const isInterviewing = job.status === 'Interviewing';
 
   const openConfirm = (nextStatus: string, e: React.MouseEvent) => {
@@ -63,7 +66,7 @@ export const JobCard: React.FC<JobCardProps> = ({ job, onUpdateStatus, onClick, 
     setConfirmState({
       isOpen: true,
       nextStatus,
-      variant: nextStatus === 'Rejected' || nextStatus === 'Discontinued' ? 'danger' : nextStatus === 'Offered' ? 'success' : 'default',
+      variant: nextStatus === 'Rejected' || nextStatus === 'Discontinued' || nextStatus === 'Withdrawn' ? 'danger' : nextStatus === 'Offered' ? 'success' : 'default',
     });
   };
 
@@ -229,7 +232,7 @@ export const JobCard: React.FC<JobCardProps> = ({ job, onUpdateStatus, onClick, 
         textLabel="Interview Step Name (e.g. Phone Screen)"
         initialText=""
         textOptions={stepTypes}
-        showDateInput={['Applied', 'Interviewing', 'Offered', 'Rejected', 'Closed', 'Discontinued'].includes(confirmState.nextStatus)}
+        showDateInput={['Applied', 'Interviewing', 'Offered', 'Rejected', 'Closed', 'Discontinued', 'Withdrawn'].includes(confirmState.nextStatus)}
         dateLabel={confirmState.nextStatus === 'Applied' ? 'Actually applied date' : confirmState.nextStatus === 'Offered' ? 'Offer received date' : confirmState.nextStatus === 'Interviewing' ? 'Interview Date (Optional)' : 'Status change date'}
         showFileUpload={confirmState.nextStatus === 'Applied'}
         fileUploadLabel="Attach Resume / CV (Optional)"

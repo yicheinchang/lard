@@ -6,7 +6,7 @@ import MdEditor from 'react-markdown-editor-lite';
 import MarkdownIt from 'markdown-it';
 import 'react-markdown-editor-lite/lib/index.css';
 import { Job, getStepTypes, StepType, addInterviewStep, updateInterviewStep, deleteInterviewStep, updateJobStream, updateJob, deleteJobDocument, getCompanies, InterviewStep, uploadJobDocumentStream } from '../lib/api';
-import { X, Calendar, User, Mail, Plus, Circle, FileText, Edit2, Save, Paperclip, Trash2, ExternalLink, Link as LinkIcon, StickyNote, Send, AlertTriangle, CircleDollarSign, Star, Maximize2, Minimize2, ZoomIn, ZoomOut, RotateCcw, Sun, Moon, Archive, ThumbsUp, ThumbsDown, ChevronRight, XCircle, Ban, Lock } from 'lucide-react';
+import { X, Calendar, User, Mail, Plus, Circle, FileText, Edit2, Save, Paperclip, Trash2, ExternalLink, Link as LinkIcon, StickyNote, Send, AlertTriangle, CircleDollarSign, Star, Maximize2, Minimize2, ZoomIn, ZoomOut, RotateCcw, Sun, Moon, Archive, ThumbsUp, ThumbsDown, ChevronRight, XCircle, Ban, Lock, Undo2 } from 'lucide-react';
 import { ConfirmDialog } from './ConfirmDialog';
 import { DocumentPreview } from './DocumentPreview';
 import { DocumentViewer } from './DocumentViewer';
@@ -374,7 +374,7 @@ export const JobDetailView: React.FC<JobDetailViewProps> = ({ job, onClose, onJo
       setIsAdding(false);
       onJobUpdated();
 
-      const terminalStatuses = ["Rejected", "Offered", "Discontinued", "Closed"];
+      const terminalStatuses = ["Rejected", "Offered", "Discontinued", "Closed", "Withdrawn"];
       if (terminalStatuses.includes(job.status)) {
         const calculatedNext = 'Interviewing';
         setTerminalStatusConfirm({
@@ -397,7 +397,7 @@ export const JobDetailView: React.FC<JobDetailViewProps> = ({ job, onClose, onJo
       await updateInterviewStep(stepId, { status: nextStatus });
       onJobUpdated();
 
-      const terminalStatuses = ["Rejected", "Offered", "Discontinued", "Closed"];
+      const terminalStatuses = ["Rejected", "Offered", "Discontinued", "Closed", "Withdrawn"];
       if (terminalStatuses.includes(job.status)) {
         // Recalculate what the status OUGHT to be
         const calculatedNext = 'Interviewing';
@@ -428,7 +428,7 @@ export const JobDetailView: React.FC<JobDetailViewProps> = ({ job, onClose, onJo
           onJobUpdated();
           setConfirmDialog(prev => ({ ...prev, isOpen: false }));
 
-          const terminalStatuses = ["Rejected", "Offered", "Discontinued", "Closed"];
+          const terminalStatuses = ["Rejected", "Offered", "Discontinued", "Closed", "Withdrawn"];
           if (terminalStatuses.includes(job.status)) {
             // If we delete a step and we are terminal, we might want to go back to Applied (if 0 steps) or stay
             const hasRemainingSteps = (job.steps?.length || 0) > 1;
@@ -487,9 +487,9 @@ export const JobDetailView: React.FC<JobDetailViewProps> = ({ job, onClose, onJo
   };
 
   const allStatuses = ['Wishlist', 'Applied', 'Interviewing', 'Offered', 'Rejected'];
-  const isTerminal = ['Offered', 'Rejected', 'Closed', 'Discontinued'].includes(job.status);
+  const isTerminal = ['Offered', 'Rejected', 'Closed', 'Discontinued', 'Withdrawn'].includes(job.status);
   const isInterviewing = job.status === 'Interviewing';
-  const hasActions = isInterviewing || !isTerminal || job.status === 'Applied' || job.status === 'Wishlist';
+  const hasActions = isInterviewing || !isTerminal || job.status === 'Applied' || job.status === 'Wishlist' || job.status === 'Offered';
 
   const openQuickConfirm = (nextStatus: string) => {
     if (nextStatus === 'Interviewing') {
@@ -498,7 +498,7 @@ export const JobDetailView: React.FC<JobDetailViewProps> = ({ job, onClose, onJo
     setQuickConfirmState({
       isOpen: true,
       nextStatus,
-      variant: nextStatus === 'Rejected' || nextStatus === 'Discontinued' ? 'danger' : nextStatus === 'Offered' ? 'success' : 'default',
+      variant: nextStatus === 'Rejected' || nextStatus === 'Discontinued' || nextStatus === 'Withdrawn' ? 'danger' : nextStatus === 'Offered' ? 'success' : 'default',
     });
   };
 
@@ -518,7 +518,7 @@ export const JobDetailView: React.FC<JobDetailViewProps> = ({ job, onClose, onJo
       } else {
         const updateData: any = { status: quickConfirmState.nextStatus };
         if (date) {
-          if (['Offered', 'Rejected', 'Discontinued'].includes(quickConfirmState.nextStatus)) {
+          if (['Offered', 'Rejected', 'Discontinued', 'Withdrawn'].includes(quickConfirmState.nextStatus)) {
             updateData.decision_date = date + 'T12:00:00.000Z';
           } else if (quickConfirmState.nextStatus === 'Applied') {
             updateData.applied_date = date + 'T12:00:00.000Z';
@@ -843,7 +843,7 @@ export const JobDetailView: React.FC<JobDetailViewProps> = ({ job, onClose, onJo
         </div>
 
         {/* Tabs */}
-        <div className="flex justify-between items-center px-4 md:px-8 border-b border-[var(--border-color)] shrink-0">
+        <div className="flex flex-wrap items-center px-4 md:px-8 border-b border-[var(--border-color)] shrink-0 gap-x-2">
           <div className="flex">
             <button
               className={`py-3 px-4 text-sm font-medium border-b-2 transition-colors ${activeTab === 'process' ? 'border-violet-500 text-violet-500' : 'border-transparent text-[var(--fg-muted)] hover:text-[var(--fg)]'}`}
@@ -868,7 +868,7 @@ export const JobDetailView: React.FC<JobDetailViewProps> = ({ job, onClose, onJo
           </div>
 
           {/* Quick Actions & Archive Tray */}
-          <div className="flex items-center gap-2 py-1.5">
+          <div className="flex items-center gap-2 py-1.5 ml-auto overflow-x-auto">
             {hasActions && (
               <div className="flex items-center gap-1.5">
                 {isInterviewing ? (
@@ -921,6 +921,17 @@ export const JobDetailView: React.FC<JobDetailViewProps> = ({ job, onClose, onJo
                   >
                     <Ban className="w-3.5 h-3.5" />
                     <span>Discontinue</span>
+                  </button>
+                )}
+
+                {(job.status === 'Applied' || job.status === 'Interviewing' || job.status === 'Offered') && (
+                  <button 
+                    onClick={() => openQuickConfirm('Withdrawn')} 
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-amber-600/10 dark:bg-amber-400/10 text-amber-600 dark:text-amber-400 border border-amber-600/20 dark:border-amber-400/20 hover:bg-amber-600/20 dark:hover:bg-amber-400/20 transition-all active:scale-95 cursor-pointer" 
+                    title="Withdraw Application"
+                  >
+                    <Undo2 className="w-3.5 h-3.5" />
+                    <span>Withdraw</span>
                   </button>
                 )}
 
@@ -1362,6 +1373,7 @@ export const JobDetailView: React.FC<JobDetailViewProps> = ({ job, onClose, onJo
                         <option value="Rejected">Rejected</option>
                         <option value="Closed">Closed</option>
                         <option value="Discontinued">Discontinued</option>
+                        <option value="Withdrawn">Withdrawn</option>
                       </select>
                     </div>
                     <div className="flex flex-col gap-1">
@@ -1572,7 +1584,7 @@ export const JobDetailView: React.FC<JobDetailViewProps> = ({ job, onClose, onJo
                         <span className="text-[var(--fg-muted)] font-medium">{job.salary_range}</span>
                       </div>
                     )}
-                    {['Offered', 'Rejected', 'Discontinued'].includes(job.status) && job.decision_date && (
+                    {['Offered', 'Rejected', 'Discontinued', 'Withdrawn'].includes(job.status) && job.decision_date && (
                       <div className="pt-2">
                         <span className="text-[var(--fg-subtle)] block text-xs mb-1">Decision Date</span>
                         <span className="text-[var(--fg-muted)] font-medium text-amber-400/80">{new Date(job.decision_date).toLocaleDateString('en-US', { timeZone: 'UTC' })}</span>
@@ -1756,7 +1768,7 @@ export const JobDetailView: React.FC<JobDetailViewProps> = ({ job, onClose, onJo
         textLabel="Interview Step Name (e.g. Phone Screen)"
         initialText=""
         textOptions={quickStepTypes}
-        showDateInput={['Applied', 'Interviewing', 'Offered', 'Rejected', 'Closed', 'Discontinued'].includes(quickConfirmState.nextStatus)}
+        showDateInput={['Applied', 'Interviewing', 'Offered', 'Rejected', 'Closed', 'Discontinued', 'Withdrawn'].includes(quickConfirmState.nextStatus)}
         dateLabel={quickConfirmState.nextStatus === 'Applied' ? 'Actually applied date' : quickConfirmState.nextStatus === 'Offered' ? 'Offer received date' : quickConfirmState.nextStatus === 'Interviewing' ? 'Interview Date (Optional)' : 'Status change date'}
         showFileUpload={quickConfirmState.nextStatus === 'Applied'}
         fileUploadLabel="Attach Resume / CV (Optional)"

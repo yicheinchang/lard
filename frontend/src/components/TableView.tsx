@@ -22,7 +22,7 @@ interface TableViewProps {
   onJobUpdated: () => void;
 }
 
-const ALL_STATUSES = ['Wishlist', 'Applied', 'Interviewing', 'Offered', 'Rejected', 'Closed', 'Discontinued'];
+const ALL_STATUSES = ['Wishlist', 'Applied', 'Interviewing', 'Offered', 'Rejected', 'Closed', 'Discontinued', 'Withdrawn'];
 
 const statusBadgeColors: Record<string, string> = {
   Wishlist: 'text-[var(--fg-muted)] bg-[var(--surface-hover)] border-[var(--border-color)]',
@@ -32,6 +32,7 @@ const statusBadgeColors: Record<string, string> = {
   Rejected: 'text-red-500 bg-red-500/10 border-red-500/20',
   Closed: 'text-orange-500 bg-orange-500/10 border-orange-500/20',
   Discontinued: 'text-[var(--fg-subtle)] bg-[var(--surface-alt)] border-[var(--border-color)]',
+  Withdrawn: 'text-amber-600 dark:text-amber-400 bg-amber-500/10 border-amber-500/20',
 };
 
 type SortKey = 'company' | 'role' | 'status' | 'location' | 'applied_date' | 'last_updated';

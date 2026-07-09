@@ -19,7 +19,7 @@ const COLUMNS = [
   { key: 'Wishlist', label: 'Wishlist', statuses: ['Wishlist', 'Closed'] },
   { key: 'Applied', label: 'Applied', statuses: ['Applied'] },
   { key: 'Interviewing', label: 'Interviewing', statuses: ['Interviewing'] },
-  { key: 'Decision', label: 'Decision', statuses: ['Offered', 'Rejected', 'Discontinued'] },
+  { key: 'Decision', label: 'Decision', statuses: ['Offered', 'Rejected', 'Discontinued', 'Withdrawn'] },
 ];
 
 const columnAccents: Record<string, string> = {

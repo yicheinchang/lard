@@ -1,4 +1,4 @@
-# 🗺️ Lard - Lazy AI-Powered Resume Database (v0.91.2)
+# 🗺️ Lard - Lazy AI-Powered Resume Database (v0.92.0)
 Last Updated: 2026-06-15T14:02:00Z
 
 This document provides a summary of the project's architecture, tech stack, and key logic to give AI coding agents instant context.
@@ -160,7 +160,7 @@ The central entity representing a job application.
 - `company` & `role`: Brand and position (Strings).
 - `employment_type`: Classification of role (FTE, Contractor, Consultant).
 - `agency`: Optional agency name for contractors.
-- `status`: Lifecycle stage (Wishlist ... Discontinued).
+- `status`: Lifecycle stage (Wishlist ... Discontinued, Withdrawn).
 - `is_starred`: Boolean toggle for marking jobs as important.
 - `is_archived`: Boolean flag indicating whether the job is archived (hidden from default view).
 - `closed_date`: Optional date when the job listing was closed.
@@ -207,7 +207,7 @@ Global configuration persisted on the server (`app_settings.json`).
 - `company`: (String, index) Redundant company name for display/legacy caching.
   - `closed_date`: Optional date when the job listing was closed.
   - `last_operation`: Friendly string for detailed user-action audit logs. Automatically captures exact status transitions, step modifications (with name), document uploads/deletions, stars, description, and notes edits.
-- `status`: Lifecycle stage (Wishlist, Applied, Interviewing, Offered, Rejected, Closed, Discontinued).
+- `status`: Lifecycle stage (Wishlist, Applied, Interviewing, Offered, Rejected, Closed, Discontinued, Withdrawn).
 - `is_archived`: (Boolean, default=False, nullable=False) Flag indicating if the application is archived.
 - `last_updated`: Refreshed on successful, meaningful application-related changes.
 - `url`: (String) Application web link.
@@ -217,7 +217,7 @@ Global configuration persisted on the server (`app_settings.json`).
 - `notes`: (Text, Markdown) User notes, automatically vectorized for RAG.
 - `hr_email`, `hiring_manager_name`, `hiring_manager_email`, `headhunter_name`, `headhunter_email`: (String)
 - `applied_date`: (DateTime, Nullable) The date the application was actually submitted. No default; null for Wishlist items. Clearing this date while steps exist is blocked. An entry here triggers an automatic move to "Applied" (or "Interviewing" if steps exist).
-- `decision_date`: (DateTime, Nullable) The date when a final decision (Offered, Rejected, Discontinued) was made.
+- `decision_date`: (DateTime, Nullable) The date when a final decision (Offered, Rejected, Discontinued, Withdrawn) was made.
 - `created_at`: (DateTime) The date the record was first added to the system.
 - `last_updated`: (DateTime) Triggered on any record change.
 
@@ -299,7 +299,7 @@ The system enforces strict status integrity based on the application's progress:
 - **Wishlist**: Default state when `applied_date` is missing. "Add Step" is disabled. Can only move manually to "Discontinued".
 - **Applied**: Automatically advanced when `applied_date` is set and no steps exist.
 - **Interviewing**: Automatically advanced when an interview step is added.
-- **Terminal Stages**: (Rejected, Offered, Discontinued, Closed). If a step is modified while in these stages, the UI prompts the user to decide whether to resume progress (move to Interviewing/Applied) or stay in the terminal stage.
+- **Terminal Stages**: (Rejected, Offered, Discontinued, Closed, Withdrawn). If a step is modified while in these stages, the UI prompts the user to decide whether to resume progress (move to Interviewing/Applied) or stay in the terminal stage.
 - **Reversion**: Deleting the last interview step automatically moves the job back to "Applied". Clearing the `applied_date` (only if no steps remain) moves it back to "Wishlist".
 
 ### 3. Multi-Provider AI

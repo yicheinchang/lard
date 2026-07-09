@@ -58,6 +58,7 @@ const StatusSelect = ({ value, appliedDate, onChange }: {
       <option value="Rejected" className="bg-[var(--surface-alt)] text-[var(--fg)]" disabled={!appliedDate}>Rejected (Requires Applied Date)</option>
       <option value="Closed" className="bg-[var(--surface-alt)] text-[var(--fg)]">Closed</option>
       <option value="Discontinued" className="bg-[var(--surface-alt)] text-[var(--fg)]">Discontinued</option>
+      <option value="Withdrawn" className="bg-[var(--surface-alt)] text-[var(--fg)]" disabled={!appliedDate}>Withdrawn (Requires Applied Date)</option>
     </select>
   </div>
 );

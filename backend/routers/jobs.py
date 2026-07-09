@@ -32,6 +32,7 @@ class JobStatus(str, Enum):
     REJECTED = "Rejected"
     DISCONTINUED = "Discontinued"
     CLOSED = "Closed"
+    WITHDRAWN = "Withdrawn"
 
 router = APIRouter(prefix="/api", tags=["Jobs"])
 
@@ -228,7 +229,7 @@ def get_friendly_doc_type(doc_type: str) -> str:
         return "Document"
     return doc_type.replace("_", " ").title()
 
-TERMINAL_STATUSES = ["Rejected", "Offered", "Discontinued", "Closed"]
+TERMINAL_STATUSES = ["Rejected", "Offered", "Discontinued", "Closed", "Withdrawn"]
 
 def update_job_status(db_job: JobApplication, db: Session, original_status: Optional[str] = None, operation: Optional[str] = None):
     """
@@ -243,7 +244,7 @@ def update_job_status(db_job: JobApplication, db: Session, original_status: Opti
     # 1. Terminal statuses stay as-is unless manually changed
     if db_job.status in TERMINAL_STATUSES:
         # One exception: Wishlist jobs can only be Discontinued or Closed.
-        if not db_job.applied_date and db_job.status not in ["Discontinued", "Closed"]:
+        if not db_job.applied_date and db_job.status not in ["Discontinued", "Closed", "Withdrawn"]:
             db_job.status = "Wishlist"
     else:
         # 2. Progress logic
@@ -275,7 +276,7 @@ def update_job_status(db_job: JobApplication, db: Session, original_status: Opti
         elif db_job.status == "Offered":
             status_op = "Received Offer"
         # Transition to terminal status
-        elif db_job.status in ["Rejected", "Closed", "Discontinued"]:
+        elif db_job.status in ["Rejected", "Closed", "Discontinued", "Withdrawn"]:
             status_op = f"Marked as {db_job.status}"
         # Resumed from terminal
         elif original_status in TERMINAL_STATUSES and db_job.status not in TERMINAL_STATUSES:
