@@ -157,6 +157,8 @@ export const ChatAssistant: React.FC<{
       setView('chat');
     } catch (err) {
       console.error("Failed to load session:", err);
+      localStorage.removeItem('ai_assistant_session_id');
+      startNewChat();
     } finally {
       setIsTyping(false);
     }
